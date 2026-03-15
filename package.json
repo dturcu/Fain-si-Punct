@@ -15,7 +15,9 @@
     "react-dom": "^19.0.0",
     "mongoose": "^8.0.0",
     "axios": "^1.6.0",
-    "zustand": "^4.4.0"
+    "zustand": "^4.4.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.1.2"
   },
   "devDependencies": {
     "eslint": "^8.0.0",
