@@ -2,7 +2,10 @@ import { connectDB } from '@/lib/db'
 import Cart from '@/models/Cart'
 import Order from '@/models/Order'
 import Product from '@/models/Product'
+import EmailLog from '@/models/EmailLog'
+import User from '@/models/User'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { sendOrderConfirmation } from '@/lib/email'
 
 function generateOrderNumber() {
   return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
@@ -54,7 +57,43 @@ export async function POST(request) {
       status: 'processing',
       customer,
       shippingAddress,
+      userId: decoded.userId,
     })
+
+    // Get user for email preferences
+    const user = await User.findById(decoded.userId)
+
+    // Send order confirmation email if user has not opted out
+    if (user?.emailPreferences?.orderConfirmation !== false) {
+      try {
+        const emailResult = await sendOrderConfirmation(order, customer.email)
+
+        if (emailResult.success) {
+          // Log the email
+          const emailLog = await EmailLog.create({
+            recipient: customer.email,
+            type: 'order_confirmation',
+            subject: `Order Confirmation - ${order.orderNumber}`,
+            orderId: order._id,
+            userId: decoded.userId,
+            status: 'sent',
+            messageId: emailResult.messageId,
+            sentAt: emailResult.timestamp,
+            metadata: {
+              orderNumber: order.orderNumber,
+            },
+          })
+
+          // Update order with email log reference
+          order.emailLog.push(emailLog._id)
+          order.lastEmailSentAt = new Date()
+          await order.save()
+        }
+      } catch (emailError) {
+        console.error('Failed to send order confirmation email:', emailError)
+        // Don't fail the order creation if email fails
+      }
+    }
 
     // Clear cart
     await Cart.deleteOne({ userId: decoded.userId })

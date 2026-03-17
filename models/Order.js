@@ -7,6 +7,12 @@ const OrderSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     items: [
       {
         productId: mongoose.Schema.Types.ObjectId,
@@ -33,6 +39,30 @@ const OrderSchema = new mongoose.Schema(
       zip: String,
       country: String,
     },
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'processing', 'paid', 'failed', 'refunded'],
+      default: 'unpaid',
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['stripe', 'paypal'],
+    },
+    paidAt: Date,
+    emailLog: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'EmailLog',
+      },
+    ],
+    lastEmailSentAt: Date,
+    nextEmailRetryAt: Date,
+    trackingNumber: String,
+    trackingUrl: String,
   },
   { timestamps: true }
 )
