@@ -59,6 +59,7 @@ const OrderSchema = new mongoose.Schema(
         ref: 'EmailLog',
       },
     ],
+    emailJobs: [String], // Bull job IDs for email processing
     lastEmailSentAt: Date,
     nextEmailRetryAt: Date,
     trackingNumber: String,

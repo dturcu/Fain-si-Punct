@@ -5,7 +5,8 @@ import Product from '@/models/Product'
 import EmailLog from '@/models/EmailLog'
 import User from '@/models/User'
 import { verifyToken, getCookieToken } from '@/lib/auth'
-import { sendOrderConfirmation } from '@/lib/email'
+import { addEmailJob } from '@/lib/job-queue'
+import { orderConfirmation } from '@/lib/templates/orderConfirmation'
 
 function generateOrderNumber() {
   return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
@@ -63,35 +64,36 @@ export async function POST(request) {
     // Get user for email preferences
     const user = await User.findById(decoded.userId)
 
-    // Send order confirmation email if user has not opted out
+    // Queue order confirmation email if user has not opted out
     if (user?.emailPreferences?.orderConfirmation !== false) {
       try {
-        const emailResult = await sendOrderConfirmation(order, customer.email)
+        const emailHtml = orderConfirmation(order)
+        const subject = `Order Confirmation - ${order.orderNumber}`
 
-        if (emailResult.success) {
-          // Log the email
-          const emailLog = await EmailLog.create({
-            recipient: customer.email,
-            type: 'order_confirmation',
-            subject: `Order Confirmation - ${order.orderNumber}`,
-            orderId: order._id,
-            userId: decoded.userId,
-            status: 'sent',
-            messageId: emailResult.messageId,
-            sentAt: emailResult.timestamp,
-            metadata: {
-              orderNumber: order.orderNumber,
-            },
-          })
+        // Add email job to queue for processing
+        const emailJob = await addEmailJob({
+          type: 'order_confirmation',
+          recipient: customer.email,
+          subject,
+          html: emailHtml,
+          orderId: order._id.toString(),
+          userId: decoded.userId.toString(),
+          metadata: {
+            orderNumber: order.orderNumber,
+            customerName: customer.name,
+          },
+        })
 
-          // Update order with email log reference
-          order.emailLog.push(emailLog._id)
-          order.lastEmailSentAt = new Date()
-          await order.save()
-        }
+        // Track the job ID on the order
+        order.emailJobs = order.emailJobs || []
+        order.emailJobs.push(emailJob.id)
+        order.lastEmailSentAt = new Date()
+        await order.save()
+
+        console.log(`Email job queued for order ${order._id}:`, emailJob.id)
       } catch (emailError) {
-        console.error('Failed to send order confirmation email:', emailError)
-        // Don't fail the order creation if email fails
+        console.error('Failed to queue order confirmation email:', emailError)
+        // Don't fail the order creation if email queuing fails
       }
     }
 
