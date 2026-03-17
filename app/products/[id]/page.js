@@ -9,6 +9,9 @@ export default function ProductDetail({ params }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [quantity, setQuantity] = useState(1)
+  const [addingToCart, setAddingToCart] = useState(false)
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('') // 'success' or 'error'
 
   useEffect(() => {
     fetchProduct()
@@ -35,9 +38,66 @@ export default function ProductDetail({ params }) {
     }
   }
 
-  const handleAddToCart = () => {
-    console.log(`Added ${quantity} of ${product.name} to cart`)
-    // TODO: Implement cart functionality
+  const handleAddToCart = async () => {
+    try {
+      setAddingToCart(true)
+      setMessage('')
+      setMessageType('')
+
+      // Get auth token from localStorage (or cookies)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/cart`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({
+            productId: product._id,
+            quantity: parseInt(quantity),
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      // Handle authentication failure
+      if (response.status === 401) {
+        setMessageType('error')
+        setMessage('Please log in to add items to your cart')
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/auth/login'
+        }, 2000)
+        return
+      }
+
+      // Handle other errors
+      if (!response.ok || !data.success) {
+        setMessageType('error')
+        setMessage(data.error || 'Failed to add item to cart')
+        return
+      }
+
+      // Success!
+      setMessageType('success')
+      setMessage(`✓ Added ${quantity} ${quantity === 1 ? 'item' : 'items'} to cart!`)
+      setQuantity(1)
+
+      // Redirect to cart after 1.5 seconds
+      setTimeout(() => {
+        window.location.href = '/cart'
+      }, 1500)
+    } catch (err) {
+      console.error('Error adding to cart:', err)
+      setMessageType('error')
+      setMessage(`Error: ${err.message}`)
+    } finally {
+      setAddingToCart(false)
+    }
   }
 
   if (loading) return <div className={styles.loading}>Loading...</div>
@@ -93,17 +153,23 @@ export default function ProductDetail({ params }) {
                 max={product.stock}
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                disabled={product.stock === 0}
+                disabled={product.stock === 0 || addingToCart}
               />
             </div>
 
             <button
               className={styles.addToCart}
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              disabled={product.stock === 0 || addingToCart}
             >
-              Add to Cart
+              {addingToCart ? 'Adding to Cart...' : 'Add to Cart'}
             </button>
+
+            {message && (
+              <div className={`${styles.message} ${styles[messageType]}`}>
+                {message}
+              </div>
+            )}
           </div>
 
           {product.tags && product.tags.length > 0 && (

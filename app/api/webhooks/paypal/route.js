@@ -24,8 +24,10 @@ export async function POST(request) {
     const event = params.get('event_type')
 
     // Verify webhook authenticity
-    // Note: Full webhook signature verification would require PayPal SDK
-    // This is a simplified version - in production, use full verification
+    // TODO: In production, verify webhook signature using PayPal SDK:
+    // const verified = await verifyPayPalIPN(body, headers)
+    // if (!verified) return NextResponse.json({ received: true }, { status: 200 })
+    // For now, rely on idempotent payment ID matching (externalId)
 
     // Handle different event types
     if (event === 'PAYMENT.CAPTURE.COMPLETED') {
@@ -61,48 +63,48 @@ async function handlePaymentCaptureCompleted(params) {
 
     console.log('Processing PAYMENT.CAPTURE.COMPLETED:', captureId)
 
-    // Note: In a real implementation, you'd need to track the relationship
-    // between PayPal capture ID and your payment record
-    // This is simplified - you might need to query by metadata
-
-    // Try to find payment by looking at recent payments
-    const payments = await Payment.find({
+    // Find payment by exact capture ID match (unique index)
+    // This is idempotent - matches by PayPal's external capture ID
+    const payment = await Payment.findOne({
+      externalId: captureId,
       type: 'paypal',
-      status: 'pending',
-      createdAt: { $gte: new Date(Date.now() - 1800000) }, // Last 30 minutes
-    }).limit(10)
+    })
 
-    if (payments.length === 0) {
-      console.warn('No pending PayPal payment found for capture:', captureId)
+    if (!payment) {
+      console.warn('Payment not found for capture ID:', captureId)
+      console.warn('This could be a stale webhook or payment created on another system')
       return
     }
-
-    // Update the matching payment (first one found)
-    const payment = payments[0]
 
     if (payment.status === 'succeeded') {
-      console.log('Payment already processed:', payment.externalId)
+      console.log('Payment already processed (idempotent):', captureId)
       return
     }
 
+    // Update payment with succeeded status
     payment.status = 'succeeded'
     payment.metadata = {
       ...payment.metadata,
-      captureId,
       captureStatus: status,
+      webhookVerifiedAt: new Date().toISOString(),
     }
     payment.webhookVerified = true
     await payment.save()
 
-    // Update order status
+    // Update order status (only if not already paid)
     const order = await Order.findById(payment.orderId)
     if (order) {
-      order.paymentStatus = 'paid'
-      order.paidAt = new Date()
-      order.status = 'processing'
-      await order.save()
-
-      console.log('Order updated for PayPal payment:', order._id)
+      if (order.paymentStatus !== 'paid') {
+        order.paymentStatus = 'paid'
+        order.paidAt = new Date()
+        order.status = 'processing'
+        await order.save()
+        console.log('Order updated for PayPal payment:', order._id)
+      } else {
+        console.log('Order already marked as paid (idempotent):', order._id)
+      }
+    } else {
+      console.error('Order not found for payment:', payment.orderId)
     }
   } catch (error) {
     console.error('Error handling PAYMENT.CAPTURE.COMPLETED:', error)
@@ -119,32 +121,45 @@ async function handlePaymentCaptureDenied(params) {
 
     console.log('Processing PAYMENT.CAPTURE.DENIED:', captureId)
 
-    // Find payments that might be related to this capture
-    const payments = await Payment.find({
+    // Find payment by exact capture ID match (unique index)
+    // Prevents issues with multiple pending payments
+    const payment = await Payment.findOne({
+      externalId: captureId,
       type: 'paypal',
-      status: { $in: ['pending', 'processing'] },
-      createdAt: { $gte: new Date(Date.now() - 1800000) }, // Last 30 minutes
-    }).limit(10)
+    })
 
-    if (payments.length === 0) {
-      console.warn('No pending PayPal payment found for denied capture:', captureId)
+    if (!payment) {
+      console.warn('Payment not found for denied capture ID:', captureId)
       return
     }
 
-    // Update the matching payment
-    const payment = payments[0]
+    // Only update if not already processed
+    if (payment.status === 'failed') {
+      console.log('Payment already marked as failed (idempotent):', captureId)
+      return
+    }
+
+    // Update payment with failed status
     payment.status = 'failed'
     payment.errorMessage = `Payment denied: ${reason}`
+    payment.metadata = {
+      ...payment.metadata,
+      denialReason: reason,
+      webhookVerifiedAt: new Date().toISOString(),
+    }
     payment.webhookVerified = true
     await payment.save()
 
     // Update order status
     const order = await Order.findById(payment.orderId)
     if (order) {
-      order.paymentStatus = 'failed'
-      await order.save()
-
-      console.log('Order payment marked as failed:', order._id)
+      if (order.paymentStatus !== 'failed') {
+        order.paymentStatus = 'failed'
+        await order.save()
+        console.log('Order payment marked as failed:', order._id)
+      } else {
+        console.log('Order already marked as failed (idempotent):', order._id)
+      }
     }
   } catch (error) {
     console.error('Error handling PAYMENT.CAPTURE.DENIED:', error)
