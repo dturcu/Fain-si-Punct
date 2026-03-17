@@ -34,6 +34,47 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    savedPaymentMethods: [
+      {
+        id: String,
+        type: {
+          type: String,
+          enum: ['stripe', 'paypal'],
+        },
+        last4: String,
+        brand: String,
+        expiryMonth: Number,
+        expiryYear: Number,
+        isDefault: {
+          type: Boolean,
+          default: false,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    emailPreferences: {
+      orderConfirmation: {
+        type: Boolean,
+        default: true,
+      },
+      shippingUpdates: {
+        type: Boolean,
+        default: true,
+      },
+      promotions: {
+        type: Boolean,
+        default: true,
+      },
+      newsletter: {
+        type: Boolean,
+        default: true,
+      },
+      updatedAt: Date,
+    },
+    unsubscribeToken: String,
   },
   { timestamps: true }
 )
