@@ -23,7 +23,9 @@
     "@stripe/stripe-js": "^3.0.0",
     "@paypal/checkout-server-sdk": "^1.0.1",
     "dotenv": "^16.4.0",
-    "nodemailer": "^6.9.0"
+    "nodemailer": "^6.9.0",
+    "bull": "^4.11.0",
+    "redis": "^4.6.0"
   },
   "devDependencies": {
     "eslint": "^8.0.0",
