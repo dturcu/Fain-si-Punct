@@ -1,0 +1,90 @@
+.container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.averageRating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.largeRating {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.reviewCount {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.distributionRow {
+  display: grid;
+  grid-template-columns: 40px 1fr 50px;
+  align-items: center;
+  gap: 12px;
+}
+
+.ratingLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.star {
+  color: #fbbf24;
+  font-size: 1rem;
+}
+
+.barContainer {
+  background: #e5e7eb;
+  border-radius: 4px;
+  height: 20px;
+  overflow: hidden;
+}
+
+.bar {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.percentage {
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-align: right;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .summary {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .largeRating {
+    font-size: 2rem;
+  }
+}
