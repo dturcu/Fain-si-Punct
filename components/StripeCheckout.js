@@ -105,6 +105,7 @@ export default function StripeCheckout({
       <StripePaymentForm
         clientSecret={clientSecret}
         orderId={orderId}
+        amount={amount}
         onSuccess={onSuccess}
         onError={onError}
         onLoadingChange={onLoadingChange}
@@ -119,6 +120,7 @@ export default function StripeCheckout({
 function StripePaymentForm({
   clientSecret,
   orderId,
+  amount,
   onSuccess,
   onError,
   onLoadingChange,
