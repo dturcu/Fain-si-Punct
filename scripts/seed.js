@@ -1,7 +1,14 @@
-import mongoose from 'mongoose'
-import Product from '../models/Product.js'
+import { createClient } from '@supabase/supabase-js'
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase environment variables')
+  process.exit(1)
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const categories = [
   'Electronics',
@@ -54,12 +61,24 @@ function generateProducts(count) {
 
 async function seed() {
   try {
-    await mongoose.connect(MONGODB_URI)
-    console.log('Connected to MongoDB')
+    console.log('Connecting to Supabase...')
+
+    // Test connection
+    const { error: connError } = await supabase.from('products').select('id').limit(1)
+    if (connError) {
+      console.error('Supabase connection error:', connError)
+      process.exit(1)
+    }
+    console.log('✅ Connected to Supabase')
 
     // Clear existing products
-    await Product.deleteMany({})
-    console.log('Cleared existing products')
+    console.log('Clearing existing products...')
+    const { error: deleteError } = await supabase.from('products').delete().neq('id', null)
+    if (deleteError) {
+      console.error('Error clearing products:', deleteError)
+      process.exit(1)
+    }
+    console.log('✅ Cleared existing products')
 
     // Generate and insert 15k products in batches
     const batchSize = 1000
@@ -67,31 +86,62 @@ async function seed() {
 
     for (let i = 0; i < totalProducts; i += batchSize) {
       const batch = generateProducts(Math.min(batchSize, totalProducts - i))
-      await Product.insertMany(batch)
-      console.log(`Inserted ${Math.min(i + batchSize, totalProducts)} products`)
+      const { error: insertError } = await supabase
+        .from('products')
+        .insert(batch)
+
+      if (insertError) {
+        console.error(`Error inserting batch at ${i}:`, insertError)
+        process.exit(1)
+      }
+
+      console.log(`✅ Inserted ${Math.min(i + batchSize, totalProducts)} products`)
     }
 
     console.log('✅ Seeding completed successfully!')
     console.log(`Created ${totalProducts} products`)
 
-    // Show some stats
-    const categoryStats = await Product.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          avgPrice: { $avg: '$price' },
-        },
-      },
-      { $sort: { count: -1 } },
-    ])
+    // Show category stats
+    const { data: categoryStats, error: statsError } = await supabase
+      .from('products')
+      .select('category')
 
-    console.log('\nProducts by category:')
-    categoryStats.forEach((stat) => {
-      console.log(
-        `  ${stat._id}: ${stat.count} products (avg: $${stat.avgPrice.toFixed(2)})`
-      )
-    })
+    if (!statsError && categoryStats) {
+      const stats = {}
+      let totalPrice = 0
+      let totalCount = 0
+
+      categoryStats.forEach((product) => {
+        if (!stats[product.category]) {
+          stats[product.category] = { count: 0, totalPrice: 0 }
+        }
+        stats[product.category].count += 1
+      })
+
+      // Get price stats per category
+      const { data: priceData } = await supabase
+        .from('products')
+        .select('category, price')
+
+      if (priceData) {
+        const priceStats = {}
+        priceData.forEach((product) => {
+          if (!priceStats[product.category]) {
+            priceStats[product.category] = { sum: 0, count: 0 }
+          }
+          priceStats[product.category].sum += product.price
+          priceStats[product.category].count += 1
+        })
+
+        console.log('\nProducts by category:')
+        Object.entries(stats)
+          .sort(([, a], [, b]) => b.count - a.count)
+          .forEach(([category, { count }]) => {
+            const avgPrice = (priceStats[category].sum / priceStats[category].count).toFixed(2)
+            console.log(`  ${category}: ${count} products (avg: $${avgPrice})`)
+          })
+      }
+    }
 
     process.exit(0)
   } catch (error) {
