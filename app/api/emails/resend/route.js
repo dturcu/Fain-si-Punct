@@ -1,17 +1,10 @@
-import { connectDB } from '@/lib/db'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
-import User from '@/models/User'
-import EmailLog from '@/models/EmailLog'
 import { sendEmail } from '@/lib/email'
 
-/**
- * POST /api/emails/resend
- * Resend a failed email
- */
 export async function POST(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -29,7 +22,7 @@ export async function POST(request) {
     }
 
     // Verify user is admin
-    const user = await User.findById(decoded.userId)
+    const user = await getUserById(decoded.userId)
     if (!user || user.role !== 'admin') {
       return Response.json(
         { success: false, error: 'Admin access required' },
@@ -47,8 +40,13 @@ export async function POST(request) {
     }
 
     // Find the email log entry
-    const emailLog = await EmailLog.findById(emailLogId)
-    if (!emailLog) {
+    const { data: emailLog, error: fetchError } = await supabaseAdmin
+      .from('email_logs')
+      .select('*')
+      .eq('id', emailLogId)
+      .single()
+
+    if (fetchError || !emailLog) {
       return Response.json(
         { success: false, error: 'Email log not found' },
         { status: 404 }
@@ -64,20 +62,25 @@ export async function POST(request) {
     )
 
     // Update the email log
-    emailLog.status = result.success ? 'sent' : 'failed'
-    emailLog.error = result.error || null
-    emailLog.messageId = result.messageId
-    emailLog.sentAt = result.timestamp
-    emailLog.retryCount = (emailLog.retryCount || 0) + 1
+    const { error: updateError } = await supabaseAdmin
+      .from('email_logs')
+      .update({
+        status: result.success ? 'sent' : 'failed',
+        error: result.error || null,
+        message_id: result.messageId,
+        sent_at: result.timestamp,
+        retry_count: (emailLog.retry_count || 0) + 1,
+      })
+      .eq('id', emailLogId)
 
-    await emailLog.save()
+    if (updateError) throw updateError
 
     return Response.json({
       success: true,
       data: {
         messageId: result.messageId,
         status: result.success ? 'sent' : 'failed',
-        retryCount: emailLog.retryCount,
+        retryCount: (emailLog.retry_count || 0) + 1,
       },
     })
   } catch (error) {
