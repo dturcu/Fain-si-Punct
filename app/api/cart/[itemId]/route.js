@@ -1,11 +1,8 @@
-import { connectDB } from '@/lib/db'
-import Cart from '@/models/Cart'
+import { updateCartItemQuantity, removeFromCart } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 
 export async function PUT(request, { params }) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -23,25 +20,7 @@ export async function PUT(request, { params }) {
     }
 
     const { quantity } = await request.json()
-
-    const cart = await Cart.findOne({ userId: decoded.userId })
-    if (!cart) {
-      return Response.json(
-        { success: false, error: 'Cart not found' },
-        { status: 404 }
-      )
-    }
-
-    const item = cart.items.id(params.itemId)
-    if (!item) {
-      return Response.json(
-        { success: false, error: 'Item not found' },
-        { status: 404 }
-      )
-    }
-
-    item.quantity = quantity
-    await cart.save()
+    const cart = await updateCartItemQuantity(decoded.userId, params.itemId, quantity)
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
@@ -54,8 +33,6 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -72,16 +49,7 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const cart = await Cart.findOne({ userId: decoded.userId })
-    if (!cart) {
-      return Response.json(
-        { success: false, error: 'Cart not found' },
-        { status: 404 }
-      )
-    }
-
-    cart.items = cart.items.filter((item) => item._id.toString() !== params.itemId)
-    await cart.save()
+    const cart = await removeFromCart(decoded.userId, params.itemId)
 
     return Response.json({ success: true, data: cart })
   } catch (error) {

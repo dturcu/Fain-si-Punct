@@ -1,22 +1,31 @@
-import { connectDB } from '@/lib/db'
-import Order from '@/models/Order'
-import User from '@/models/User'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { orderRowToObj } from '../route'
 
 export async function GET(request, { params }) {
   try {
-    await connectDB()
+    const { id } = await params
 
-    const order = await Order.findById(params.id)
+    const { data: order, error } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!order) {
+    if (error || !order) {
       return Response.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       )
     }
 
-    return Response.json({ success: true, data: order })
+    const { data: items } = await supabaseAdmin
+      .from('order_items')
+      .select('*')
+      .eq('order_id', id)
+
+    return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
     return Response.json(
       { success: false, error: error.message },
@@ -27,8 +36,6 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -45,8 +52,8 @@ export async function PUT(request, { params }) {
       )
     }
 
-    // Check if user is admin
-    const user = await User.findById(decoded.userId)
+    // Verify user is admin
+    const user = await getUserById(decoded.userId)
     if (!user || user.role !== 'admin') {
       return Response.json(
         { success: false, error: 'Admin access required' },
@@ -54,24 +61,38 @@ export async function PUT(request, { params }) {
       )
     }
 
+    const { id } = await params
     const body = await request.json()
 
-    const order = await Order.findByIdAndUpdate(params.id, body, {
-      new: true,
-    })
+    const { data: order, error } = await supabaseAdmin
+      .from('orders')
+      .update({
+        status: body.status,
+        payment_status: body.paymentStatus,
+        tracking_number: body.trackingNumber,
+        tracking_url: body.trackingUrl,
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    if (!order) {
+    if (error || !order) {
       return Response.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       )
     }
 
-    return Response.json({ success: true, data: order })
+    const { data: items } = await supabaseAdmin
+      .from('order_items')
+      .select('*')
+      .eq('order_id', id)
+
+    return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
     return Response.json(
       { success: false, error: error.message },
-      { status: 500 }
+      { status: 400 }
     )
   }
 }
