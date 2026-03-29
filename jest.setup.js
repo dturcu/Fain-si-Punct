@@ -10,8 +10,8 @@ beforeAll(() => {
     // Allow specific error logs through
     if (
       typeof args[0] === 'string' &&
-      (args[0].includes('Not connected to MongoDB') ||
-        args[0].includes('Redis connection error'))
+      (args[0].includes('Supabase connection error') ||
+        args[0].includes('Upstash Redis connection error'))
     ) {
       return
     }
@@ -35,25 +35,29 @@ afterAll(() => {
 // Mock environment variables for tests
 process.env.NEXT_PUBLIC_API_URL = 'http://localhost:3000'
 process.env.JWT_SECRET = 'test-secret-key'
-process.env.MONGODB_URI = 'mongodb://localhost:27017/ecommerce-test'
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test-project.supabase.co'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
+process.env.UPSTASH_REDIS_REST_URL = 'https://test-project.upstash.io'
+process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token'
 process.env.SMTP_HOST = 'smtp.test.com'
 process.env.SMTP_PORT = '587'
 process.env.SMTP_USER = 'test@test.com'
 process.env.SMTP_PASS = 'test-pass'
 process.env.SENDER_EMAIL = 'noreply@test.com'
 process.env.SENDER_NAME = 'Test Shop'
-process.env.REDIS_URL = 'redis://localhost:6379'
 process.env.EMAIL_MAX_RETRIES = '4'
 
 // Extend Jest matchers if needed
 expect.extend({
-  toBeValidMongoId(received) {
+  toBeValidUUID(received) {
     const isValid =
-      typeof received === 'string' && /^[0-9a-fA-F]{24}$/.test(received)
+      typeof received === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(received)
     return {
       pass: isValid,
       message: () =>
-        `expected ${received} to be a valid MongoDB ObjectId`,
+        `expected ${received} to be a valid UUID`,
     }
   },
 
