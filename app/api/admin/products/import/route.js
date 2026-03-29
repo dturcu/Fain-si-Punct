@@ -1,12 +1,9 @@
-import { connectDB } from '@/lib/db'
-import Product from '@/models/Product'
-import User from '@/models/User'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 
 export async function POST(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -24,7 +21,7 @@ export async function POST(request) {
     }
 
     // Check if user is admin
-    const user = await User.findById(decoded.userId)
+    const user = await getUserById(decoded.userId)
     if (!user || user.role !== 'admin') {
       return Response.json(
         { success: false, error: 'Admin access required' },
@@ -76,16 +73,38 @@ export async function POST(request) {
         }
 
         // Check if product with same SKU exists
-        const existingProduct = await Product.findOne({ sku: product.sku })
+        const { data: existingProduct } = await supabaseAdmin
+          .from('products')
+          .select('id')
+          .eq('sku', product.sku)
+          .single()
+
         if (existingProduct) {
           // Update existing product
-          await Product.findByIdAndUpdate(existingProduct._id, product)
+          const { error: updateError } = await supabaseAdmin
+            .from('products')
+            .update(product)
+            .eq('id', existingProduct.id)
+
+          if (updateError) {
+            errors.push(`Row ${i + 2}: ${updateError.message}`)
+            errorCount++
+          } else {
+            successCount++
+          }
         } else {
           // Create new product
-          await Product.create(product)
-        }
+          const { error: insertError } = await supabaseAdmin
+            .from('products')
+            .insert([product])
 
-        successCount++
+          if (insertError) {
+            errors.push(`Row ${i + 2}: ${insertError.message}`)
+            errorCount++
+          } else {
+            successCount++
+          }
+        }
       } catch (error) {
         errors.push(`Row ${i + 2}: ${error.message}`)
         errorCount++
