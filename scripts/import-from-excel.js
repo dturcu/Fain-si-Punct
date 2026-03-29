@@ -1,10 +1,17 @@
-import mongoose from 'mongoose'
+import { createClient } from '@supabase/supabase-js'
 import XLSX from 'xlsx'
 import fs from 'fs'
 import path from 'path'
-import Product from '../models/Product.js'
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing Supabase environment variables')
+  process.exit(1)
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 /**
  * Parse Excel file and import products
@@ -52,13 +59,23 @@ async function importFromExcel(filePath) {
       process.exit(1)
     }
 
-    // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI)
-    console.log('✅ Connected to MongoDB')
+    // Test Supabase connection
+    console.log('🔗 Connecting to Supabase...')
+    const { error: connError } = await supabase.from('products').select('id').limit(1)
+    if (connError) {
+      console.error('❌ Supabase connection error:', connError)
+      process.exit(1)
+    }
+    console.log('✅ Connected to Supabase')
 
     // Clear existing products
-    const deleteResult = await Product.deleteMany({})
-    console.log(`🗑️  Cleared ${deleteResult.deletedCount} existing products`)
+    console.log('🗑️  Clearing existing products...')
+    const { error: deleteError } = await supabase.from('products').delete().neq('id', null)
+    if (deleteError) {
+      console.error('❌ Error clearing products:', deleteError)
+      process.exit(1)
+    }
+    console.log('✅ Cleared existing products')
 
     // Transform Excel rows to product documents
     const products = rows.map((row, index) => {
@@ -99,23 +116,23 @@ async function importFromExcel(filePath) {
           image: images[0] || null,
           images: images,
           sku: row['Product SKU'] || row['Manifest SKU'] || `SKU-${index}`,
-          manifestSku: row['Manifest SKU'],
-          sourceName: row['Source.Name'],
+          manifest_sku: row['Manifest SKU'],
+          source_name: row['Source.Name'],
           asin: row['ASIN'],
           ean: row['EAN'],
           barcode: row['Barcode'],
           brand: row['Brand'] || 'Unknown Brand',
-          subCategory,
+          sub_category: subCategory,
           condition: row['Condition'] || 'New',
           grade: row['Grade'],
           weight: parseFloat(row['Unit Weight (kg)']) || null,
           currency: row['Currency'] || 'USD',
-          totalRrp: parseFloat(row['Total RRP']) || 0,
+          total_rrp: parseFloat(row['Total RRP']) || 0,
           tags: buildTags(row),
-          // Initialize these with defaults
-          avgRating: 0,
-          reviewCount: 0,
-          ratingDistribution: {
+          // Initialize rating fields with defaults
+          avg_rating: 0,
+          review_count: 0,
+          rating_distribution: {
             5: 0,
             4: 0,
             3: 0,
@@ -141,85 +158,102 @@ async function importFromExcel(filePath) {
       const batch = products.slice(i, i + batchSize)
 
       try {
-        const result = await Product.insertMany(batch, { ordered: false })
-        inserted += result.length
-        console.log(`📦 Inserted ${inserted}/${products.length} products`)
-      } catch (error) {
-        if (error.code === 11000) {
-          // Duplicate key error - try inserting one by one
-          console.warn(`⚠️  Some duplicates found in batch, attempting individual inserts...`)
+        const { data, error: insertError } = await supabase
+          .from('products')
+          .insert(batch)
+          .select()
+
+        if (insertError) {
+          console.error(`❌ Error inserting batch at ${i}:`, insertError)
+          // Try individual inserts as fallback
           for (const product of batch) {
             try {
-              await Product.create(product)
-              inserted++
-            } catch (err) {
-              if (err.code !== 11000) {
-                console.error(`Error inserting product ${product.sku}:`, err.message)
+              const { error: singleError } = await supabase
+                .from('products')
+                .insert([product])
+
+              if (!singleError) {
+                inserted++
               }
+            } catch (err) {
+              console.error(`Error inserting product ${product.sku}:`, err.message)
             }
           }
         } else {
-          console.error(`Error inserting batch:`, error.message)
+          inserted += batch.length
         }
+
+        console.log(`📦 Inserted ${inserted}/${products.length} products`)
+      } catch (error) {
+        console.error(`❌ Error inserting batch:`, error.message)
       }
     }
 
     console.log(`\n✅ Import completed successfully!`)
     console.log(`📊 Total products imported: ${inserted}`)
 
-    // Show statistics
-    const stats = await Product.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          avgPrice: { $avg: '$price' },
-          avgStock: { $avg: '$stock' },
-        },
-      },
-      { $sort: { count: -1 } },
-    ])
+    // Show statistics - category stats
+    const { data: categoryData, error: catError } = await supabase
+      .from('products')
+      .select('category, price, stock')
 
-    console.log('\n📈 Products by category:')
-    stats.forEach((stat) => {
-      console.log(
-        `  ${stat._id}: ${stat.count} products | Avg Price: $${stat.avgPrice.toFixed(2)} | Avg Stock: ${stat.avgStock.toFixed(0)}`
-      )
-    })
+    if (!catError && categoryData) {
+      const categoryStats = {}
+      categoryData.forEach((product) => {
+        if (!categoryStats[product.category]) {
+          categoryStats[product.category] = { count: 0, totalPrice: 0, totalStock: 0 }
+        }
+        categoryStats[product.category].count += 1
+        categoryStats[product.category].totalPrice += product.price || 0
+        categoryStats[product.category].totalStock += product.stock || 0
+      })
 
-    // Show brands
-    const brands = await Product.aggregate([
-      { $group: { _id: '$brand', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ])
+      console.log('\n📈 Products by category:')
+      Object.entries(categoryStats)
+        .sort(([, a], [, b]) => b.count - a.count)
+        .forEach(([category, stats]) => {
+          const avgPrice = (stats.totalPrice / stats.count).toFixed(2)
+          const avgStock = (stats.totalStock / stats.count).toFixed(0)
+          console.log(`  ${category}: ${stats.count} products | Avg Price: $${avgPrice} | Avg Stock: ${avgStock}`)
+        })
+    }
 
-    console.log('\n🏢 Top 10 brands:')
-    brands.forEach((brand) => {
-      console.log(`  ${brand._id}: ${brand.count} products`)
-    })
+    // Show top brands
+    const { data: brandData, error: brandError } = await supabase
+      .from('products')
+      .select('brand')
+
+    if (!brandError && brandData) {
+      const brandStats = {}
+      brandData.forEach((product) => {
+        const brand = product.brand || 'Unknown'
+        brandStats[brand] = (brandStats[brand] || 0) + 1
+      })
+
+      const topBrands = Object.entries(brandStats)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+
+      console.log('\n🏢 Top 10 brands:')
+      topBrands.forEach(([brand, count]) => {
+        console.log(`  ${brand}: ${count} products`)
+      })
+    }
 
     // Overall statistics
-    const totalStats = await Product.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalProducts: { $sum: 1 },
-          totalStock: { $sum: '$stock' },
-          avgPrice: { $avg: '$price' },
-          minPrice: { $min: '$price' },
-          maxPrice: { $max: '$price' },
-        },
-      },
-    ])
+    if (categoryData) {
+      const totalProducts = categoryData.length
+      const totalStock = categoryData.reduce((sum, p) => sum + (p.stock || 0), 0)
+      const prices = categoryData.map(p => p.price || 0).filter(p => p > 0)
+      const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
 
-    if (totalStats.length > 0) {
-      const stats = totalStats[0]
       console.log('\n📊 Overall statistics:')
-      console.log(`  Total Products: ${stats.totalProducts}`)
-      console.log(`  Total Stock: ${stats.totalStock}`)
-      console.log(`  Avg Price: $${stats.avgPrice.toFixed(2)}`)
-      console.log(`  Price Range: $${stats.minPrice.toFixed(2)} - $${stats.maxPrice.toFixed(2)}`)
+      console.log(`  Total Products: ${totalProducts}`)
+      console.log(`  Total Stock: ${totalStock}`)
+      console.log(`  Avg Price: $${avgPrice.toFixed(2)}`)
+      console.log(`  Price Range: $${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`)
     }
 
     process.exit(0)
