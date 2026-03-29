@@ -1,11 +1,8 @@
-import { connectDB } from '@/lib/db'
-import User from '@/models/User'
+import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 
 export async function GET(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -22,7 +19,7 @@ export async function GET(request) {
       )
     }
 
-    const user = await User.findById(decoded.userId)
+    const user = await getUserById(decoded.userId)
     if (!user) {
       return Response.json(
         { success: false, error: 'User not found' },
@@ -32,7 +29,7 @@ export async function GET(request) {
 
     return Response.json({
       success: true,
-      user: user.toJSON(),
+      user,
     })
   } catch (error) {
     return Response.json(

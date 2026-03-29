@@ -1,0 +1,53 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/products/:slug",
+      "destination": "/product/:slug",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "env": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "STRIPE_SECRET_KEY",
+    "NEXT_PUBLIC_STRIPE_PUBLIC_KEY",
+    "PAYPAL_CLIENT_ID",
+    "PAYPAL_CLIENT_SECRET",
+    "GMAIL_USER",
+    "GMAIL_APP_PASSWORD",
+    "JWT_SECRET",
+    "EMAIL_MAX_RETRIES"
+  ]
+}

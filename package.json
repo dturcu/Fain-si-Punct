@@ -1,13 +1,14 @@
 {
   "name": "ecommerce-platform",
-  "version": "1.0.0",
-  "description": "Scalable ecommerce platform with 15k products",
+  "version": "2.0.0",
+  "description": "Scalable ecommerce platform with Supabase + Vercel",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "node scripts/seed.js",
+    "import": "node scripts/import-from-excel.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -16,7 +17,8 @@
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "mongoose": "^8.0.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@upstash/redis": "^1.34.0",
     "axios": "^1.6.0",
     "zustand": "^4.4.0",
     "bcryptjs": "^2.4.3",
@@ -27,8 +29,6 @@
     "@paypal/checkout-server-sdk": "^1.0.1",
     "dotenv": "^16.4.0",
     "nodemailer": "^6.9.0",
-    "bull": "^4.11.0",
-    "redis": "^4.6.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
