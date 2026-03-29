@@ -1,9 +1,5 @@
-import { connectDB } from '@/lib/db'
-import Cart from '@/models/Cart'
-import Order from '@/models/Order'
-import Product from '@/models/Product'
-import EmailLog from '@/models/EmailLog'
-import User from '@/models/User'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getCartByUserId, clearCart, getUserById, createOrder } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
@@ -14,8 +10,6 @@ function generateOrderNumber() {
 
 export async function POST(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -34,63 +28,78 @@ export async function POST(request) {
 
     const { shippingAddress, customer } = await request.json()
 
-    const cart = await Cart.findOne({ userId: decoded.userId })
-    if (!cart || cart.items.length === 0) {
+    // Get user's cart
+    const cart = await getCartByUserId(decoded.userId)
+    if (!cart || !cart.items || cart.items.length === 0) {
       return Response.json(
         { success: false, error: 'Cart is empty' },
         { status: 400 }
       )
     }
 
-    // Update product stock
+    // Update product stock for each item
     for (const item of cart.items) {
-      await Product.findByIdAndUpdate(
-        item.productId,
-        { $inc: { stock: -item.quantity } }
-      )
+      const { data: product } = await supabaseAdmin
+        .from('products')
+        .select('stock')
+        .eq('id', item.productId)
+        .single()
+
+      if (product) {
+        await supabaseAdmin
+          .from('products')
+          .update({ stock: Math.max(0, product.stock - item.quantity) })
+          .eq('id', item.productId)
+      }
     }
 
     // Create order
-    const order = await Order.create({
-      orderNumber: generateOrderNumber(),
-      items: cart.items,
-      total: cart.total,
-      status: 'processing',
+    const orderNumber = generateOrderNumber()
+    const order = await createOrder(
+      decoded.userId,
+      cart.items,
+      cart.total,
       customer,
       shippingAddress,
-      userId: decoded.userId,
-    })
+      orderNumber
+    )
 
     // Get user for email preferences
-    const user = await User.findById(decoded.userId)
+    const user = await getUserById(decoded.userId)
 
-    // Queue order confirmation email if user has not opted out
+    // Queue order confirmation email if user hasn't opted out
     if (user?.emailPreferences?.orderConfirmation !== false) {
       try {
         const emailHtml = orderConfirmation(order)
         const subject = `Order Confirmation - ${order.orderNumber}`
 
-        // Add email job to queue for processing
         const emailJob = await addEmailJob({
           type: 'order_confirmation',
           recipient: customer.email,
           subject,
           html: emailHtml,
-          orderId: order._id.toString(),
-          userId: decoded.userId.toString(),
+          orderId: order.id,
+          userId: decoded.userId,
           metadata: {
             orderNumber: order.orderNumber,
             customerName: customer.name,
           },
         })
 
-        // Track the job ID on the order
-        order.emailJobs = order.emailJobs || []
-        order.emailJobs.push(emailJob.id)
-        order.lastEmailSentAt = new Date()
-        await order.save()
+        // Update order with email job tracking
+        await supabaseAdmin
+          .from('order_email_jobs')
+          .insert({
+            order_id: order.id,
+            job_id: emailJob.id,
+          })
 
-        console.log(`Email job queued for order ${order._id}:`, emailJob.id)
+        await supabaseAdmin
+          .from('orders')
+          .update({ last_email_sent_at: new Date().toISOString() })
+          .eq('id', order.id)
+
+        console.log(`Email job queued for order ${order.id}:`, emailJob.id)
       } catch (emailError) {
         console.error('Failed to queue order confirmation email:', emailError)
         // Don't fail the order creation if email queuing fails
@@ -98,13 +107,14 @@ export async function POST(request) {
     }
 
     // Clear cart
-    await Cart.deleteOne({ userId: decoded.userId })
+    await clearCart(decoded.userId)
 
     return Response.json(
       { success: true, data: order },
       { status: 201 }
     )
   } catch (error) {
+    console.error('Checkout error:', error)
     return Response.json(
       { success: false, error: error.message },
       { status: 500 }
