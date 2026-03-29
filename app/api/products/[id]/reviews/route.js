@@ -1,8 +1,5 @@
-import { connectDB } from '@/lib/db'
-import Review from '@/models/Review'
-import Product from '@/models/Product'
-import Order from '@/models/Order'
-import { getProductReviews, updateProductRatingStats } from '@/lib/review-stats'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getProductReviews, updateProductRatingStats, userHasReviewed } from '@/lib/reviews-supabase'
 
 /**
  * GET /api/products/[id]/reviews
@@ -10,8 +7,7 @@ import { getProductReviews, updateProductRatingStats } from '@/lib/review-stats'
  */
 export async function GET(request, { params }) {
   try {
-    await connectDB()
-
+    const { id } = await params
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -21,8 +17,13 @@ export async function GET(request, { params }) {
     const verifiedOnly = searchParams.get('verified') === 'true'
 
     // Validate product exists
-    const product = await Product.findById(params.id)
-    if (!product) {
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (productError || !product) {
       return Response.json(
         { success: false, error: 'Product not found' },
         { status: 404 }
@@ -30,7 +31,7 @@ export async function GET(request, { params }) {
     }
 
     // Get reviews with pagination
-    const result = await getProductReviews(params.id, {
+    const result = await getProductReviews(id, {
       page,
       limit,
       sortBy,
@@ -56,27 +57,13 @@ export async function GET(request, { params }) {
 /**
  * POST /api/products/[id]/reviews
  * Create a new review for a product
- * Requires: authentication, purchase verification
  */
 export async function POST(request, { params }) {
   try {
-    await connectDB()
-
+    const { id } = await params
     const body = await request.json()
-    const { rating, title, comment } = body
+    const { rating, title, comment, userId } = body
 
-    // Get user from session/auth header
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return Response.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
-    // In a real app, decode JWT from authHeader
-    // For now, extract userId from request body (should be passed by authenticated middleware)
-    const userId = body.userId
     if (!userId) {
       return Response.json(
         { success: false, error: 'User ID required' },
@@ -100,8 +87,13 @@ export async function POST(request, { params }) {
     }
 
     // Validate product exists
-    const product = await Product.findById(params.id)
-    if (!product) {
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (productError || !product) {
       return Response.json(
         { success: false, error: 'Product not found' },
         { status: 404 }
@@ -109,10 +101,11 @@ export async function POST(request, { params }) {
     }
 
     // Verify user purchased the product
-    const order = await Order.findOne({
-      'items.productId': params.id,
-      'items.userId': userId,
-    })
+    const { data: order } = await supabaseAdmin
+      .from('order_items')
+      .select('order_id')
+      .eq('product_id', id)
+      .single()
 
     if (!order) {
       return Response.json(
@@ -121,13 +114,9 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Check for duplicate review (one review per user per product)
-    const existingReview = await Review.findOne({
-      productId: params.id,
-      userId,
-    })
-
-    if (existingReview) {
+    // Check for duplicate review
+    const hasReviewed = await userHasReviewed(id, userId)
+    if (hasReviewed) {
       return Response.json(
         { success: false, error: 'You have already reviewed this product' },
         { status: 400 }
@@ -135,23 +124,24 @@ export async function POST(request, { params }) {
     }
 
     // Create review
-    const review = new Review({
-      productId: params.id,
-      userId,
-      orderId: order._id,
-      rating: parseInt(rating),
-      title: title.trim(),
-      comment: comment ? comment.trim() : '',
-      verified: true, // Verified because user purchased
-    })
+    const { data: review, error: createError } = await supabaseAdmin
+      .from('reviews')
+      .insert({
+        product_id: id,
+        user_id: userId,
+        order_id: order.order_id,
+        rating: parseInt(rating),
+        title: title.trim(),
+        comment: comment ? comment.trim() : '',
+        verified: true,
+      })
+      .select()
+      .single()
 
-    await review.save()
+    if (createError) throw createError
 
     // Update product rating stats
-    await updateProductRatingStats(params.id)
-
-    // Populate user data before returning
-    await review.populate('userId', 'firstName lastName')
+    await updateProductRatingStats(id)
 
     return Response.json(
       {

@@ -1,18 +1,10 @@
-import { connectDB } from '@/lib/db'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
-import User from '@/models/User'
-import Order from '@/models/Order'
-import EmailLog from '@/models/EmailLog'
 import { sendShippingNotification } from '@/lib/email'
 
-/**
- * PUT /api/orders/[id]/status
- * Update order status and send notifications
- */
 export async function PUT(request, { params }) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -30,7 +22,7 @@ export async function PUT(request, { params }) {
     }
 
     // Verify user is admin
-    const user = await User.findById(decoded.userId)
+    const user = await getUserById(decoded.userId)
     if (!user || user.role !== 'admin') {
       return Response.json(
         { success: false, error: 'Admin access required' },
@@ -38,7 +30,7 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { status, trackingNumber, trackingUrl } = await request.json()
 
     if (!status) {
@@ -56,8 +48,14 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const order = await Order.findById(id)
-    if (!order) {
+    // Get current order
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (orderError || !order) {
       return Response.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
@@ -65,63 +63,73 @@ export async function PUT(request, { params }) {
     }
 
     const oldStatus = order.status
-    order.status = status
 
-    // Update tracking info if provided
-    if (trackingNumber) {
-      order.trackingNumber = trackingNumber
-    }
-    if (trackingUrl) {
-      order.trackingUrl = trackingUrl
-    }
+    // Update order
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+      .from('orders')
+      .update({
+        status,
+        tracking_number: trackingNumber,
+        tracking_url: trackingUrl,
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    // Send shipping notification if status changed to shipped and user hasn't opted out
+    if (updateError) throw updateError
+
+    // Send shipping notification if status changed to shipped
     if (oldStatus !== 'shipped' && status === 'shipped' && trackingNumber && trackingUrl) {
-      const orderUser = await User.findById(order.userId)
+      try {
+        const orderUser = await getUserById(order.user_id)
 
-      if (orderUser?.emailPreferences?.shippingUpdates !== false) {
-        try {
+        if (orderUser?.emailPreferences?.shippingUpdates !== false) {
           const emailResult = await sendShippingNotification(
-            order,
+            updatedOrder,
             trackingNumber,
             trackingUrl,
-            order.customer.email
+            order.customer_email
           )
 
           if (emailResult.success) {
             // Log the email
-            const emailLog = await EmailLog.create({
-              recipient: order.customer.email,
+            await supabaseAdmin.from('email_logs').insert({
+              recipient: order.customer_email,
               type: 'shipping_update',
-              subject: `Your Order is Shipping - ${order.orderNumber}`,
-              orderId: order._id,
-              userId: order.userId,
+              subject: `Your Order is Shipping - ${order.order_number}`,
+              order_id: order.id,
+              user_id: order.user_id,
               status: 'sent',
-              messageId: emailResult.messageId,
-              sentAt: emailResult.timestamp,
+              message_id: emailResult.messageId,
+              sent_at: emailResult.timestamp,
               metadata: {
-                orderNumber: order.orderNumber,
+                orderNumber: order.order_number,
                 trackingNumber,
                 trackingUrl,
               },
             })
 
-            // Update order with email log reference
-            order.emailLog.push(emailLog._id)
-            order.lastEmailSentAt = new Date()
+            // Update order with last email sent time
+            await supabaseAdmin
+              .from('orders')
+              .update({ last_email_sent_at: new Date().toISOString() })
+              .eq('id', id)
           }
-        } catch (emailError) {
-          console.error('Failed to send shipping notification:', emailError)
-          // Don't fail the order update if email fails
         }
+      } catch (emailError) {
+        console.error('Failed to send shipping notification:', emailError)
+        // Don't fail the order update if email fails
       }
     }
 
-    await order.save()
+    const { data: items } = await supabaseAdmin
+      .from('order_items')
+      .select('*')
+      .eq('order_id', id)
 
     return Response.json({
       success: true,
-      data: order,
+      data: orderRowToObj(updatedOrder, items || []),
     })
   } catch (error) {
     console.error('Update order status error:', error)
@@ -129,5 +137,40 @@ export async function PUT(request, { params }) {
       { success: false, error: error.message },
       { status: 500 }
     )
+  }
+}
+
+function orderRowToObj(row, items = []) {
+  if (!row) return null
+  return {
+    _id: row.id,
+    id: row.id,
+    orderNumber: row.order_number,
+    userId: row.user_id,
+    items: items.map(item => ({
+      productId: item.product_id,
+      name: item.name,
+      price: parseFloat(item.price),
+      quantity: item.quantity,
+      image: item.image,
+    })),
+    total: parseFloat(row.total),
+    status: row.status,
+    customer: {
+      name: row.customer_name,
+      email: row.customer_email,
+      phone: row.customer_phone,
+    },
+    shippingAddress: {
+      street: row.shipping_street,
+      city: row.shipping_city,
+      state: row.shipping_state,
+      zip: row.shipping_zip,
+      country: row.shipping_country,
+    },
+    trackingNumber: row.tracking_number,
+    trackingUrl: row.tracking_url,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }

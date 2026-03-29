@@ -1,16 +1,13 @@
-import { connectDB } from '@/lib/db'
-import Review from '@/models/Review'
-import { toggleHelpfulVote } from '@/lib/review-stats'
+import { supabaseAdmin } from '@/lib/supabase'
+import { toggleHelpfulVote } from '@/lib/reviews-supabase'
 
 /**
  * PATCH /api/reviews/[id]/helpful
  * Toggle helpful/unhelpful vote on a review
- * Prevents duplicate votes from same user
  */
 export async function PATCH(request, { params }) {
   try {
-    await connectDB()
-
+    const { id } = await params
     const body = await request.json()
     const { userId, voteType } = body
 
@@ -29,14 +26,13 @@ export async function PATCH(request, { params }) {
     }
 
     // Toggle the helpful vote
-    const review = await toggleHelpfulVote(params.id, userId, voteType)
+    const review = await toggleHelpfulVote(id, userId, voteType)
 
     return Response.json({
       success: true,
       data: {
-        reviewId: review._id,
+        reviewId: review.id,
         helpful: review.helpful,
-        voteCount: review.helpfulVotes.length,
       },
       message: 'Vote recorded successfully',
     })
@@ -62,31 +58,25 @@ export async function PATCH(request, { params }) {
  */
 export async function GET(request, { params }) {
   try {
-    await connectDB()
+    const { id } = await params
 
-    const review = await Review.findById(params.id).select('helpful helpfulVotes')
+    const { data: votes, error } = await supabaseAdmin
+      .from('helpful_votes')
+      .select('vote_type')
+      .eq('review_id', id)
 
-    if (!review) {
-      return Response.json(
-        { success: false, error: 'Review not found' },
-        { status: 404 }
-      )
-    }
+    if (error) throw error
 
-    const helpfulCount = review.helpfulVotes.filter(
-      (v) => v.type === 'helpful'
-    ).length
-    const unhelpfulCount = review.helpfulVotes.filter(
-      (v) => v.type === 'unhelpful'
-    ).length
+    const helpfulCount = (votes || []).filter(v => v.vote_type === 'helpful').length
+    const unhelpfulCount = (votes || []).filter(v => v.vote_type === 'unhelpful').length
 
     return Response.json({
       success: true,
       data: {
-        reviewId: review._id,
+        reviewId: id,
         helpful: helpfulCount,
         unhelpful: unhelpfulCount,
-        total: review.helpfulVotes.length,
+        total: votes?.length || 0,
       },
     })
   } catch (error) {

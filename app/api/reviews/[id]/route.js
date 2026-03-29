@@ -1,6 +1,39 @@
-import { connectDB } from '@/lib/db'
-import Review from '@/models/Review'
-import { updateProductRatingStats } from '@/lib/review-stats'
+import { supabaseAdmin } from '@/lib/supabase'
+import { updateProductRatingStats } from '@/lib/reviews-supabase'
+
+/**
+ * GET /api/reviews/[id]
+ * Get a single review
+ */
+export async function GET(request, { params }) {
+  try {
+    const { id } = await params
+
+    const { data: review, error } = await supabaseAdmin
+      .from('reviews')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !review) {
+      return Response.json(
+        { success: false, error: 'Review not found' },
+        { status: 404 }
+      )
+    }
+
+    return Response.json({
+      success: true,
+      data: review,
+    })
+  } catch (error) {
+    console.error('Error fetching review:', error)
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    )
+  }
+}
 
 /**
  * PUT /api/reviews/[id]
@@ -8,8 +41,7 @@ import { updateProductRatingStats } from '@/lib/review-stats'
  */
 export async function PUT(request, { params }) {
   try {
-    await connectDB()
-
+    const { id } = await params
     const body = await request.json()
     const { rating, title, comment, userId } = body
 
@@ -21,9 +53,13 @@ export async function PUT(request, { params }) {
     }
 
     // Find review
-    const review = await Review.findById(params.id)
+    const { data: review, error: fetchError } = await supabaseAdmin
+      .from('reviews')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!review) {
+    if (fetchError || !review) {
       return Response.json(
         { success: false, error: 'Review not found' },
         { status: 404 }
@@ -31,7 +67,7 @@ export async function PUT(request, { params }) {
     }
 
     // Check ownership
-    if (review.userId.toString() !== userId) {
+    if (review.user_id !== userId) {
       return Response.json(
         { success: false, error: 'Unauthorized: only review owner can update' },
         { status: 403 }
@@ -54,21 +90,26 @@ export async function PUT(request, { params }) {
     }
 
     // Update review
-    if (rating !== undefined) review.rating = rating
-    if (title !== undefined) review.title = title.trim()
-    if (comment !== undefined) review.comment = comment ? comment.trim() : ''
+    const updateData = {}
+    if (rating !== undefined) updateData.rating = rating
+    if (title !== undefined) updateData.title = title.trim()
+    if (comment !== undefined) updateData.comment = comment ? comment.trim() : ''
 
-    await review.save()
+    const { data: updatedReview, error: updateError } = await supabaseAdmin
+      .from('reviews')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
 
     // Update product rating stats
-    await updateProductRatingStats(review.productId)
-
-    // Populate user data
-    await review.populate('userId', 'firstName lastName')
+    await updateProductRatingStats(review.product_id)
 
     return Response.json({
       success: true,
-      data: review,
+      data: updatedReview,
       message: 'Review updated successfully',
     })
   } catch (error) {
@@ -86,8 +127,7 @@ export async function PUT(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
-    await connectDB()
-
+    const { id } = await params
     const body = await request.json()
     const { userId, isAdmin } = body
 
@@ -99,9 +139,13 @@ export async function DELETE(request, { params }) {
     }
 
     // Find review
-    const review = await Review.findById(params.id)
+    const { data: review, error: fetchError } = await supabaseAdmin
+      .from('reviews')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!review) {
+    if (fetchError || !review) {
       return Response.json(
         { success: false, error: 'Review not found' },
         { status: 404 }
@@ -109,7 +153,7 @@ export async function DELETE(request, { params }) {
     }
 
     // Check authorization
-    const isOwner = review.userId.toString() === userId
+    const isOwner = review.user_id === userId
     if (!isOwner && !isAdmin) {
       return Response.json(
         { success: false, error: 'Unauthorized: only owner or admin can delete' },
@@ -117,10 +161,21 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const productId = review.productId
+    const productId = review.product_id
+
+    // Delete helpful votes first (cascading)
+    await supabaseAdmin
+      .from('helpful_votes')
+      .delete()
+      .eq('review_id', id)
 
     // Delete review
-    await Review.findByIdAndDelete(params.id)
+    const { error: deleteError } = await supabaseAdmin
+      .from('reviews')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) throw deleteError
 
     // Update product rating stats
     await updateProductRatingStats(productId)
@@ -131,39 +186,6 @@ export async function DELETE(request, { params }) {
     })
   } catch (error) {
     console.error('Error deleting review:', error)
-    return Response.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * GET /api/reviews/[id]
- * Get a single review
- */
-export async function GET(request, { params }) {
-  try {
-    await connectDB()
-
-    const review = await Review.findById(params.id).populate(
-      'userId',
-      'firstName lastName'
-    )
-
-    if (!review) {
-      return Response.json(
-        { success: false, error: 'Review not found' },
-        { status: 404 }
-      )
-    }
-
-    return Response.json({
-      success: true,
-      data: review,
-    })
-  } catch (error) {
-    console.error('Error fetching review:', error)
     return Response.json(
       { success: false, error: error.message },
       { status: 500 }

@@ -1,37 +1,28 @@
 import { NextResponse } from 'next/server'
-import Order from '@/models/Order'
-import Payment from '@/models/Payment'
+import { supabaseAdmin } from '@/lib/supabase'
 import { verifyPayPalIPN } from '@/lib/paypal'
 
 /**
  * POST /api/webhooks/paypal
  * Handle PayPal webhook events (IPN - Instant Payment Notification)
- *
- * Supported events:
- * - PAYMENT.CAPTURE.COMPLETED
- * - PAYMENT.CAPTURE.DENIED
- * - CHECKOUT.ORDER.APPROVED
  */
 export async function POST(request) {
   try {
     const body = await request.text()
-    const headers = request.headers
-
-    console.log('PayPal webhook received')
-
-    // Parse the body
     const params = new URLSearchParams(body)
     const event = params.get('event_type')
 
-    // Verify webhook authenticity
-    // TODO: In production, verify webhook signature using PayPal SDK:
-    // const verified = await verifyPayPalIPN(body, headers)
-    // if (!verified) return NextResponse.json({ received: true }, { status: 200 })
-    // For now, rely on idempotent payment ID matching (externalId)
+    // Verify webhook signature
+    const isVerified = await verifyPayPalIPN(body)
+    if (!isVerified) {
+      console.warn('PayPal webhook verification failed')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    console.log('PayPal webhook received:', event)
 
     // Handle different event types
     if (event === 'PAYMENT.CAPTURE.COMPLETED') {
-      const paymentId = params.get('resource_id')
       await handlePaymentCaptureCompleted(params)
     } else if (event === 'PAYMENT.CAPTURE.DENIED') {
       await handlePaymentCaptureDenied(params)
@@ -51,9 +42,6 @@ export async function POST(request) {
   }
 }
 
-/**
- * Handle PAYMENT.CAPTURE.COMPLETED event
- */
 async function handlePaymentCaptureCompleted(params) {
   try {
     const captureId = params.get('resource_capture_id')
@@ -64,15 +52,15 @@ async function handlePaymentCaptureCompleted(params) {
     console.log('Processing PAYMENT.CAPTURE.COMPLETED:', captureId)
 
     // Find payment by exact capture ID match (unique index)
-    // This is idempotent - matches by PayPal's external capture ID
-    const payment = await Payment.findOne({
-      externalId: captureId,
-      type: 'paypal',
-    })
+    const { data: payment } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .eq('external_id', captureId)
+      .eq('type', 'paypal')
+      .single()
 
     if (!payment) {
       console.warn('Payment not found for capture ID:', captureId)
-      console.warn('This could be a stale webhook or payment created on another system')
       return
     }
 
@@ -82,38 +70,48 @@ async function handlePaymentCaptureCompleted(params) {
     }
 
     // Update payment with succeeded status
-    payment.status = 'succeeded'
-    payment.metadata = {
-      ...payment.metadata,
-      captureStatus: status,
-      webhookVerifiedAt: new Date().toISOString(),
-    }
-    payment.webhookVerified = true
-    await payment.save()
+    await supabaseAdmin
+      .from('payments')
+      .update({
+        status: 'succeeded',
+        metadata: {
+          ...payment.metadata,
+          captureStatus: status,
+          webhookVerifiedAt: new Date().toISOString(),
+        },
+        webhook_verified: true,
+      })
+      .eq('id', payment.id)
 
     // Update order status (only if not already paid)
-    const order = await Order.findById(payment.orderId)
+    const { data: order } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', payment.order_id)
+      .single()
+
     if (order) {
-      if (order.paymentStatus !== 'paid') {
-        order.paymentStatus = 'paid'
-        order.paidAt = new Date()
-        order.status = 'processing'
-        await order.save()
-        console.log('Order updated for PayPal payment:', order._id)
+      if (order.payment_status !== 'paid') {
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
+            status: 'processing',
+          })
+          .eq('id', order.id)
+        console.log('Order updated for PayPal payment:', order.id)
       } else {
-        console.log('Order already marked as paid (idempotent):', order._id)
+        console.log('Order already marked as paid (idempotent):', order.id)
       }
     } else {
-      console.error('Order not found for payment:', payment.orderId)
+      console.error('Order not found for payment:', payment.order_id)
     }
   } catch (error) {
     console.error('Error handling PAYMENT.CAPTURE.COMPLETED:', error)
   }
 }
 
-/**
- * Handle PAYMENT.CAPTURE.DENIED event
- */
 async function handlePaymentCaptureDenied(params) {
   try {
     const captureId = params.get('resource_capture_id')
@@ -121,12 +119,13 @@ async function handlePaymentCaptureDenied(params) {
 
     console.log('Processing PAYMENT.CAPTURE.DENIED:', captureId)
 
-    // Find payment by exact capture ID match (unique index)
-    // Prevents issues with multiple pending payments
-    const payment = await Payment.findOne({
-      externalId: captureId,
-      type: 'paypal',
-    })
+    // Find payment by exact capture ID match
+    const { data: payment } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .eq('external_id', captureId)
+      .eq('type', 'paypal')
+      .single()
 
     if (!payment) {
       console.warn('Payment not found for denied capture ID:', captureId)
@@ -140,25 +139,36 @@ async function handlePaymentCaptureDenied(params) {
     }
 
     // Update payment with failed status
-    payment.status = 'failed'
-    payment.errorMessage = `Payment denied: ${reason}`
-    payment.metadata = {
-      ...payment.metadata,
-      denialReason: reason,
-      webhookVerifiedAt: new Date().toISOString(),
-    }
-    payment.webhookVerified = true
-    await payment.save()
+    await supabaseAdmin
+      .from('payments')
+      .update({
+        status: 'failed',
+        error_message: `Payment denied: ${reason}`,
+        metadata: {
+          ...payment.metadata,
+          denialReason: reason,
+          webhookVerifiedAt: new Date().toISOString(),
+        },
+        webhook_verified: true,
+      })
+      .eq('id', payment.id)
 
     // Update order status
-    const order = await Order.findById(payment.orderId)
+    const { data: order } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', payment.order_id)
+      .single()
+
     if (order) {
-      if (order.paymentStatus !== 'failed') {
-        order.paymentStatus = 'failed'
-        await order.save()
-        console.log('Order payment marked as failed:', order._id)
+      if (order.payment_status !== 'failed') {
+        await supabaseAdmin
+          .from('orders')
+          .update({ payment_status: 'failed' })
+          .eq('id', order.id)
+        console.log('Order payment marked as failed:', order.id)
       } else {
-        console.log('Order already marked as failed (idempotent):', order._id)
+        console.log('Order already marked as failed (idempotent):', order.id)
       }
     }
   } catch (error) {

@@ -1,17 +1,9 @@
-import { connectDB } from '@/lib/db'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
-import User from '@/models/User'
-import EmailLog from '@/models/EmailLog'
 
-/**
- * GET /api/emails/logs
- * View email history with filtering
- * Query params: type, status, orderId, userId, recipient, limit, page
- */
 export async function GET(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -29,7 +21,7 @@ export async function GET(request) {
     }
 
     // Verify user is admin
-    const user = await User.findById(decoded.userId)
+    const user = await getUserById(decoded.userId)
     if (!user || user.role !== 'admin') {
       return Response.json(
         { success: false, error: 'Admin access required' },
@@ -47,34 +39,31 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit') || '50', 10)
     const page = parseInt(searchParams.get('page') || '1', 10)
 
-    // Build filter
-    const filter = {}
-    if (type) filter.type = type
-    if (status) filter.status = status
-    if (orderId) filter.orderId = orderId
-    if (userId) filter.userId = userId
-    if (recipient) filter.recipient = new RegExp(recipient, 'i')
+    let query = supabaseAdmin.from('email_logs').select('*', { count: 'exact' })
 
-    // Get total count
-    const total = await EmailLog.countDocuments(filter)
+    if (type) query = query.eq('type', type)
+    if (status) query = query.eq('status', status)
+    if (orderId) query = query.eq('order_id', orderId)
+    if (userId) query = query.eq('user_id', userId)
+    if (recipient) query = query.ilike('recipient', `%${recipient}%`)
 
-    // Get paginated results
     const skip = (page - 1) * limit
-    const logs = await EmailLog.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
+
+    const { data: logs, count, error } = await query
+      .order('created_at', { ascending: false })
+      .range(skip, skip + limit - 1)
+
+    if (error) throw error
 
     return Response.json({
       success: true,
       data: {
-        logs,
+        logs: logs || [],
         pagination: {
-          total,
+          total: count || 0,
           page,
           limit,
-          pages: Math.ceil(total / limit),
+          pages: Math.ceil((count || 0) / limit),
         },
       },
     })

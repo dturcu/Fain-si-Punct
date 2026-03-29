@@ -1,28 +1,14 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import mongoose from 'mongoose'
-import Order from '@/models/Order'
-import Payment from '@/models/Payment'
-import {
-  createPaymentIntent,
-  getStripePublicKey,
-} from '@/lib/stripe'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getOrderById } from '@/lib/supabase-queries'
+import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
 import { verifyAuth } from '@/lib/auth'
 
 /**
  * POST /api/payments/create-intent
  * Create a payment intent for either Stripe or PayPal
- *
- * Request body:
- * {
- *   orderId: string,
- *   method: 'stripe' | 'paypal'
- * }
- *
- * Response:
- * Stripe: { clientSecret, paymentIntentId, publicKey }
- * PayPal: { approvalUrl, paypalOrderId }
  */
 export async function POST(request) {
   try {
@@ -31,50 +17,32 @@ export async function POST(request) {
     const auth = await verifyAuth(headersList)
 
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { orderId, method } = await request.json()
 
-    // Validate input
     if (!orderId || !method) {
-      return NextResponse.json(
-        { error: 'Missing orderId or method' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing orderId or method' }, { status: 400 })
     }
 
     if (!['stripe', 'paypal'].includes(method)) {
-      return NextResponse.json(
-        { error: 'Invalid payment method' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
     }
 
-    // Verify order exists and belongs to user
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return NextResponse.json(
-        { error: 'Invalid order ID' },
-        { status: 400 }
-      )
-    }
-
-    const order = await Order.findById(orderId)
+    // Verify order exists
+    const order = await getOrderById(orderId)
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     // Check if order already has a processing payment
-    const existingPayment = await Payment.findOne({
-      orderId: order._id,
-      status: 'processing',
-    })
+    const { data: existingPayment } = await supabaseAdmin
+      .from('payments')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('status', 'processing')
+      .single()
 
     if (existingPayment) {
       return NextResponse.json(
@@ -97,9 +65,6 @@ export async function POST(request) {
   }
 }
 
-/**
- * Handle Stripe payment intent creation
- */
 async function handleStripePayment(order, auth) {
   try {
     const amountInCents = Math.round(order.total * 100)
@@ -107,40 +72,43 @@ async function handleStripePayment(order, auth) {
     const result = await createPaymentIntent({
       amount: amountInCents,
       currency: 'usd',
-      orderId: order._id,
+      orderId: order.id,
       metadata: {
         userId: auth.userId,
       },
     })
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
     // Create payment record in database
-    const payment = new Payment({
-      orderId: order._id,
-      type: 'stripe',
-      externalId: result.id,
-      amount: amountInCents,
-      currency: 'USD',
-      status: 'pending',
-      paymentMethod: 'card',
-      metadata: {
-        clientSecret: result.clientSecret,
-      },
-    })
+    const { data: payment, error } = await supabaseAdmin
+      .from('payments')
+      .insert({
+        order_id: order.id,
+        type: 'stripe',
+        external_id: result.id,
+        amount: amountInCents,
+        currency: 'USD',
+        status: 'pending',
+        payment_method: 'card',
+        metadata: { clientSecret: result.clientSecret },
+      })
+      .select()
+      .single()
 
-    await payment.save()
+    if (error) throw error
 
     // Update order with payment reference
-    order.paymentId = payment._id
-    order.paymentMethod = 'stripe'
-    order.paymentStatus = 'processing'
-    await order.save()
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        payment_id: payment.id,
+        payment_method: 'stripe',
+        payment_status: 'processing',
+      })
+      .eq('id', order.id)
 
     return NextResponse.json(
       {
@@ -159,45 +127,47 @@ async function handleStripePayment(order, auth) {
   }
 }
 
-/**
- * Handle PayPal order creation
- */
 async function handlePayPalPayment(order, auth) {
   try {
     const result = await createPayPalOrder({
       amount: Math.round(order.total * 100),
       currency: 'USD',
-      orderId: order._id,
+      orderId: order.id,
       items: order.items,
       returnUrl: `${process.env.NEXT_PUBLIC_API_URL}/payments/paypal/return`,
       cancelUrl: `${process.env.NEXT_PUBLIC_API_URL}/checkout?error=cancelled`,
     })
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
     // Create payment record in database
-    const payment = new Payment({
-      orderId: order._id,
-      type: 'paypal',
-      externalId: result.id,
-      amount: Math.round(order.total * 100),
-      currency: 'USD',
-      status: 'pending',
-      paymentMethod: 'paypal',
-    })
+    const { data: payment, error } = await supabaseAdmin
+      .from('payments')
+      .insert({
+        order_id: order.id,
+        type: 'paypal',
+        external_id: result.id,
+        amount: Math.round(order.total * 100),
+        currency: 'USD',
+        status: 'pending',
+        payment_method: 'paypal',
+      })
+      .select()
+      .single()
 
-    await payment.save()
+    if (error) throw error
 
     // Update order with payment reference
-    order.paymentId = payment._id
-    order.paymentMethod = 'paypal'
-    order.paymentStatus = 'processing'
-    await order.save()
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        payment_id: payment.id,
+        payment_method: 'paypal',
+        payment_status: 'processing',
+      })
+      .eq('id', order.id)
 
     return NextResponse.json(
       {

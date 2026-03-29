@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import mongoose from 'mongoose'
-import Order from '@/models/Order'
-import Payment from '@/models/Payment'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getOrderById } from '@/lib/supabase-queries'
 import { getPaymentIntent } from '@/lib/stripe'
 import { capturePayPalOrder } from '@/lib/paypal'
 import { verifyAuth } from '@/lib/auth'
@@ -10,22 +9,6 @@ import { verifyAuth } from '@/lib/auth'
 /**
  * POST /api/payments/confirm
  * Confirm a payment and update order status
- *
- * Request body:
- * {
- *   orderId: string,
- *   paymentMethod: 'stripe' | 'paypal',
- *   paymentIntentId?: string (for Stripe)
- *   paypalOrderId?: string (for PayPal)
- * }
- *
- * Response:
- * {
- *   success: boolean,
- *   orderId: string,
- *   paymentStatus: string,
- *   message: string
- * }
  */
 export async function POST(request) {
   try {
@@ -34,16 +17,11 @@ export async function POST(request) {
     const auth = await verifyAuth(headersList)
 
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { orderId, paymentMethod, paymentIntentId, paypalOrderId } =
-      await request.json()
+    const { orderId, paymentMethod, paymentIntentId, paypalOrderId } = await request.json()
 
-    // Validate input
     if (!orderId || !paymentMethod) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -51,19 +29,9 @@ export async function POST(request) {
       )
     }
 
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return NextResponse.json(
-        { error: 'Invalid order ID' },
-        { status: 400 }
-      )
-    }
-
-    const order = await Order.findById(orderId)
+    const order = await getOrderById(orderId)
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     if (paymentMethod === 'stripe') {
@@ -71,10 +39,7 @@ export async function POST(request) {
     } else if (paymentMethod === 'paypal') {
       return confirmPayPalPayment(order, paypalOrderId)
     } else {
-      return NextResponse.json(
-        { error: 'Invalid payment method' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
     }
   } catch (error) {
     console.error('Error confirming payment:', error)
@@ -85,70 +50,66 @@ export async function POST(request) {
   }
 }
 
-/**
- * Confirm Stripe payment
- */
 async function confirmStripePayment(order, paymentIntentId) {
   try {
     if (!paymentIntentId) {
-      return NextResponse.json(
-        { error: 'Missing payment intent ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing payment intent ID' }, { status: 400 })
     }
 
     // Get payment intent status from Stripe
     const result = await getPaymentIntent(paymentIntentId)
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
     // Update payment record
-    const payment = await Payment.findOneAndUpdate(
-      { externalId: paymentIntentId },
-      {
-        status: result.status === 'succeeded' ? 'succeeded' : 'failed',
-        webhookVerified: true,
-        updatedAt: new Date(),
-      },
-      { new: true }
-    )
+    const { data: payment } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .eq('external_id', paymentIntentId)
+      .single()
 
-    if (!payment) {
-      // Payment record doesn't exist, create it
-      await Payment.create({
-        orderId: order._id,
+    if (payment) {
+      await supabaseAdmin
+        .from('payments')
+        .update({
+          status: result.status === 'succeeded' ? 'succeeded' : 'failed',
+          webhook_verified: true,
+        })
+        .eq('id', payment.id)
+    } else {
+      // Create payment record if doesn't exist
+      await supabaseAdmin.from('payments').insert({
+        order_id: order.id,
         type: 'stripe',
-        externalId: paymentIntentId,
+        external_id: paymentIntentId,
         amount: result.amount,
         currency: result.currency.toUpperCase(),
         status: result.status === 'succeeded' ? 'succeeded' : 'failed',
-        paymentMethod: 'card',
-        webhookVerified: true,
+        payment_method: 'card',
+        webhook_verified: true,
       })
     }
 
     // Update order based on payment status
+    const updateData = {}
     if (result.status === 'succeeded') {
-      order.paymentStatus = 'paid'
-      order.paidAt = new Date()
-      order.status = 'processing'
+      updateData.payment_status = 'paid'
+      updateData.paid_at = new Date().toISOString()
+      updateData.status = 'processing'
     } else if (result.status === 'processing') {
-      order.paymentStatus = 'processing'
+      updateData.payment_status = 'processing'
     } else {
-      order.paymentStatus = 'failed'
+      updateData.payment_status = 'failed'
     }
 
-    await order.save()
+    await supabaseAdmin.from('orders').update(updateData).eq('id', order.id)
 
     return NextResponse.json({
       success: result.status === 'succeeded',
-      orderId: order._id,
-      paymentStatus: order.paymentStatus,
+      orderId: order.id,
+      paymentStatus: updateData.payment_status || 'processing',
       message:
         result.status === 'succeeded'
           ? 'Payment confirmed successfully'
@@ -163,16 +124,10 @@ async function confirmStripePayment(order, paymentIntentId) {
   }
 }
 
-/**
- * Confirm PayPal payment
- */
 async function confirmPayPalPayment(order, paypalOrderId) {
   try {
     if (!paypalOrderId) {
-      return NextResponse.json(
-        { error: 'Missing PayPal order ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing PayPal order ID' }, { status: 400 })
     }
 
     // Capture the PayPal order
@@ -180,69 +135,57 @@ async function confirmPayPalPayment(order, paypalOrderId) {
 
     if (!result.success) {
       // Update payment status as failed
-      await Payment.findOneAndUpdate(
-        { externalId: paypalOrderId },
-        {
+      await supabaseAdmin
+        .from('payments')
+        .update({
           status: 'failed',
-          errorMessage: result.error,
-          updatedAt: new Date(),
-        }
-      )
+          error_message: result.error,
+        })
+        .eq('external_id', paypalOrderId)
 
-      order.paymentStatus = 'failed'
-      await order.save()
+      await supabaseAdmin
+        .from('orders')
+        .update({ payment_status: 'failed' })
+        .eq('id', order.id)
 
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
     // Extract capture ID from response
-    const captureId =
-      result.purchaseUnits[0]?.payments?.captures[0]?.id
+    const captureId = result.purchaseUnits?.[0]?.payments?.captures?.[0]?.id
 
     // Update payment record
-    const payment = await Payment.findOneAndUpdate(
-      { externalId: paypalOrderId },
-      {
+    await supabaseAdmin
+      .from('payments')
+      .update({
         status: 'succeeded',
-        paymentMethod: 'paypal',
+        payment_method: 'paypal',
         metadata: {
           captureId,
           payerId: result.payer?.payer_info?.payer_id,
         },
-        webhookVerified: true,
-        updatedAt: new Date(),
-      },
-      { new: true }
-    )
+        webhook_verified: true,
+      })
+      .eq('external_id', paypalOrderId)
 
     // Update order
-    order.paymentStatus = 'paid'
-    order.paidAt = new Date()
-    order.status = 'processing'
-    await order.save()
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        status: 'processing',
+      })
+      .eq('id', order.id)
 
     return NextResponse.json({
       success: true,
-      orderId: order._id,
+      orderId: order.id,
       paymentStatus: 'paid',
       message: 'PayPal payment captured successfully',
     })
   } catch (error) {
     console.error('Error confirming PayPal payment:', error)
-
-    // Try to update the payment record
-    await Payment.findOneAndUpdate(
-      { externalId: paypalOrderId },
-      {
-        status: 'failed',
-        errorMessage: error.message,
-        updatedAt: new Date(),
-      }
-    ).catch(() => {})
-
     return NextResponse.json(
       { error: 'Failed to confirm PayPal payment' },
       { status: 500 }

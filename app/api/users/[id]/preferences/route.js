@@ -1,16 +1,10 @@
-import { connectDB } from '@/lib/db'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById, updateUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
-import User from '@/models/User'
 import crypto from 'crypto'
 
-/**
- * GET /api/users/[id]/preferences
- * Get user email preferences
- */
 export async function GET(request, { params }) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -27,11 +21,11 @@ export async function GET(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Users can only view their own preferences unless they're admin
     if (decoded.userId !== id) {
-      const user = await User.findById(decoded.userId)
+      const user = await getUserById(decoded.userId)
       if (!user || user.role !== 'admin') {
         return Response.json(
           { success: false, error: 'Access denied' },
@@ -40,7 +34,7 @@ export async function GET(request, { params }) {
       }
     }
 
-    const user = await User.findById(id)
+    const user = await getUserById(id)
     if (!user) {
       return Response.json(
         { success: false, error: 'User not found' },
@@ -61,14 +55,8 @@ export async function GET(request, { params }) {
   }
 }
 
-/**
- * PUT /api/users/[id]/preferences
- * Update user email preferences
- */
 export async function PUT(request, { params }) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -85,11 +73,11 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Users can only update their own preferences unless they're admin
     if (decoded.userId !== id) {
-      const user = await User.findById(decoded.userId)
+      const user = await getUserById(decoded.userId)
       if (!user || user.role !== 'admin') {
         return Response.json(
           { success: false, error: 'Access denied' },
@@ -100,7 +88,7 @@ export async function PUT(request, { params }) {
 
     const { orderConfirmation, shippingUpdates, promotions, newsletter } = await request.json()
 
-    const user = await User.findById(id)
+    const user = await getUserById(id)
     if (!user) {
       return Response.json(
         { success: false, error: 'User not found' },
@@ -109,24 +97,26 @@ export async function PUT(request, { params }) {
     }
 
     // Update preferences
-    user.emailPreferences = {
-      orderConfirmation: orderConfirmation !== undefined ? orderConfirmation : user.emailPreferences?.orderConfirmation ?? true,
-      shippingUpdates: shippingUpdates !== undefined ? shippingUpdates : user.emailPreferences?.shippingUpdates ?? true,
-      promotions: promotions !== undefined ? promotions : user.emailPreferences?.promotions ?? true,
-      newsletter: newsletter !== undefined ? newsletter : user.emailPreferences?.newsletter ?? true,
-      updatedAt: new Date(),
-    }
+    const updatedUser = await updateUserById(id, {
+      emailPreferences: {
+        orderConfirmation: orderConfirmation !== undefined ? orderConfirmation : user.emailPreferences?.orderConfirmation ?? true,
+        shippingUpdates: shippingUpdates !== undefined ? shippingUpdates : user.emailPreferences?.shippingUpdates ?? true,
+        promotions: promotions !== undefined ? promotions : user.emailPreferences?.promotions ?? true,
+        newsletter: newsletter !== undefined ? newsletter : user.emailPreferences?.newsletter ?? true,
+      },
+    })
 
     // Generate unsubscribe token if not exists
-    if (!user.unsubscribeToken) {
-      user.unsubscribeToken = crypto.randomBytes(32).toString('hex')
+    if (!updatedUser.unsubscribeToken) {
+      await supabaseAdmin
+        .from('users')
+        .update({ unsubscribe_token: crypto.randomBytes(32).toString('hex') })
+        .eq('id', id)
     }
-
-    await user.save()
 
     return Response.json({
       success: true,
-      data: user.emailPreferences,
+      data: updatedUser.emailPreferences,
     })
   } catch (error) {
     console.error('Update preferences error:', error)
