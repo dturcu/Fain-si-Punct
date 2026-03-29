@@ -4,7 +4,7 @@ import { createTestToken } from '../fixtures/users.fixture'
 describe('Authentication Utilities', () => {
   describe('createToken', () => {
     it('should create a valid JWT token', () => {
-      const userId = '507f1f77bcf86cd799439011'
+      const userId = '123e4567-e89b-12d3-a456-426614174000'
       const email = 'test@example.com'
       const role = 'customer'
 
@@ -16,7 +16,7 @@ describe('Authentication Utilities', () => {
     })
 
     it('should create tokens with different roles', () => {
-      const userId = '507f1f77bcf86cd799439011'
+      const userId = '123e4567-e89b-12d3-a456-426614174000'
       const email = 'test@example.com'
 
       const customerToken = createToken(userId, email, 'customer')
@@ -32,7 +32,7 @@ describe('Authentication Utilities', () => {
 
   describe('verifyToken', () => {
     it('should verify a valid token', () => {
-      const userId = '507f1f77bcf86cd799439011'
+      const userId = '123e4567-e89b-12d3-a456-426614174000'
       const email = 'test@example.com'
       const role = 'customer'
 
@@ -70,7 +70,7 @@ describe('Authentication Utilities', () => {
     })
 
     it('should create test token with custom values', () => {
-      const customUserId = '607f1f77bcf86cd799439099'
+      const customUserId = '423e4567-e89b-12d3-a456-426614174003'
       const customEmail = 'custom@test.com'
 
       const token = createTestToken(customUserId, customEmail, 'admin')

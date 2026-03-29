@@ -1,18 +1,18 @@
 /**
- * Test product fixtures
+ * Test product fixtures (using UUIDs for Supabase)
  */
 export const testProducts = {
   laptop: {
-    _id: '607f1f77bcf86cd799439021',
+    id: '123e4567-e89b-12d3-a456-426614175000',
     name: 'Professional Laptop',
     slug: 'professional-laptop',
     description: 'High-performance laptop for professionals',
     price: 1299.99,
     category: 'Electronics',
     stock: 50,
-    avgRating: 4.5,
-    reviewCount: 120,
-    ratingDistribution: {
+    avg_rating: 4.5,
+    review_count: 120,
+    rating_distribution: {
       5: 70,
       4: 35,
       3: 10,
@@ -25,16 +25,16 @@ export const testProducts = {
   },
 
   phone: {
-    _id: '607f1f77bcf86cd799439022',
+    id: '223e4567-e89b-12d3-a456-426614175001',
     name: 'Smartphone Pro',
     slug: 'smartphone-pro',
     description: 'Latest smartphone with advanced features',
     price: 899.99,
     category: 'Electronics',
     stock: 100,
-    avgRating: 4.8,
-    reviewCount: 250,
-    ratingDistribution: {
+    avg_rating: 4.8,
+    review_count: 250,
+    rating_distribution: {
       5: 200,
       4: 40,
       3: 8,
@@ -47,16 +47,16 @@ export const testProducts = {
   },
 
   outOfStock: {
-    _id: '607f1f77bcf86cd799439023',
+    id: '323e4567-e89b-12d3-a456-426614175002',
     name: 'Limited Edition Headphones',
     slug: 'limited-edition-headphones',
     description: 'Exclusive limited edition headphones',
     price: 299.99,
     category: 'Electronics',
     stock: 0,
-    avgRating: 0,
-    reviewCount: 0,
-    ratingDistribution: {
+    avg_rating: 0,
+    review_count: 0,
+    rating_distribution: {
       5: 0,
       4: 0,
       3: 0,
@@ -69,16 +69,16 @@ export const testProducts = {
   },
 
   cheap: {
-    _id: '607f1f77bcf86cd799439024',
+    id: '423e4567-e89b-12d3-a456-426614175003',
     name: 'USB Cable',
     slug: 'usb-cable',
     description: 'Standard USB-C charging cable',
     price: 9.99,
     category: 'Accessories',
     stock: 500,
-    avgRating: 3.5,
-    reviewCount: 45,
-    ratingDistribution: {
+    avg_rating: 3.5,
+    review_count: 45,
+    rating_distribution: {
       5: 25,
       4: 15,
       3: 4,

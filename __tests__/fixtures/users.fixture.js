@@ -2,18 +2,18 @@ import { createToken } from '@/lib/auth'
 import bcryptjs from 'bcryptjs'
 
 /**
- * Test user fixtures
+ * Test user fixtures (using UUIDs for Supabase)
  */
 export const testUsers = {
   customer: {
-    _id: '507f1f77bcf86cd799439011',
+    id: '123e4567-e89b-12d3-a456-426614174000',
     email: 'customer@test.com',
     password: 'hashed_password_123',
-    firstName: 'John',
-    lastName: 'Doe',
+    first_name: 'John',
+    last_name: 'Doe',
     phone: '555-0123',
     role: 'customer',
-    isActive: true,
+    is_active: true,
     address: {
       street: '123 Main St',
       city: 'New York',
@@ -21,34 +21,34 @@ export const testUsers = {
       zip: '10001',
       country: 'USA',
     },
-    emailPreferences: {
-      orderConfirmation: true,
-      shippingUpdates: true,
+    email_preferences: {
+      order_confirmation: true,
+      shipping_updates: true,
       promotions: false,
       newsletter: true,
     },
   },
 
   admin: {
-    _id: '507f1f77bcf86cd799439012',
+    id: '223e4567-e89b-12d3-a456-426614174001',
     email: 'admin@test.com',
     password: 'hashed_password_admin_123',
-    firstName: 'Admin',
-    lastName: 'User',
+    first_name: 'Admin',
+    last_name: 'User',
     role: 'admin',
-    isActive: true,
+    is_active: true,
   },
 
   unsubscribed: {
-    _id: '507f1f77bcf86cd799439013',
+    id: '323e4567-e89b-12d3-a456-426614174002',
     email: 'unsubscribed@test.com',
     password: 'hashed_password_456',
-    firstName: 'Jane',
-    lastName: 'Smith',
+    first_name: 'Jane',
+    last_name: 'Smith',
     role: 'customer',
-    emailPreferences: {
-      orderConfirmation: false,
-      shippingUpdates: false,
+    email_preferences: {
+      order_confirmation: false,
+      shipping_updates: false,
       promotions: false,
       newsletter: false,
     },
@@ -63,7 +63,7 @@ export const testUsers = {
  * @returns {string} JWT token
  */
 export function createTestToken(
-  userId = testUsers.customer._id,
+  userId = testUsers.customer.id,
   email = testUsers.customer.email,
   role = 'customer'
 ) {
