@@ -1,11 +1,9 @@
-import { connectDB } from '@/lib/db'
-import User from '@/models/User'
+import bcrypt from 'bcryptjs'
 import { createToken } from '@/lib/auth'
+import { getUserByEmail } from '@/lib/supabase-queries'
 
 export async function POST(request) {
   try {
-    await connectDB()
-
     const { email, password } = await request.json()
 
     if (!email || !password) {
@@ -15,7 +13,7 @@ export async function POST(request) {
       )
     }
 
-    const user = await User.findOne({ email })
+    const user = await getUserByEmail(email)
     if (!user) {
       return Response.json(
         { success: false, error: 'Invalid credentials' },
@@ -23,7 +21,9 @@ export async function POST(request) {
       )
     }
 
-    const isPasswordValid = await user.comparePassword(password)
+    // Note: In production, fetch actual password hash from DB
+    // For now, store hashed password in 'password' field
+    const isPasswordValid = await bcrypt.compare(password, user.password || '')
     if (!isPasswordValid) {
       return Response.json(
         { success: false, error: 'Invalid credentials' },
@@ -31,13 +31,16 @@ export async function POST(request) {
       )
     }
 
-    const token = createToken(user._id, user.email, user.role)
+    const token = createToken(user.id, user.email, user.role)
+
+    const userResponse = { ...user }
+    delete userResponse.password
 
     return Response.json(
       {
         success: true,
         token,
-        user: user.toJSON(),
+        user: userResponse,
       },
       {
         status: 200,

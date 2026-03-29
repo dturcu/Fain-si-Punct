@@ -1,12 +1,9 @@
-import { connectDB } from '@/lib/db'
-import Cart from '@/models/Cart'
-import Product from '@/models/Product'
+import { getCartByUserId, addToCart } from '@/lib/supabase-queries'
+import { supabaseAdmin } from '@/lib/supabase'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 
 export async function GET(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -23,7 +20,7 @@ export async function GET(request) {
       )
     }
 
-    const cart = await Cart.findOne({ userId: decoded.userId }).populate('items.productId')
+    const cart = await getCartByUserId(decoded.userId)
 
     return Response.json({
       success: true,
@@ -39,8 +36,6 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    await connectDB()
-
     const token = getCookieToken(request)
     if (!token) {
       return Response.json(
@@ -59,37 +54,28 @@ export async function POST(request) {
 
     const { productId, quantity } = await request.json()
 
-    const product = await Product.findById(productId)
-    if (!product) {
+    // Get product
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('id, name, price, image')
+      .eq('id', productId)
+      .single()
+
+    if (productError || !product) {
       return Response.json(
         { success: false, error: 'Product not found' },
         { status: 404 }
       )
     }
 
-    let cart = await Cart.findOne({ userId: decoded.userId })
-
-    if (!cart) {
-      cart = new Cart({ userId: decoded.userId, items: [] })
-    }
-
-    const existingItem = cart.items.find(
-      (item) => item.productId.toString() === productId
+    const cart = await addToCart(
+      decoded.userId,
+      productId,
+      product.name,
+      product.price,
+      product.image,
+      quantity
     )
-
-    if (existingItem) {
-      existingItem.quantity += quantity
-    } else {
-      cart.items.push({
-        productId,
-        name: product.name,
-        price: product.price,
-        quantity,
-        image: product.image,
-      })
-    }
-
-    await cart.save()
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
