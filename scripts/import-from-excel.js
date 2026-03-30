@@ -96,8 +96,13 @@ async function importFromExcel(filePath) {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '')
 
-        // Parse price
-        const price = parseFloat(row['Unit RRP']) || parseFloat(row['Total RRP']) || 0
+        // Parse price - strip currency prefix (e.g., "lei12.9" → 12.9)
+        const parsePrice = (val) => {
+          if (!val) return 0
+          const num = parseFloat(String(val).replace(/[^0-9.]/g, ''))
+          return isNaN(num) ? 0 : num
+        }
+        const price = parsePrice(row['Unit RRP']) || parsePrice(row['Total RRP']) || 0
 
         // Parse quantity
         const stock = parseInt(row['Quantity']) || 0
@@ -127,7 +132,7 @@ async function importFromExcel(filePath) {
           grade: row['Grade'],
           weight: parseFloat(row['Unit Weight (kg)']) || null,
           currency: row['Currency'] || 'USD',
-          total_rrp: parseFloat(row['Total RRP']) || 0,
+          total_rrp: parsePrice(row['Total RRP']) || 0,
           tags: buildTags(row),
           // Initialize rating fields with defaults
           avg_rating: 0,
@@ -300,7 +305,8 @@ function buildTags(row) {
   if (row['Source.Name']) tags.add(row['Source.Name'])
 
   // Add price-based tags
-  const price = parseFloat(row['Unit RRP']) || parseFloat(row['Total RRP']) || 0
+  const parseP = (v) => { if (!v) return 0; const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); return isNaN(n) ? 0 : n }
+  const price = parseP(row['Unit RRP']) || parseP(row['Total RRP']) || 0
   if (price > 0 && price < 50) tags.add('budget-friendly')
   if (price >= 50 && price < 200) tags.add('mid-range')
   if (price >= 200) tags.add('premium')
