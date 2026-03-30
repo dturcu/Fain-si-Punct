@@ -134,6 +134,9 @@ export async function POST(request) {
           }
         }
       } catch (error) {
+        
+        console.error('admin/products/import error:', error)
+
         errors.push(`Row ${i + 2}: ${error.message}`)
         errorCount++
       }

@@ -71,6 +71,9 @@ export async function POST(request, { params }) {
       },
     })
   } catch (error) {
+    
+    console.error('orders/[id]/pay error:', error)
+
     return Response.json(
       { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }

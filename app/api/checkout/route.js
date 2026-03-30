@@ -3,7 +3,7 @@ import { getCartByUserId, clearCart, getUserById, createOrder } from '@/lib/supa
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
-import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
+import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
 
 import { randomUUID } from 'crypto'
 
@@ -82,13 +82,24 @@ export async function POST(request) {
       )
     }
 
+    // Enforce per-item quantity cap at checkout too
+    for (const item of cart.items) {
+      if (item.quantity > MAX_QUANTITY_PER_ITEM) {
+        return Response.json(
+          { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Decrement stock using optimistic locking: read the current value, then update only if
     // it hasn't changed (via .eq('stock', currentStock)). This prevents overselling when two
     // requests race — the second update will find no matching row and return an empty array.
+    // Also re-validate prices against the DB to prevent stale/manipulated cart prices.
     for (const item of cart.items) {
       const { data: product } = await supabaseAdmin
         .from('products')
-        .select('stock, name')
+        .select('stock, name, price')
         .eq('id', item.productId)
         .single()
 
@@ -99,6 +110,10 @@ export async function POST(request) {
           { status: 400 }
         )
       }
+
+      // Price re-validation: cart may hold a stale price if the product was updated
+      // or if a client tried to manipulate it. Always use the current DB price.
+      item.price = parseFloat(product.price)
 
       // Only update if stock hasn't changed since we read it (optimistic locking)
       const { data: updated } = await supabaseAdmin

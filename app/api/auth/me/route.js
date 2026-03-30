@@ -32,6 +32,9 @@ export async function GET(request) {
       user,
     })
   } catch (error) {
+    
+    console.error('auth/me error:', error)
+
     return Response.json(
       { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
@@ -72,6 +75,9 @@ export async function PUT(request) {
       user,
     })
   } catch (error) {
+    
+    console.error('auth/me error:', error)
+
     return Response.json(
       { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
