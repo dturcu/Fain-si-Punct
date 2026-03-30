@@ -9,13 +9,7 @@
       "destination": "/api/:path*"
     }
   ],
-  "redirects": [
-    {
-      "source": "/products/:slug",
-      "destination": "/product/:slug",
-      "permanent": true
-    }
-  ],
+  "redirects": [],
   "headers": [
     {
       "source": "/api/:path*",
