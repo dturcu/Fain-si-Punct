@@ -12,6 +12,7 @@ export default function ProductDetail({ params }) {
   const [addingToCart, setAddingToCart] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('') // 'success' or 'error'
+  const [selectedImage, setSelectedImage] = useState(0)
 
   useEffect(() => {
     fetchProduct()
@@ -56,7 +57,7 @@ export default function ProductDetail({ params }) {
             ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
-            productId: product._id,
+            productId: product.id,
             quantity: parseInt(quantity),
           }),
         }
@@ -110,7 +111,24 @@ export default function ProductDetail({ params }) {
 
       <div className={styles.content}>
         <div className={styles.imageSection}>
-          {product.image ? (
+          {product.images && product.images.length > 0 ? (
+            <>
+              <img src={product.images[selectedImage]} alt={product.name} />
+              {product.images.length > 1 && (
+                <div className={styles.thumbnails}>
+                  {product.images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img}
+                      alt={`${product.name} ${i + 1}`}
+                      className={selectedImage === i ? styles.activeThumbnail : ''}
+                      onClick={() => setSelectedImage(i)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : product.image ? (
             <img src={product.image} alt={product.name} />
           ) : (
             <div className={styles.placeholder}>No Image Available</div>
@@ -128,8 +146,8 @@ export default function ProductDetail({ params }) {
           <p className={styles.description}>{product.description}</p>
 
           <div className={styles.rating}>
-            <span className={styles.stars}>★ {product.rating}</span>
-            <span className={styles.reviews}>({product.reviews} reviews)</span>
+            <span className={styles.stars}>★ {product.avgRating}</span>
+            <span className={styles.reviews}>({product.reviewCount} reviews)</span>
           </div>
 
           <div className={styles.pricing}>

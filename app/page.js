@@ -49,7 +49,7 @@ export default function Home() {
               <p className={styles.category}>{product.category}</p>
               <p className={styles.price}>${product.price}</p>
               <div className={styles.rating}>
-                ★ {product.rating} ({product.reviews} reviews)
+                ★ {product.avgRating} ({product.reviewCount} reviews)
               </div>
             </div>
           </Link>

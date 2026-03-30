@@ -70,7 +70,7 @@ async function importFromExcel(filePath) {
 
     // Clear existing products
     console.log('🗑️  Clearing existing products...')
-    const { error: deleteError } = await supabase.from('products').delete().neq('id', null)
+    const { error: deleteError } = await supabase.from('products').delete().gte('created_at', '1970-01-01')
     if (deleteError) {
       console.error('❌ Error clearing products:', deleteError)
       process.exit(1)
@@ -148,14 +148,37 @@ async function importFromExcel(filePath) {
       }
     }).filter(p => p !== null) // Remove failed rows
 
-    console.log(`✅ Processed ${products.length} valid products`)
+    // Deduplicate by slug and sku
+    const seenSlugs = new Set()
+    const seenSkus = new Set()
+    const deduped = []
+    for (const p of products) {
+      let slug = p.slug
+      while (seenSlugs.has(slug)) {
+        slug = slug + '-' + Math.random().toString(36).slice(2, 6)
+      }
+      p.slug = slug
+      seenSlugs.add(slug)
+
+      let sku = p.sku
+      while (seenSkus.has(sku)) {
+        sku = sku + '-' + Math.random().toString(36).slice(2, 6)
+      }
+      p.sku = sku
+      seenSkus.add(sku)
+
+      deduped.push(p)
+    }
+    const products_final = deduped
+
+    console.log(`✅ Processed ${products_final.length} valid products (deduplicated)`)
 
     // Insert products in batches
     const batchSize = 1000
     let inserted = 0
 
-    for (let i = 0; i < products.length; i += batchSize) {
-      const batch = products.slice(i, i + batchSize)
+    for (let i = 0; i < products_final.length; i += batchSize) {
+      const batch = products_final.slice(i, i + batchSize)
 
       try {
         const { data, error: insertError } = await supabase
@@ -183,7 +206,7 @@ async function importFromExcel(filePath) {
           inserted += batch.length
         }
 
-        console.log(`📦 Inserted ${inserted}/${products.length} products`)
+        console.log(`📦 Inserted ${inserted}/${products_final.length} products`)
       } catch (error) {
         console.error(`❌ Error inserting batch:`, error.message)
       }
