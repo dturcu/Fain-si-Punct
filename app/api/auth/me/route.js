@@ -30,11 +30,10 @@ export async function GET(request) {
     return Response.json({
       success: true,
       user,
+      data: user,
     })
   } catch (error) {
-    
-    console.error('auth/me error:', error)
-
+    console.error('auth/me GET error:', error)
     return Response.json(
       { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
@@ -73,11 +72,10 @@ export async function PUT(request) {
     return Response.json({
       success: true,
       user,
+      data: user,
     })
   } catch (error) {
-    
-    console.error('auth/me error:', error)
-
+    console.error('auth/me PUT error:', error)
     return Response.json(
       { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
