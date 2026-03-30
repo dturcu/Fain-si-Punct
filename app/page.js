@@ -5,20 +5,24 @@ import Link from 'next/link'
 import styles from '@/styles/home.module.css'
 
 export default function Home() {
-  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [totalProducts, setTotalProducts] = useState(0)
 
   useEffect(() => {
-    fetchProducts()
+    fetchCategories()
   }, [])
 
-  const fetchProducts = async () => {
+  const fetchCategories = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/products?limit=12')
+      const response = await fetch('/api/products/categories')
       const data = await response.json()
-      setProducts(data.data)
+      if (data.success) {
+        setCategories(data.data)
+        setTotalProducts(data.total || data.data.reduce((sum, c) => sum + c.count, 0))
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -26,35 +30,61 @@ export default function Home() {
     }
   }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div>Error: {error}</div>
+  if (loading) return <div className={styles.loading}>Se incarca...</div>
+  if (error) return <div className={styles.error}>Eroare: {error}</div>
 
   return (
     <div className={styles.container}>
-      <h1>Welcome to Our Store</h1>
-      <p>Browse from {products.length}+ products</p>
+      <div className={styles.hero}>
+        <h1>Bine ai venit la ShopHub</h1>
+        <p>Descopera peste {totalProducts.toLocaleString()} produse din {categories.length} categorii</p>
+        <Link href="/products" className={styles.heroBtn}>
+          Vezi toate produsele
+        </Link>
+      </div>
+
+      <h2 className={styles.sectionTitle}>Categorii</h2>
 
       <div className={styles.grid}>
-        {products.map((product) => (
-          <Link key={product._id} href={`/products/${product._id}`}>
+        {categories.map((cat) => (
+          <Link key={cat.name} href={`/products?category=${encodeURIComponent(cat.name)}`}>
             <div className={styles.card}>
-              <div className={styles.image}>
-                {product.image ? (
-                  <img src={product.image} alt={product.name} />
-                ) : (
-                  <div className={styles.placeholder}>No Image</div>
-                )}
+              <div className={styles.categoryIcon}>
+                {getCategoryIcon(cat.name)}
               </div>
-              <h2>{product.name}</h2>
-              <p className={styles.category}>{product.category}</p>
-              <p className={styles.price}>${product.price}</p>
-              <div className={styles.rating}>
-                ★ {product.avgRating} ({product.reviewCount} reviews)
-              </div>
+              <h3>{cat.name}</h3>
+              <p className={styles.count}>{cat.count} produse</p>
             </div>
           </Link>
         ))}
       </div>
     </div>
   )
+}
+
+function getCategoryIcon(name) {
+  const icons = {
+    'Electronics': '🔌',
+    'Clothing': '👕',
+    'Home & Garden': '🏡',
+    'Sports': '⚽',
+    'Sports & Outdoors': '🏕️',
+    'Books': '📚',
+    'Toys': '🧸',
+    'Toys & Games': '🎮',
+    'Beauty': '💄',
+    'Health': '💊',
+    'Health & Beauty': '💊',
+    'Automotive': '🚗',
+    'Tools': '🔧',
+    'Baby': '👶',
+    'Office': '📎',
+    'Pets': '🐾',
+    'Pet Supplies': '🐾',
+    'Kitchen': '🍳',
+    'Garden': '🌱',
+    'Furniture': '🪑',
+    'Uncategorized': '📦',
+  }
+  return icons[name] || '🛍️'
 }
