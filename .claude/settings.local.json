@@ -81,7 +81,9 @@
       "Bash(grep -rh process.env.[A-Z_]* C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilburlib C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilburapp --include=*.js)",
       "Bash(grep -r \"export const revalidate\\\\|export const dynamic\\\\|export const fetchCache\" /c/Users/danie/OneDrive/Documents/ecommerce/.claude/worktrees/awesome-wilbur/app --include=*.js --include=*.ts)",
       "Bash(grep -r \"zod\\\\|yup\\\\|joi\\\\|validator\" C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.jsx)",
-      "Bash(grep -r \"zod\\\\|yup\\\\|joi\" C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.jsx --exclude-dir=.next --exclude-dir=node_modules)"
+      "Bash(grep -r \"zod\\\\|yup\\\\|joi\" C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.jsx --exclude-dir=.next --exclude-dir=node_modules)",
+      "Bash(rm -rf models/)",
+      "Bash(rm -f lib/review-stats.js lib/purchase-verification.js lib/jobs/email-job.js)"
     ]
   }
 }
