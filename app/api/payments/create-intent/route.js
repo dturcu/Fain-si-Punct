@@ -13,8 +13,8 @@ import { verifyAuth } from '@/lib/auth'
 export async function POST(request) {
   try {
     // Verify authentication
-    const headersList = headers()
-    const auth = await verifyAuth(headersList)
+    const headersList = await headers()
+    const auth = verifyAuth(headersList)
 
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -34,6 +34,11 @@ export async function POST(request) {
     const order = await getOrderById(orderId)
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Ownership check: users can only pay for their own orders
+    if (order.userId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Check if order already has a processing payment
