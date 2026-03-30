@@ -28,7 +28,7 @@ export default function AdminImport() {
       formData.append('file', file)
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/import`,
+        `/api/admin/products/import`,
         {
           method: 'POST',
           body: formData,

@@ -16,9 +16,7 @@ export default function Home() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products?limit=12`
-      )
+      const response = await fetch('/api/products?limit=12')
       const data = await response.json()
       setProducts(data.data)
     } catch (err) {

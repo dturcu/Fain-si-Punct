@@ -19,7 +19,7 @@ export default function AdminProducts() {
     try {
       setLoading(true)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products?page=${page}&limit=20`
+        `/api/products?page=${page}&limit=20`
       )
       const data = await response.json()
       setProducts(data.data)
@@ -39,7 +39,7 @@ export default function AdminProducts() {
   const handleSave = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${editingId}`,
+        `/api/products/${editingId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -60,7 +60,7 @@ export default function AdminProducts() {
     if (!confirm('Are you sure?')) return
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`, {
+      await fetch(`/api/products/${id}`, {
         method: 'DELETE',
       })
       fetchProducts()

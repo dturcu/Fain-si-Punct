@@ -40,7 +40,7 @@ export default function ProductsPage() {
       })
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products?${params}`
+        `/api/products?${params}`
       )
       const data = await response.json()
       setProducts(data.data)

@@ -17,7 +17,7 @@ export default function CartPage() {
 
   const fetchCart = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart`)
+      const response = await fetch(`/api/cart`)
 
       if (response.status === 401) {
         router.push('/auth/login')
@@ -43,7 +43,7 @@ export default function CartPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/cart/${itemId}`,
+        `/api/cart/${itemId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -63,7 +63,7 @@ export default function CartPage() {
   const handleRemoveItem = async (itemId) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/cart/${itemId}`,
+        `/api/cart/${itemId}`,
         {
           method: 'DELETE',
         }
