@@ -69,6 +69,15 @@ async function handlePaymentCaptureCompleted(params) {
       return
     }
 
+    // Validate amount: webhook value (in RON) must match stored amount (in bani/cents)
+    const webhookAmountBani = Math.round(parseFloat(amount) * 100)
+    if (webhookAmountBani !== payment.amount) {
+      console.error(
+        `PayPal amount mismatch for ${captureId}: expected ${payment.amount} bani, got ${webhookAmountBani} bani`
+      )
+      return
+    }
+
     // Update payment with succeeded status
     await supabaseAdmin
       .from('payments')
