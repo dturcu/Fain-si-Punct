@@ -17,6 +17,10 @@ export default function Navbar() {
   useEffect(() => {
     checkAuth()
     fetchCartCount()
+
+    const handleCartUpdated = () => fetchCartCount()
+    window.addEventListener('cart-updated', handleCartUpdated)
+    return () => window.removeEventListener('cart-updated', handleCartUpdated)
   }, [])
 
   useEffect(() => {

@@ -59,6 +59,7 @@ export default function CartPage() {
       const data = await response.json()
       if (data.success) {
         setCart(data.data)
+        window.dispatchEvent(new Event('cart-updated'))
       }
     } catch (err) {
       console.error('Error updating quantity:', err)
@@ -83,6 +84,7 @@ export default function CartPage() {
       const data = await response.json()
       if (data.success) {
         setCart(data.data)
+        window.dispatchEvent(new Event('cart-updated'))
       }
     } catch (err) {
       console.error('Error removing item:', err)

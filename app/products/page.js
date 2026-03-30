@@ -90,6 +90,7 @@ function ProductsContent() {
       const data = await response.json()
       if (data.success) {
         setCartMessage('Adaugat in cos!')
+        window.dispatchEvent(new Event('cart-updated'))
         setTimeout(() => setCartMessage(''), 2000)
       } else {
         setCartMessage(data.error || 'Eroare')
@@ -477,7 +478,7 @@ function ProductsContent() {
                       <h3 className={styles.cardTitle}>{product.name}</h3>
                       <StarRating rating={product.avgRating} reviewCount={product.reviewCount} />
                       <div className={styles.cardPrice}>
-                        {product.price?.toFixed(2)} <span className={styles.currency}>RON</span>
+                        {product.price?.toFixed(2)} <span className={styles.currency}>lei</span>
                       </div>
                       <div className={product.stock > 0 ? styles.inStock : styles.outOfStock}>
                         {product.stock > 0 ? 'In stoc' : 'Stoc epuizat'}
