@@ -2,19 +2,29 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('products')
-      .select('category')
-
-    if (error) throw error
-
-    // Count products per category
+    // Fetch all categories by paginating (Supabase defaults to 1000 rows)
     const counts = {}
     let total = 0
-    for (const row of data) {
-      const cat = row.category || 'Uncategorized'
-      counts[cat] = (counts[cat] || 0) + 1
-      total++
+    let offset = 0
+    const pageSize = 1000
+
+    while (true) {
+      const { data, error } = await supabaseAdmin
+        .from('products')
+        .select('category')
+        .range(offset, offset + pageSize - 1)
+
+      if (error) throw error
+      if (!data || data.length === 0) break
+
+      for (const row of data) {
+        const cat = row.category || 'Uncategorized'
+        counts[cat] = (counts[cat] || 0) + 1
+        total++
+      }
+
+      if (data.length < pageSize) break
+      offset += pageSize
     }
 
     const categories = Object.entries(counts)
