@@ -3,15 +3,19 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import styles from '@/styles/order-detail.module.css'
 
 export default function OrderDetailPage() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const orderId = params.id
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [paying, setPaying] = useState(false)
+  const [paymentDone, setPaymentDone] = useState(false)
 
   const isConfirmed = searchParams.get('status') === 'confirmed'
   const payMethod = searchParams.get('pay')
@@ -39,6 +43,37 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleSimulatePayment = async () => {
+    setPaying(true)
+    try {
+      // Simulate payment processing delay
+      await new Promise((r) => setTimeout(r, 2000))
+
+      // Confirm payment via dedicated endpoint
+      const payRes = await fetch(`/api/orders/${orderId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const payData = await payRes.json()
+      if (!payData.success) {
+        throw new Error(payData.error || 'Plata a esuat')
+      }
+
+      setPaymentDone(true)
+      // Refresh order data
+      await fetchOrder()
+
+      // Remove pay param from URL
+      router.replace(`/orders/${orderId}`)
+    } catch (err) {
+      setError('Eroare la procesarea platii: ' + err.message)
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  const formatPrice = (val) => parseFloat(val).toFixed(2) + ' lei'
+
   if (loading) return <div className={styles.loading}>Se incarca...</div>
   if (error || !order) {
     return (
@@ -50,6 +85,13 @@ export default function OrderDetailPage() {
     )
   }
 
+  const paymentMethodLabels = {
+    card: 'Card bancar',
+    revolut: 'Revolut Pay',
+    paypal: 'PayPal',
+    ramburs: 'Plata la livrare',
+  }
+
   return (
     <div className={styles.container}>
       {isConfirmed && (
@@ -59,10 +101,37 @@ export default function OrderDetailPage() {
         </div>
       )}
 
-      {payMethod && (
+      {paymentDone && (
+        <div className={styles.successBanner}>
+          <h3>Plata a fost procesata cu succes!</h3>
+          <p>Comanda ta este acum in curs de pregatire.</p>
+        </div>
+      )}
+
+      {payMethod && !paymentDone && (
         <div className={styles.infoBanner}>
-          <h3>Comanda creata - plata in asteptare</h3>
-          <p>Integrarea cu {payMethod === 'card' ? 'procesatorul de carduri' : payMethod} va fi disponibila in curand.</p>
+          <h3>Finalizeaza plata</h3>
+          <p>
+            Metoda selectata: <strong>{paymentMethodLabels[payMethod] || payMethod}</strong>
+          </p>
+          <p>Total de plata: <strong>{formatPrice(order.total)}</strong></p>
+          <button
+            className={styles.payBtn}
+            onClick={handleSimulatePayment}
+            disabled={paying}
+          >
+            {paying ? (
+              <>
+                <span className={styles.paySpinner} />
+                Se proceseaza plata...
+              </>
+            ) : (
+              `Plateste ${formatPrice(order.total)} cu ${paymentMethodLabels[payMethod] || payMethod}`
+            )}
+          </button>
+          <p className={styles.payNote}>
+            Plata este simulata in scopuri demonstrative.
+          </p>
         </div>
       )}
 
@@ -90,13 +159,15 @@ export default function OrderDetailPage() {
             {getPaymentLabel(order.paymentStatus)}
           </span>
           {order.paymentMethod && (
-            <p className={styles.meta}>Metoda: {order.paymentMethod}</p>
+            <p className={styles.meta}>
+              Metoda: {paymentMethodLabels[order.paymentMethod] || order.paymentMethod}
+            </p>
           )}
         </div>
 
         <div className={styles.card}>
           <h3>Total comanda</h3>
-          <p className={styles.totalAmount}>${order.total.toFixed(2)}</p>
+          <p className={styles.totalAmount}>{formatPrice(order.total)}</p>
         </div>
       </div>
 
@@ -105,16 +176,10 @@ export default function OrderDetailPage() {
         <div className={styles.section}>
           <h2>Informatii client</h2>
           <div className={styles.infoGrid}>
-            <div>
-              <strong>Nume:</strong> {order.customer.name}
-            </div>
-            <div>
-              <strong>Email:</strong> {order.customer.email}
-            </div>
+            <div><strong>Nume:</strong> {order.customer.name}</div>
+            <div><strong>Email:</strong> {order.customer.email}</div>
             {order.customer.phone && (
-              <div>
-                <strong>Telefon:</strong> {order.customer.phone}
-              </div>
+              <div><strong>Telefon:</strong> {order.customer.phone}</div>
             )}
           </div>
         </div>
@@ -149,9 +214,9 @@ export default function OrderDetailPage() {
                   {item.image && <img src={item.image} alt={item.name} className={styles.itemImg} />}
                   <span>{item.name}</span>
                 </div>
-                <span>${item.price.toFixed(2)}</span>
+                <span>{formatPrice(item.price)}</span>
                 <span>{item.quantity}</span>
-                <span className={styles.subtotal}>${(item.price * item.quantity).toFixed(2)}</span>
+                <span className={styles.subtotal}>{formatPrice(item.price * item.quantity)}</span>
               </div>
             ))}
           </div>
@@ -162,7 +227,7 @@ export default function OrderDetailPage() {
           </div>
           <div className={styles.totalLineBold}>
             <span>Total:</span>
-            <span>${order.total.toFixed(2)}</span>
+            <span>{formatPrice(order.total)}</span>
           </div>
         </div>
       )}

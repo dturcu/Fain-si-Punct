@@ -51,8 +51,9 @@ export default function Navbar() {
         return
       }
       const data = await response.json()
-      if (data.success && data.cart && data.cart.items) {
-        const total = data.cart.items.reduce((sum, item) => sum + (item.quantity || 1), 0)
+      const cart = data.cart || data.data
+      if (data.success && cart && cart.items) {
+        const total = cart.items.reduce((sum, item) => sum + (item.quantity || 1), 0)
         setCartCount(total)
       }
     } catch {
