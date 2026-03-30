@@ -227,6 +227,50 @@
   flex-shrink: 0;
 }
 
+/* Subcategory items */
+.subcategoryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #0f1111;
+  transition: background 0.15s;
+}
+
+.subcategoryItem:hover {
+  background: #f0f2f2;
+}
+
+.subcategoryActive {
+  background: #edfdff;
+  color: #007185;
+  font-weight: 600;
+}
+
+.subcategoryActive:hover {
+  background: #d8f6fa;
+}
+
+.subcategoryLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.subcategoryCheckbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #007185;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* Price inputs */
 .priceInputs {
   display: flex;

@@ -7,6 +7,7 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit')) || 20
     const category = searchParams.get('category')
     const search = searchParams.get('search')
+    const tag = searchParams.get('tag')
     const sort = searchParams.get('sort') || '-createdAt'
 
     const offset = (page - 1) * limit
@@ -19,6 +20,15 @@ export async function GET(request) {
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+    }
+
+    if (tag) {
+      // tags is a text array column; filter products that contain the given tag(s)
+      // Support comma-separated tags - products must contain ALL specified tags
+      const tags = tag.split(',').map((t) => t.trim()).filter(Boolean)
+      if (tags.length > 0) {
+        query = query.contains('tags', tags)
+      }
     }
 
     // Handle sorting

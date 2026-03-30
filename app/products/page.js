@@ -53,6 +53,11 @@ function ProductsContent() {
   const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [subcategories, setSubcategories] = useState([])
+  const [selectedTags, setSelectedTags] = useState(() => {
+    const tagParam = searchParams.get('tag')
+    return tagParam ? tagParam.split(',') : []
+  })
 
   // Filters from URL or state
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1)
@@ -108,6 +113,22 @@ function ProductsContent() {
       .catch(() => {})
   }, [])
 
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    if (!category) {
+      setSubcategories([])
+      setSelectedTags([])
+      return
+    }
+    fetch(`/api/products/subcategories?category=${encodeURIComponent(category)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setSubcategories(data.data)
+        else setSubcategories([])
+      })
+      .catch(() => setSubcategories([]))
+  }, [category])
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)
@@ -121,6 +142,7 @@ function ProductsContent() {
       if (minPrice) params.set('minPrice', minPrice)
       if (maxPrice) params.set('maxPrice', maxPrice)
       if (inStockOnly) params.set('inStock', '1')
+      if (selectedTags.length > 0) params.set('tag', selectedTags.join(','))
 
       const response = await fetch(`/api/products?${params}`)
       const data = await response.json()
@@ -145,7 +167,7 @@ function ProductsContent() {
     } finally {
       setLoading(false)
     }
-  }, [page, limit, category, search, sort, minPrice, maxPrice, inStockOnly])
+  }, [page, limit, category, search, sort, minPrice, maxPrice, inStockOnly, selectedTags])
 
   useEffect(() => {
     fetchProducts()
@@ -162,10 +184,11 @@ function ProductsContent() {
     if (minPrice) params.set('minPrice', minPrice)
     if (maxPrice) params.set('maxPrice', maxPrice)
     if (inStockOnly) params.set('inStock', '1')
+    if (selectedTags.length > 0) params.set('tag', selectedTags.join(','))
 
     const qs = params.toString()
     router.replace(`/products${qs ? '?' + qs : ''}`, { scroll: false })
-  }, [page, limit, category, search, sort, minPrice, maxPrice, inStockOnly, router])
+  }, [page, limit, category, search, sort, minPrice, maxPrice, inStockOnly, selectedTags, router])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -175,6 +198,16 @@ function ProductsContent() {
 
   const handleCategorySelect = (cat) => {
     setCategory(cat === category ? '' : cat)
+    setSelectedTags([])
+    setPage(1)
+  }
+
+  const handleTagToggle = (tagName) => {
+    setSelectedTags((prev) =>
+      prev.includes(tagName)
+        ? prev.filter((t) => t !== tagName)
+        : [...prev, tagName]
+    )
     setPage(1)
   }
 
@@ -297,6 +330,34 @@ function ProductsContent() {
               ))}
             </ul>
           </div>
+
+          {/* Subcategories */}
+          {category && subcategories.length > 0 && (
+            <div className={styles.filterGroup}>
+              <h4>Subcategorii</h4>
+              <ul className={styles.categoryList}>
+                {subcategories.map((sub) => (
+                  <li
+                    key={sub.name}
+                    className={`${styles.subcategoryItem} ${selectedTags.includes(sub.name) ? styles.subcategoryActive : ''}`}
+                    onClick={() => handleTagToggle(sub.name)}
+                  >
+                    <label className={styles.subcategoryLabel}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.includes(sub.name)}
+                        onChange={() => handleTagToggle(sub.name)}
+                        className={styles.subcategoryCheckbox}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className={styles.categoryName}>{sub.name}</span>
+                    </label>
+                    <span className={styles.categoryCount}>({sub.count})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Price Range */}
           <div className={styles.filterGroup}>
