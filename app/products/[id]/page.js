@@ -358,7 +358,7 @@ export default function ProductDetail({ params: paramsPromise }) {
                   type="button"
                   className={styles.qtyBtn}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={product.stock === 0 || addingToCart}
+                  disabled={quantity <= 1 || product.stock === 0 || addingToCart}
                 >
                   -
                 </button>
@@ -366,16 +366,16 @@ export default function ProductDetail({ params: paramsPromise }) {
                   id="quantity"
                   type="number"
                   min="1"
-                  max={product.stock}
+                  max={Math.min(product.stock, 10)}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(Math.min(product.stock, 10), parseInt(e.target.value) || 1)))}
                   disabled={product.stock === 0 || addingToCart}
                 />
                 <button
                   type="button"
                   className={styles.qtyBtn}
-                  onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
-                  disabled={product.stock === 0 || addingToCart}
+                  onClick={() => setQuantity((q) => Math.min(Math.min(product.stock, 10), q + 1))}
+                  disabled={quantity >= Math.min(product.stock, 10) || product.stock === 0 || addingToCart}
                 >
                   +
                 </button>
