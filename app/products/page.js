@@ -318,15 +318,19 @@ function ProductsContent() {
           {/* Categories */}
           <div className={styles.filterGroup}>
             <h4>Categorie</h4>
-            <ul className={styles.categoryList}>
+            <ul className={styles.categoryList} role="listbox" aria-label="Categorii">
               {categories.map((cat) => (
-                <li
-                  key={cat.name}
-                  className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
-                  onClick={() => handleCategorySelect(cat.name)}
-                >
-                  <span className={styles.categoryName}>{cat.name}</span>
-                  <span className={styles.categoryCount}>({cat.count})</span>
+                <li key={cat.name} role="presentation">
+                  <button
+                    type="button"
+                    className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
+                    onClick={() => handleCategorySelect(cat.name)}
+                    role="option"
+                    aria-selected={category === cat.name}
+                  >
+                    <span className={styles.categoryName}>{cat.name}</span>
+                    <span className={styles.categoryCount}>({cat.count})</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -341,7 +345,6 @@ function ProductsContent() {
                   <li
                     key={sub.name}
                     className={`${styles.subcategoryItem} ${selectedTags.includes(sub.name) ? styles.subcategoryActive : ''}`}
-                    onClick={() => handleTagToggle(sub.name)}
                   >
                     <label className={styles.subcategoryLabel}>
                       <input
@@ -349,11 +352,10 @@ function ProductsContent() {
                         checked={selectedTags.includes(sub.name)}
                         onChange={() => handleTagToggle(sub.name)}
                         className={styles.subcategoryCheckbox}
-                        onClick={(e) => e.stopPropagation()}
                       />
                       <span className={styles.categoryName}>{sub.name}</span>
+                      <span className={styles.categoryCount}>({sub.count})</span>
                     </label>
-                    <span className={styles.categoryCount}>({sub.count})</span>
                   </li>
                 ))}
               </ul>
