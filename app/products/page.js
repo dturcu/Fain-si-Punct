@@ -1,135 +1,459 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import styles from '@/styles/products.module.css'
 
-const CATEGORIES = [
-  'Electronics',
-  'Clothing',
-  'Home & Garden',
-  'Sports',
-  'Books',
-  'Toys',
-  'Beauty',
-  'Health',
-  'Automotive',
-  'Tools',
+const SORT_OPTIONS = [
+  { value: '', label: 'Relevanta' },
+  { value: 'price', label: 'Pret crescator' },
+  { value: '-price', label: 'Pret descrescator' },
+  { value: '-created_at', label: 'Cele mai noi' },
+  { value: '-avg_rating', label: 'Rating' },
 ]
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
-  const [category, setCategory] = useState('')
-  const [search, setSearch] = useState('')
+const ITEMS_PER_PAGE_OPTIONS = [20, 40, 60]
 
-  useEffect(() => {
-    fetchProducts()
-  }, [page, category, search])
+function StarRating({ rating, reviewCount }) {
+  const stars = []
+  const rounded = Math.round((rating || 0) * 2) / 2
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page,
-        limit: 20,
-        ...(category && { category }),
-        ...(search && { search }),
-      })
-
-      const response = await fetch(
-        `/api/products?${params}`
+  for (let i = 1; i <= 5; i++) {
+    if (i <= rounded) {
+      stars.push(
+        <span key={i} className={styles.starFull}>&#9733;</span>
       )
-      const data = await response.json()
-      setProducts(data.data)
-      setTotal(data.pagination.total)
-    } catch (error) {
-      console.error('Error fetching products:', error)
-    } finally {
-      setLoading(false)
+    } else if (i - 0.5 === rounded) {
+      stars.push(
+        <span key={i} className={styles.starHalf}>&#9733;</span>
+      )
+    } else {
+      stars.push(
+        <span key={i} className={styles.starEmpty}>&#9733;</span>
+      )
     }
   }
 
-  const handleCategoryChange = (e) => {
-    setCategory(e.target.value)
-    setPage(1)
-  }
+  return (
+    <div className={styles.rating}>
+      <span className={styles.stars}>{stars}</span>
+      {reviewCount > 0 && (
+        <span className={styles.reviewCount}>({reviewCount})</span>
+      )}
+    </div>
+  )
+}
+
+function ProductsContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Filters from URL or state
+  const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1)
+  const [limit, setLimit] = useState(parseInt(searchParams.get('limit')) || 20)
+  const [category, setCategory] = useState(searchParams.get('category') || '')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [sort, setSort] = useState(searchParams.get('sort') || '')
+  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
+  const [inStockOnly, setInStockOnly] = useState(searchParams.get('inStock') === '1')
+
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, pages: 0 })
+  const [searchInput, setSearchInput] = useState(search)
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetch('/api/products/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setCategories(data.data)
+      })
+      .catch(() => {})
+  }, [])
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      })
+      if (category) params.set('category', category)
+      if (search) params.set('search', search)
+      if (sort) params.set('sort', sort)
+      if (minPrice) params.set('minPrice', minPrice)
+      if (maxPrice) params.set('maxPrice', maxPrice)
+      if (inStockOnly) params.set('inStock', '1')
+
+      const response = await fetch(`/api/products?${params}`)
+      const data = await response.json()
+
+      if (data.success) {
+        let filtered = data.data
+        // Client-side filtering for price range and stock if API doesn't support it
+        if (minPrice) {
+          filtered = filtered.filter((p) => p.price >= parseFloat(minPrice))
+        }
+        if (maxPrice) {
+          filtered = filtered.filter((p) => p.price <= parseFloat(maxPrice))
+        }
+        if (inStockOnly) {
+          filtered = filtered.filter((p) => p.stock > 0)
+        }
+        setProducts(filtered)
+        setPagination(data.pagination)
+      }
+    } catch (error) {
+      console.error('Eroare la incarcarea produselor:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, limit, category, search, sort, minPrice, maxPrice, inStockOnly])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (page > 1) params.set('page', String(page))
+    if (limit !== 20) params.set('limit', String(limit))
+    if (category) params.set('category', category)
+    if (search) params.set('search', search)
+    if (sort) params.set('sort', sort)
+    if (minPrice) params.set('minPrice', minPrice)
+    if (maxPrice) params.set('maxPrice', maxPrice)
+    if (inStockOnly) params.set('inStock', '1')
+
+    const qs = params.toString()
+    router.replace(`/products${qs ? '?' + qs : ''}`, { scroll: false })
+  }, [page, limit, category, search, sort, minPrice, maxPrice, inStockOnly, router])
 
   const handleSearch = (e) => {
     e.preventDefault()
+    setSearch(searchInput)
+    setPage(1)
+  }
+
+  const handleCategorySelect = (cat) => {
+    setCategory(cat === category ? '' : cat)
+    setPage(1)
+  }
+
+  const handleApplyPrice = () => {
     setPage(1)
     fetchProducts()
   }
 
-  if (loading && products.length === 0) {
-    return <div className={styles.loading}>Loading products...</div>
+  const handleSortChange = (e) => {
+    setSort(e.target.value)
+    setPage(1)
   }
 
+  const handleLimitChange = (e) => {
+    setLimit(parseInt(e.target.value))
+    setPage(1)
+  }
+
+  const handleInStockToggle = () => {
+    setInStockOnly(!inStockOnly)
+    setPage(1)
+  }
+
+  // Pagination page numbers: first, last, current +/- 2
+  const getPageNumbers = () => {
+    const { pages: totalPages } = pagination
+    if (totalPages <= 1) return []
+
+    const pageSet = new Set()
+    pageSet.add(1)
+    pageSet.add(totalPages)
+    for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+      pageSet.add(i)
+    }
+    const sorted = Array.from(pageSet).sort((a, b) => a - b)
+
+    // Insert ellipsis markers
+    const result = []
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+        result.push('...')
+      }
+      result.push(sorted[i])
+    }
+    return result
+  }
+
+  const activeCategoryName = categories.find((c) => c.name === category)?.name
+
   return (
-    <div className={styles.container}>
-      <h1>All Products ({total})</h1>
+    <div className={styles.pageWrapper}>
+      {/* Breadcrumbs */}
+      <nav className={styles.breadcrumbs}>
+        <Link href="/">Acasa</Link>
+        <span className={styles.breadcrumbSep}>&rsaquo;</span>
+        {category ? (
+          <>
+            <Link href="/products">Produse</Link>
+            <span className={styles.breadcrumbSep}>&rsaquo;</span>
+            <span className={styles.breadcrumbCurrent}>{activeCategoryName || category}</span>
+          </>
+        ) : (
+          <span className={styles.breadcrumbCurrent}>Produse</span>
+        )}
+      </nav>
 
-      <form onSubmit={handleSearch} className={styles.searchForm}>
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <button type="submit">Search</button>
-      </form>
+      {/* Mobile filter toggle */}
+      <button
+        className={styles.mobileFilterBtn}
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="16" y2="12" />
+          <line x1="4" y1="18" x2="12" y2="18" />
+        </svg>
+        Filtre
+      </button>
 
-      <div className={styles.filterSection}>
-        <label>Filter by Category:</label>
-        <select value={category} onChange={handleCategoryChange}>
-          <option value="">All Categories</option>
-          {CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-      </div>
+      <div className={styles.layout}>
+        {/* Sidebar */}
+        <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
+          <div className={styles.sidebarHeader}>
+            <h3>Filtre</h3>
+            <button
+              className={styles.sidebarClose}
+              onClick={() => setSidebarOpen(false)}
+            >
+              &times;
+            </button>
+          </div>
 
-      <div className={styles.grid}>
-        {products.map((product) => (
-          <Link key={product._id} href={`/products/${product._id}`}>
-            <div className={styles.card}>
-              <div className={styles.image}>
-                {product.image ? (
-                  <img src={product.image} alt={product.name} />
-                ) : (
-                  <div className={styles.placeholder}>No Image</div>
-                )}
-              </div>
-              <h2>{product.name}</h2>
-              <p className={styles.category}>{product.category}</p>
-              <p className={styles.price}>${product.price}</p>
-              <p className={styles.stock}>
-                {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-              </p>
+          {/* Search inside sidebar */}
+          <form onSubmit={handleSearch} className={styles.sidebarSearch}>
+            <input
+              type="text"
+              placeholder="Cauta produse..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit">Cauta</button>
+          </form>
+
+          {/* Categories */}
+          <div className={styles.filterGroup}>
+            <h4>Categorie</h4>
+            <ul className={styles.categoryList}>
+              {categories.map((cat) => (
+                <li
+                  key={cat.name}
+                  className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
+                  onClick={() => handleCategorySelect(cat.name)}
+                >
+                  <span className={styles.categoryName}>{cat.name}</span>
+                  <span className={styles.categoryCount}>({cat.count})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Price Range */}
+          <div className={styles.filterGroup}>
+            <h4>Pret (RON)</h4>
+            <div className={styles.priceInputs}>
+              <input
+                type="number"
+                placeholder="Min"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                min="0"
+              />
+              <span className={styles.priceSep}>-</span>
+              <input
+                type="number"
+                placeholder="Max"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                min="0"
+              />
             </div>
-          </Link>
-        ))}
-      </div>
+            <button className={styles.applyPriceBtn} onClick={handleApplyPrice}>
+              Aplica
+            </button>
+          </div>
 
-      <div className={styles.pagination}>
-        <button
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Previous
-        </button>
-        <span>Page {page}</span>
-        <button
-          disabled={page * 20 >= total}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </button>
+          {/* In Stock Toggle */}
+          <div className={styles.filterGroup}>
+            <label className={styles.stockToggle}>
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={handleInStockToggle}
+              />
+              <span className={styles.toggleSlider}></span>
+              <span className={styles.toggleLabel}>Doar produse in stoc</span>
+            </label>
+          </div>
+        </aside>
+
+        {/* Sidebar overlay on mobile */}
+        {sidebarOpen && (
+          <div className={styles.sidebarOverlay} onClick={() => setSidebarOpen(false)} />
+        )}
+
+        {/* Main content */}
+        <main className={styles.mainContent}>
+          {/* Top bar: results count + sort */}
+          <div className={styles.topBar}>
+            <span className={styles.resultsCount}>
+              <strong>{pagination.total}</strong> produse gasite
+              {search && (
+                <> pentru &quot;<em>{search}</em>&quot;</>
+              )}
+            </span>
+            <div className={styles.topBarRight}>
+              <div className={styles.sortWrapper}>
+                <label htmlFor="sort-select">Sorteaza:</label>
+                <select id="sort-select" value={sort} onChange={handleSortChange}>
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.perPageWrapper}>
+                <label htmlFor="limit-select">Afiseaza:</label>
+                <select id="limit-select" value={limit} onChange={handleLimitChange}>
+                  {ITEMS_PER_PAGE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <div className={styles.loadingOverlay}>
+              <div className={styles.spinner}></div>
+              <p>Se incarca produsele...</p>
+            </div>
+          )}
+
+          {/* Products grid */}
+          {!loading && products.length === 0 ? (
+            <div className={styles.emptyState}>
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <h2>Niciun produs gasit</h2>
+              <p>Incearca sa modifici filtrele sau termenul de cautare.</p>
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {products.map((product) => (
+                <div key={product._id} className={styles.card}>
+                  <Link href={`/products/${product.slug || product._id}`} className={styles.cardLink}>
+                    <div className={styles.cardImageWrap}>
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} loading="lazy" />
+                      ) : (
+                        <div className={styles.placeholder}>
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.cardBody}>
+                      <h3 className={styles.cardTitle}>{product.name}</h3>
+                      <StarRating rating={product.avgRating} reviewCount={product.reviewCount} />
+                      <div className={styles.cardPrice}>
+                        {product.price?.toFixed(2)} <span className={styles.currency}>RON</span>
+                      </div>
+                      <div className={product.stock > 0 ? styles.inStock : styles.outOfStock}>
+                        {product.stock > 0 ? 'In stoc' : 'Stoc epuizat'}
+                      </div>
+                    </div>
+                  </Link>
+                  <button
+                    className={styles.quickAddBtn}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      // Dispatch add-to-cart event or call API
+                      window.dispatchEvent(
+                        new CustomEvent('add-to-cart', { detail: { productId: product._id, quantity: 1 } })
+                      )
+                    }}
+                    disabled={product.stock <= 0}
+                  >
+                    {product.stock > 0 ? 'Adauga in cos' : 'Indisponibil'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className={styles.pagination}>
+              <button
+                className={styles.pageBtn}
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                &laquo; Inapoi
+              </button>
+
+              {getPageNumbers().map((p, idx) =>
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} className={styles.pageEllipsis}>
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`${styles.pageBtn} ${p === page ? styles.pageBtnActive : ''}`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                className={styles.pageBtn}
+                disabled={page === pagination.pages}
+                onClick={() => setPage(page + 1)}
+              >
+                Inainte &raquo;
+              </button>
+            </div>
+          )}
+        </main>
       </div>
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '2rem' }}>Se incarca...</div>}>
+      <ProductsContent />
+    </Suspense>
   )
 }
