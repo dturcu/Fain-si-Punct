@@ -1,102 +1,236 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import styles from '@/styles/account.module.css'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import styles from '@/styles/account.module.css';
 
 export default function AccountPage() {
-  const router = useRouter()
-  const [user, setUser] = useState(null)
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
-    try {
-      const authRes = await fetch('/api/auth/me')
-      const authData = await authRes.json()
-
-      if (!authData.success) {
-        router.push('/auth/login')
-        return
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          router.push('/auth/login');
+          return;
+        }
+        setUser(data.user);
+      } catch {
+        router.push('/auth/login');
+        return;
+      } finally {
+        setLoading(false);
       }
 
-      setUser(authData.user)
-
-      const ordersRes = await fetch('/api/orders/my')
-      const ordersData = await ordersRes.json()
-      if (ordersData.success) {
-        setOrders(ordersData.data || [])
+      try {
+        const res = await fetch('/api/orders/my');
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setOrders((data.data || []).slice(0, 5));
+        }
+      } catch {
+        // orders fetch failed silently
+      } finally {
+        setOrdersLoading(false);
       }
-    } catch {
-      router.push('/auth/login')
-    } finally {
-      setLoading(false)
     }
+    fetchData();
+  }, [router]);
+
+  function getInitials(firstName, lastName) {
+    const f = firstName ? firstName.charAt(0).toUpperCase() : '';
+    const l = lastName ? lastName.charAt(0).toUpperCase() : '';
+    return f + l || '?';
   }
 
-  if (loading) return <div className={styles.loading}>Se incarca...</div>
-  if (!user) return null
+  function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ro-RO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  function formatPrice(val) {
+    return parseFloat(val).toFixed(2) + ' lei';
+  }
+
+  function statusLabel(status) {
+    const map = {
+      pending: 'In asteptare',
+      processing: 'In procesare',
+      shipped: 'Expediata',
+      delivered: 'Livrata',
+      cancelled: 'Anulata',
+    };
+    return map[status] || status;
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.loaderWrap}>
+        <div className={styles.spinner} />
+        <p className={styles.loaderText}>Se incarca...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  const hasAddress =
+    user.address &&
+    (user.address.street || user.address.city || user.address.county);
 
   return (
-    <div className={styles.container}>
-      <h1>Contul meu</h1>
+    <div className={styles.page}>
+      {/* Breadcrumbs */}
+      <nav className={styles.breadcrumbs}>
+        <Link href="/" className={styles.breadLink}>Acasa</Link>
+        <span className={styles.breadSep}>&gt;</span>
+        <span className={styles.breadCurrent}>Contul meu</span>
+      </nav>
 
-      <div className={styles.grid}>
-        <div className={styles.card}>
-          <h2>Informatii personale</h2>
-          <div className={styles.info}>
-            <p><strong>Nume:</strong> {user.firstName} {user.lastName}</p>
-            <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Telefon:</strong> {user.phone || 'Nesetat'}</p>
+      <h1 className={styles.pageTitle}>Contul meu</h1>
+
+      {/* Section 1 - Personal info */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Informatii personale</h2>
+        <div className={styles.profileRow}>
+          <div className={styles.avatar}>
+            {getInitials(user.firstName, user.lastName)}
           </div>
-          {user.address?.street && (
-            <div className={styles.info}>
-              <h3>Adresa</h3>
-              <p>{user.address.street}</p>
-              <p>{user.address.city}, {user.address.state} {user.address.zip}</p>
-              <p>{user.address.country}</p>
-            </div>
-          )}
+          <div className={styles.profileDetails}>
+            <p className={styles.userName}>
+              {user.firstName} {user.lastName}
+              {user.role === 'admin' && (
+                <span className={styles.roleBadge}>Admin</span>
+              )}
+            </p>
+            <p className={styles.userMeta}>
+              <span className={styles.metaIcon}>&#9993;</span>
+              {user.email}
+            </p>
+            {user.phone && (
+              <p className={styles.userMeta}>
+                <span className={styles.metaIcon}>&#9742;</span>
+                {user.phone}
+              </p>
+            )}
+          </div>
         </div>
+        <button className={styles.btnPrimary}>Editeaza profilul</button>
+      </section>
 
-        <div className={styles.card}>
-          <h2>Comenzile mele</h2>
-          {orders.length === 0 ? (
-            <p className={styles.empty}>Nu ai nicio comanda inca.</p>
-          ) : (
+      {/* Section 2 - Shipping address */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Adresa de livrare</h2>
+        {hasAddress ? (
+          <div className={styles.addressBlock}>
+            {user.address.street && <p>{user.address.street}</p>}
+            <p>
+              {[user.address.city, user.address.county, user.address.zip]
+                .filter(Boolean)
+                .join(', ')}
+            </p>
+            {user.address.country && <p>{user.address.country}</p>}
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon}>&#128205;</span>
+            <p className={styles.emptyMsg}>Nu ai o adresa salvata.</p>
+            <p className={styles.emptyHint}>
+              Adauga o adresa pentru a simplifica procesul de comanda.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* Section 3 - My orders */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Comenzile mele</h2>
+        {ordersLoading ? (
+          <p className={styles.loadingText}>Se incarca comenzile...</p>
+        ) : orders.length === 0 ? (
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon}>&#128230;</span>
+            <p className={styles.emptyMsg}>Nu ai nicio comanda inca.</p>
+            <p className={styles.emptyHint}>
+              Exploreaza produsele noastre si plaseaza prima ta comanda!
+            </p>
+            <Link href="/products" className={styles.btnOutline}>
+              Vezi produse
+            </Link>
+          </div>
+        ) : (
+          <>
             <div className={styles.ordersList}>
-              {orders.map((order) => (
-                <Link key={order.id} href={`/orders/${order.id}`} className={styles.orderItem}>
-                  <div className={styles.orderHeader}>
-                    <span className={styles.orderNumber}>{order.orderNumber}</span>
-                    <span className={`${styles.status} ${styles[order.status]}`}>
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className={styles.orderMeta}>
-                    <span>${order.total.toFixed(2)}</span>
-                    <span>{new Date(order.createdAt).toLocaleDateString('ro-RO')}</span>
-                  </div>
-                </Link>
-              ))}
+              {orders.map((order) => {
+                const itemCount = Array.isArray(order.items)
+                  ? order.items.length
+                  : 0;
+                return (
+                  <Link
+                    href={`/orders/${order.id}`}
+                    key={order.id}
+                    className={styles.orderRow}
+                  >
+                    <div className={styles.orderMain}>
+                      <span className={styles.orderNumber}>
+                        #{order.orderNumber}
+                      </span>
+                      <span className={styles.orderDate}>
+                        {formatDate(order.createdAt)}
+                      </span>
+                    </div>
+                    <div className={styles.orderRight}>
+                      <span
+                        className={`${styles.statusBadge} ${
+                          styles['status_' + order.status]
+                        }`}
+                      >
+                        {statusLabel(order.status)}
+                      </span>
+                      <span className={styles.orderTotal}>
+                        {formatPrice(order.total)}
+                      </span>
+                      <span className={styles.orderItems}>
+                        {itemCount} {itemCount === 1 ? 'produs' : 'produse'}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
-          )}
-        </div>
-      </div>
+            <Link href="/account/orders" className={styles.viewAllLink}>
+              Vezi toate comenzile &rarr;
+            </Link>
+          </>
+        )}
+      </section>
 
-      <div className={styles.actions}>
-        <Link href="/account/preferences" className={styles.link}>
-          Preferinte email
+      {/* Section 4 - Quick links */}
+      <section className={styles.quickLinks}>
+        <Link href="/products" className={styles.quickCard}>
+          <span className={styles.quickIcon}>&#128722;</span>
+          <span className={styles.quickLabel}>Continua cumparaturile</span>
         </Link>
-        <Link href="/products" className={styles.link}>
-          Continua cumparaturile
+        <Link href="/cart" className={styles.quickCard}>
+          <span className={styles.quickIcon}>&#128717;</span>
+          <span className={styles.quickLabel}>Cosul meu</span>
         </Link>
-      </div>
+        <Link href="/account/preferences" className={styles.quickCard}>
+          <span className={styles.quickIcon}>&#9993;</span>
+          <span className={styles.quickLabel}>Preferinte email</span>
+        </Link>
+      </section>
     </div>
-  )
+  );
 }
