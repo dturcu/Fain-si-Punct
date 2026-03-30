@@ -19,9 +19,13 @@ export async function PUT(request, { params }) {
       )
     }
 
+    const { itemId } = await params
+
     // Verify the cart item belongs to the user's cart
     const userCart = await getCartByUserId(decoded.userId)
-    const itemBelongsToUser = userCart.items?.some(item => item.id === params.itemId || item.id === parseInt(params.itemId))
+    const itemBelongsToUser = userCart.items?.some(
+      (item) => item._id === itemId || String(item._id) === String(itemId)
+    )
     if (!userCart.id || !itemBelongsToUser) {
       return Response.json(
         { success: false, error: 'Cart item not found' },
@@ -30,7 +34,7 @@ export async function PUT(request, { params }) {
     }
 
     const { quantity } = await request.json()
-    const cart = await updateCartItemQuantity(decoded.userId, params.itemId, quantity)
+    const cart = await updateCartItemQuantity(decoded.userId, itemId, quantity)
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
@@ -59,9 +63,13 @@ export async function DELETE(request, { params }) {
       )
     }
 
+    const { itemId } = await params
+
     // Verify the cart item belongs to the user's cart
     const userCart = await getCartByUserId(decoded.userId)
-    const itemBelongsToUser = userCart.items?.some(item => item.id === params.itemId || item.id === parseInt(params.itemId))
+    const itemBelongsToUser = userCart.items?.some(
+      (item) => item._id === itemId || String(item._id) === String(itemId)
+    )
     if (!userCart.id || !itemBelongsToUser) {
       return Response.json(
         { success: false, error: 'Cart item not found' },
@@ -69,7 +77,7 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const cart = await removeFromCart(decoded.userId, params.itemId)
+    const cart = await removeFromCart(decoded.userId, itemId)
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
