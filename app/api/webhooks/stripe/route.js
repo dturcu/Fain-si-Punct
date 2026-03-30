@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { constructWebhookEvent, verifyWebhookSignature } from '@/lib/stripe'
 
+async function restoreStock(orderId) {
+  const { data: items } = await supabaseAdmin
+    .from('order_items')
+    .select('product_id, quantity')
+    .eq('order_id', orderId)
+
+  if (!items || items.length === 0) return
+
+  for (const item of items) {
+    await supabaseAdmin.rpc('increment_stock', {
+      p_product_id: item.product_id,
+      p_quantity: item.quantity,
+    })
+  }
+}
+
 /**
  * POST /api/webhooks/stripe
  * Handle Stripe webhook events
@@ -154,6 +170,14 @@ async function handlePaymentIntentFailed(paymentIntent) {
         .update({ payment_status: 'failed' })
         .eq('id', order.id)
 
+      // Restore stock for failed payment
+      try {
+        await restoreStock(order.id)
+        console.log('Stock restored for failed Stripe payment on order:', order.id)
+      } catch (stockError) {
+        console.error('Failed to restore stock for Stripe payment failure:', stockError)
+      }
+
       console.log('Order payment marked as failed:', order.id)
     }
   } catch (error) {
@@ -199,6 +223,14 @@ async function handlePaymentIntentCanceled(paymentIntent) {
         .from('orders')
         .update({ payment_status: 'failed' })
         .eq('id', order.id)
+
+      // Restore stock for cancelled payment
+      try {
+        await restoreStock(order.id)
+        console.log('Stock restored for cancelled Stripe payment on order:', order.id)
+      } catch (stockError) {
+        console.error('Failed to restore stock for Stripe payment cancellation:', stockError)
+      }
 
       console.log('Order marked as canceled:', order.id)
     }

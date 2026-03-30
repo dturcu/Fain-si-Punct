@@ -70,7 +70,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Get email logs error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

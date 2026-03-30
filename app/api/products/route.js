@@ -3,12 +3,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page')) || 1
-    const limit = parseInt(searchParams.get('limit')) || 20
+    const page = Math.max(1, parseInt(searchParams.get('page')) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit')) || 20))
     const category = searchParams.get('category')
     const search = searchParams.get('search')
     const tag = searchParams.get('tag')
     const sort = searchParams.get('sort') || '-createdAt'
+    const minPrice = parseFloat(searchParams.get('minPrice'))
+    const maxPrice = parseFloat(searchParams.get('maxPrice'))
 
     const offset = (page - 1) * limit
 
@@ -19,7 +21,22 @@ export async function GET(request) {
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+      // Use full-text search for multi-word queries (leverages GIN index on search_vector);
+      // fall back to ILIKE for very short terms where FTS is less useful.
+      if (search.trim().length >= 3) {
+        const ftsQuery = search.trim().split(/\s+/).join(' & ')
+        query = query.or(`name.ilike.%${search}%,search_vector.fts(romanian).${ftsQuery}`)
+      } else {
+        query = query.ilike('name', `%${search}%`)
+      }
+    }
+
+    if (!isNaN(minPrice)) {
+      query = query.gte('price', minPrice)
+    }
+
+    if (!isNaN(maxPrice)) {
+      query = query.lte('price', maxPrice)
     }
 
     if (tag) {
@@ -55,8 +72,9 @@ export async function GET(request) {
       },
     })
   } catch (error) {
+    console.error('Products GET error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -79,8 +97,9 @@ export async function POST(request) {
       { status: 201 }
     )
   } catch (error) {
+    console.error('Products POST error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 400 }
     )
   }

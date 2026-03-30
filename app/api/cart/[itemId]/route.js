@@ -1,5 +1,6 @@
 import { updateCartItemQuantity, removeFromCart, getCartByUserId } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
 
 export async function PUT(request, { params }) {
   try {
@@ -34,12 +35,28 @@ export async function PUT(request, { params }) {
     }
 
     const { quantity } = await request.json()
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return Response.json(
+        { success: false, error: 'Cantitatea trebuie să fie un număr întreg pozitiv' },
+        { status: 400 }
+      )
+    }
+
+    if (quantity > MAX_QUANTITY_PER_ITEM) {
+      return Response.json(
+        { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
+        { status: 400 }
+      )
+    }
+
     const cart = await updateCartItemQuantity(decoded.userId, itemId, quantity)
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
+    console.error('Cart item error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -81,8 +98,9 @@ export async function DELETE(request, { params }) {
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
+    console.error('Cart item error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

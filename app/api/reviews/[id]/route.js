@@ -31,7 +31,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -116,7 +116,7 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error('Error updating review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -187,7 +187,7 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error('Error deleting review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
