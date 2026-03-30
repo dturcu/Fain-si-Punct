@@ -83,7 +83,14 @@ export async function GET(request) {
         totalProducts: totalProducts || 0,
         totalOrders: totalOrders || 0,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-        recentOrders: recentOrders || [],
+        recentOrders: (recentOrders || []).map(o => ({
+          _id: o.id,
+          orderNumber: o.order_number,
+          total: parseFloat(o.total),
+          status: o.status,
+          customer: { name: o.customer_name, email: o.customer_email },
+          createdAt: o.created_at,
+        })),
         categoryStats: categories,
       },
     })
