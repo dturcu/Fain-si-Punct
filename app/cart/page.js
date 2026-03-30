@@ -233,7 +233,7 @@ export default function CartPage() {
               >
                 <div className={styles.productInfo}>
                   <Link
-                    href={`/products/${item.product_id}`}
+                    href={`/products/${item.productId}`}
                     className={styles.imageLink}
                   >
                     <img
@@ -244,7 +244,7 @@ export default function CartPage() {
                   </Link>
                   <div className={styles.productDetails}>
                     <Link
-                      href={`/products/${item.product_id}`}
+                      href={`/products/${item.productId}`}
                       className={styles.productName}
                     >
                       {item.name}

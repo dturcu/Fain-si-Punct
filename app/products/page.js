@@ -66,6 +66,37 @@ function ProductsContent() {
 
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, pages: 0 })
   const [searchInput, setSearchInput] = useState(search)
+  const [addingToCartId, setAddingToCartId] = useState(null)
+  const [cartMessage, setCartMessage] = useState('')
+
+  const handleQuickAdd = async (productId) => {
+    setAddingToCartId(productId)
+    setCartMessage('')
+    try {
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity: 1 }),
+      })
+      if (response.status === 401) {
+        window.location.href = '/auth/login'
+        return
+      }
+      const data = await response.json()
+      if (data.success) {
+        setCartMessage('Adaugat in cos!')
+        setTimeout(() => setCartMessage(''), 2000)
+      } else {
+        setCartMessage(data.error || 'Eroare')
+        setTimeout(() => setCartMessage(''), 3000)
+      }
+    } catch {
+      setCartMessage('Eroare la adaugare')
+      setTimeout(() => setCartMessage(''), 3000)
+    } finally {
+      setAddingToCartId(null)
+    }
+  }
 
   // Fetch categories on mount
   useEffect(() => {
@@ -195,6 +226,9 @@ function ProductsContent() {
 
   return (
     <div className={styles.pageWrapper}>
+      {cartMessage && (
+        <div className={styles.cartToast}>{cartMessage}</div>
+      )}
       {/* Breadcrumbs */}
       <nav className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
@@ -394,14 +428,15 @@ function ProductsContent() {
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      // Dispatch add-to-cart event or call API
-                      window.dispatchEvent(
-                        new CustomEvent('add-to-cart', { detail: { productId: product._id, quantity: 1 } })
-                      )
+                      handleQuickAdd(product.id)
                     }}
-                    disabled={product.stock <= 0}
+                    disabled={product.stock <= 0 || addingToCartId === product.id}
                   >
-                    {product.stock > 0 ? 'Adauga in cos' : 'Indisponibil'}
+                    {addingToCartId === product.id
+                      ? 'Se adauga...'
+                      : product.stock > 0
+                      ? 'Adauga in cos'
+                      : 'Indisponibil'}
                   </button>
                 </div>
               ))}
