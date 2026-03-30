@@ -1,4 +1,4 @@
-import { updateCartItemQuantity, removeFromCart } from '@/lib/supabase-queries'
+import { updateCartItemQuantity, removeFromCart, getCartByUserId } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 
 export async function PUT(request, { params }) {
@@ -16,6 +16,16 @@ export async function PUT(request, { params }) {
       return Response.json(
         { success: false, error: 'Invalid token' },
         { status: 401 }
+      )
+    }
+
+    // Verify the cart item belongs to the user's cart
+    const userCart = await getCartByUserId(decoded.userId)
+    const itemBelongsToUser = userCart.items?.some(item => item.id === params.itemId || item.id === parseInt(params.itemId))
+    if (!userCart.id || !itemBelongsToUser) {
+      return Response.json(
+        { success: false, error: 'Cart item not found' },
+        { status: 403 }
       )
     }
 
@@ -46,6 +56,16 @@ export async function DELETE(request, { params }) {
       return Response.json(
         { success: false, error: 'Invalid token' },
         { status: 401 }
+      )
+    }
+
+    // Verify the cart item belongs to the user's cart
+    const userCart = await getCartByUserId(decoded.userId)
+    const itemBelongsToUser = userCart.items?.some(item => item.id === params.itemId || item.id === parseInt(params.itemId))
+    if (!userCart.id || !itemBelongsToUser) {
+      return Response.json(
+        { success: false, error: 'Cart item not found' },
+        { status: 403 }
       )
     }
 

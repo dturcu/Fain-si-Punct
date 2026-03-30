@@ -5,6 +5,22 @@ import { orderRowToObj } from '../route'
 
 export async function GET(request, { params }) {
   try {
+    const token = getCookieToken(request)
+    if (!token) {
+      return Response.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
 
     const { data: order, error } = await supabaseAdmin
@@ -17,6 +33,15 @@ export async function GET(request, { params }) {
       return Response.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
+      )
+    }
+
+    // Verify the requesting user owns this order or is admin
+    const user = await getUserById(decoded.userId)
+    if (order.user_id !== decoded.userId && (!user || user.role !== 'admin')) {
+      return Response.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
       )
     }
 

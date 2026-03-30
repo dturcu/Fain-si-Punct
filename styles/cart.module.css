@@ -75,6 +75,32 @@
   letter-spacing: 0.03em;
 }
 
+/* ===== Items Column Wrapper ===== */
+.itemsColumn {
+  min-width: 0;
+}
+
+/* ===== Column Header Labels ===== */
+.colProduct {
+  text-align: left;
+}
+
+.colPrice {
+  text-align: center;
+}
+
+.colQuantity {
+  text-align: center;
+}
+
+.colSubtotal {
+  text-align: right;
+}
+
+.colRemove {
+  text-align: center;
+}
+
 /* ===== Cart Item Row ===== */
 .cartItem {
   display: grid;

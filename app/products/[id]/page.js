@@ -125,6 +125,7 @@ export default function ProductDetail({ params: paramsPromise }) {
 
       setMessageType('success')
       setMessage(`Produsul a fost adaugat in cos (${quantity} ${quantity === 1 ? 'bucata' : 'bucati'})`)
+      window.dispatchEvent(new Event('cart-updated'))
       setQuantity(1)
 
       // Clear the message after 4 seconds, do NOT redirect
@@ -178,6 +179,7 @@ export default function ProductDetail({ params: paramsPromise }) {
         return
       }
 
+      window.dispatchEvent(new Event('cart-updated'))
       window.location.href = '/cart'
     } catch (err) {
       console.error('Error:', err)

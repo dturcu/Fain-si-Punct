@@ -53,12 +53,20 @@ export async function POST(request) {
       }
     }
 
+    // Calculate subtotal from cart items and apply shipping
+    const subtotal = cart.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    )
+    const shippingCost = subtotal >= 200 ? 0 : 15.99
+    const orderTotal = subtotal + shippingCost
+
     // Create order
     const orderNumber = generateOrderNumber()
     const order = await createOrder(
       decoded.userId,
       cart.items,
-      cart.total,
+      orderTotal,
       customer,
       shippingAddress,
       orderNumber,
