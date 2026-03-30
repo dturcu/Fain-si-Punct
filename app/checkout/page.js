@@ -27,7 +27,7 @@ export default function CheckoutPage() {
 
   const fetchCart = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart`)
+      const response = await fetch(`/api/cart`)
 
       if (response.status === 401) {
         router.push('/auth/login')
@@ -55,7 +55,7 @@ export default function CheckoutPage() {
     setSubmitting(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/checkout`, {
+      const response = await fetch(`/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

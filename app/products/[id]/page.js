@@ -21,7 +21,7 @@ export default function ProductDetail({ params }) {
     try {
       setLoading(true)
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${params.id}`
+        `/api/products/${params.id}`
       )
       const data = await response.json()
 
@@ -48,7 +48,7 @@ export default function ProductDetail({ params }) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/cart`,
+        `/api/cart`,
         {
           method: 'POST',
           headers: {

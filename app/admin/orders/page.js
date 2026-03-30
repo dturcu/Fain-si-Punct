@@ -24,7 +24,7 @@ export default function AdminOrders() {
       if (filter) params.append('status', filter)
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/orders?${params}`
+        `/api/orders?${params}`
       )
       const data = await response.json()
       setOrders(data.data)
@@ -56,7 +56,7 @@ export default function AdminOrders() {
     try {
       const trackingInfo = trackingData[orderId] || {}
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/status`,
+        `/api/orders/${orderId}/status`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
