@@ -12,6 +12,12 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingItems, setUpdatingItems] = useState({})
+  const [toast, setToast] = useState({ message: '', type: '' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast({ message: '', type: '' }), 4000)
+  }
 
   useEffect(() => {
     fetchCart()
@@ -43,6 +49,14 @@ export default function CartPage() {
   const handleQuantityChange = async (itemId, newQuantity) => {
     if (newQuantity < 1) return
 
+    // Optimistic update — apply locally immediately, roll back on error
+    const previousCart = cart
+    setCart((prev) => ({
+      ...prev,
+      items: prev.items.map((i) =>
+        i._id === itemId ? { ...i, quantity: newQuantity } : i
+      ),
+    }))
     setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
 
     try {
@@ -61,15 +75,25 @@ export default function CartPage() {
       if (data.success) {
         setCart(data.data)
         window.dispatchEvent(new Event('cart-updated'))
+      } else {
+        setCart(previousCart) // roll back
+        showToast(data.error || 'Nu s-a putut actualiza cantitatea.', 'error')
       }
     } catch (err) {
-      console.error('Error updating quantity:', err)
+      setCart(previousCart) // roll back
+      showToast('Eroare de rețea. Încearcă din nou.', 'error')
     } finally {
       setUpdatingItems((prev) => ({ ...prev, [itemId]: false }))
     }
   }
 
   const handleRemoveItem = async (itemId) => {
+    // Optimistic update — remove locally immediately, roll back on error
+    const previousCart = cart
+    setCart((prev) => ({
+      ...prev,
+      items: prev.items.filter((i) => i._id !== itemId),
+    }))
     setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
 
     try {
@@ -86,9 +110,14 @@ export default function CartPage() {
       if (data.success) {
         setCart(data.data)
         window.dispatchEvent(new Event('cart-updated'))
+        showToast('Produs eliminat din coș.')
+      } else {
+        setCart(previousCart) // roll back
+        showToast(data.error || 'Nu s-a putut elimina produsul.', 'error')
       }
     } catch (err) {
-      console.error('Error removing item:', err)
+      setCart(previousCart) // roll back
+      showToast('Eroare de rețea. Încearcă din nou.', 'error')
     } finally {
       setUpdatingItems((prev) => ({ ...prev, [itemId]: false }))
     }
@@ -205,6 +234,17 @@ export default function CartPage() {
 
   return (
     <div className={styles.pageWrapper}>
+      {/* Toast notification */}
+      {toast.message && (
+        <div
+          className={`${styles.toast} ${toast.type === 'error' ? styles.toastError : styles.toastSuccess}`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
         <span className={styles.breadcrumbSep}>&gt;</span>
