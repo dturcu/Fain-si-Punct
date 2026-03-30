@@ -28,6 +28,47 @@ export async function POST(request) {
 
     const { shippingAddress, customer, paymentMethod } = await request.json()
 
+    // Validate customer fields
+    if (!customer?.name || !customer.name.trim()) {
+      return Response.json(
+        { success: false, error: 'Numele clientului este obligatoriu' },
+        { status: 400 }
+      )
+    }
+    if (!customer?.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+      return Response.json(
+        { success: false, error: 'Adresa de email nu este valida' },
+        { status: 400 }
+      )
+    }
+    if (!customer?.phone) {
+      return Response.json(
+        { success: false, error: 'Numarul de telefon este obligatoriu' },
+        { status: 400 }
+      )
+    }
+
+    // Validate shipping address fields
+    const requiredAddressFields = ['street', 'city', 'state', 'zip']
+    for (const field of requiredAddressFields) {
+      if (!shippingAddress?.[field] || !shippingAddress[field].trim()) {
+        const fieldLabels = { street: 'Strada', city: 'Orasul', state: 'Judetul', zip: 'Codul postal' }
+        return Response.json(
+          { success: false, error: `${fieldLabels[field]} este obligatoriu/obligatorie` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Validate payment method
+    const validPaymentMethods = ['card', 'revolut', 'paypal', 'ramburs']
+    if (!paymentMethod || !validPaymentMethods.includes(paymentMethod)) {
+      return Response.json(
+        { success: false, error: 'Metoda de plata selectata nu este valida' },
+        { status: 400 }
+      )
+    }
+
     // Get user's cart
     const cart = await getCartByUserId(decoded.userId)
     if (!cart || !cart.items || cart.items.length === 0) {
@@ -35,6 +76,23 @@ export async function POST(request) {
         { success: false, error: 'Cart is empty' },
         { status: 400 }
       )
+    }
+
+    // Check stock availability before deducting
+    for (const item of cart.items) {
+      const { data: product } = await supabaseAdmin
+        .from('products')
+        .select('stock, name')
+        .eq('id', item.productId)
+        .single()
+
+      if (!product || product.stock < item.quantity) {
+        const productName = product?.name || item.name || item.productId
+        return Response.json(
+          { success: false, error: `Produsul ${productName} nu mai este disponibil in cantitatea solicitata` },
+          { status: 400 }
+        )
+      }
     }
 
     // Update product stock for each item
@@ -48,7 +106,7 @@ export async function POST(request) {
       if (product) {
         await supabaseAdmin
           .from('products')
-          .update({ stock: Math.max(0, product.stock - item.quantity) })
+          .update({ stock: product.stock - item.quantity })
           .eq('id', item.productId)
       }
     }
