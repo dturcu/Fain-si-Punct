@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import styles from '@/styles/checkout.module.css'
 
 const PAYMENT_METHODS = [
@@ -9,27 +10,30 @@ const PAYMENT_METHODS = [
     id: 'card',
     label: 'Card bancar',
     subtitle: 'Visa, Mastercard, Maestro',
-    icon: '💳',
+    icon: '\u{1F4B3}',
   },
   {
     id: 'revolut',
     label: 'Revolut Pay',
     subtitle: 'Plateste cu Revolut',
-    icon: '🔄',
+    icon: '\u{1F504}',
   },
   {
     id: 'paypal',
     label: 'PayPal',
     subtitle: 'Plateste cu contul PayPal',
-    icon: '🅿️',
+    icon: '\u{1F17F}\uFE0F',
   },
   {
     id: 'ramburs',
     label: 'Ramburs (Plata la livrare)',
     subtitle: 'Platesti cand primesti coletul',
-    icon: '📦',
+    icon: '\u{1F4E6}',
   },
 ]
+
+const SHIPPING_THRESHOLD = 200
+const SHIPPING_COST = 15.99
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -37,6 +41,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('card')
+  const [errors, setErrors] = useState({})
+  const [attempted, setAttempted] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -64,6 +70,10 @@ export default function CheckoutPage() {
 
       const data = await response.json()
       if (data.success) {
+        if (!data.data || !data.data.items || data.data.items.length === 0) {
+          router.push('/cart')
+          return
+        }
         setCart(data.data)
       }
     } catch (err) {
@@ -76,10 +86,42 @@ export default function CheckoutPage() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (attempted) {
+      setErrors((prev) => {
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
+    }
   }
+
+  const validate = () => {
+    const newErrors = {}
+    if (!formData.firstName.trim()) newErrors.firstName = true
+    if (!formData.lastName.trim()) newErrors.lastName = true
+    if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = true
+    if (!formData.phone.trim()) newErrors.phone = true
+    if (!formData.street.trim()) newErrors.street = true
+    if (!formData.city.trim()) newErrors.city = true
+    if (!formData.state.trim()) newErrors.state = true
+    if (!formData.zip.trim()) newErrors.zip = true
+    if (!formData.country.trim()) newErrors.country = true
+    return newErrors
+  }
+
+  const shippingCost =
+    cart && cart.total >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+  const orderTotal = cart ? cart.total + shippingCost : 0
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setAttempted(true)
+
+    const newErrors = validate()
+    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) return
+
     setSubmitting(true)
 
     try {
@@ -110,11 +152,8 @@ export default function CheckoutPage() {
 
         if (paymentMethod === 'ramburs') {
           router.push(`/orders/${order.id}?status=confirmed`)
-        } else if (paymentMethod === 'card' || paymentMethod === 'revolut') {
-          // For card/Revolut, redirect to payment page
+        } else {
           router.push(`/orders/${order.id}?pay=${paymentMethod}`)
-        } else if (paymentMethod === 'paypal') {
-          router.push(`/orders/${order.id}?pay=paypal`)
         }
       } else {
         alert(`Eroare: ${data.error}`)
@@ -125,6 +164,9 @@ export default function CheckoutPage() {
       setSubmitting(false)
     }
   }
+
+  const inputClass = (field) =>
+    `${styles.input} ${attempted && errors[field] ? styles.inputError : ''}`
 
   if (loading) return <div className={styles.loading}>Se incarca...</div>
 
@@ -140,96 +182,160 @@ export default function CheckoutPage() {
     )
   }
 
+  const isRamburs = paymentMethod === 'ramburs'
+
   return (
     <div className={styles.container}>
-      <h1>Finalizare comanda</h1>
+      {/* Breadcrumbs */}
+      <nav className={styles.breadcrumbs}>
+        <a href="/">Acasa</a>
+        <span className={styles.breadcrumbSep}>&gt;</span>
+        <a href="/cart">Cos</a>
+        <span className={styles.breadcrumbSep}>&gt;</span>
+        <span className={styles.breadcrumbActive}>Finalizare comanda</span>
+      </nav>
+
+      {/* Step Indicator */}
+      <div className={styles.steps}>
+        <div className={styles.step}>
+          <span className={styles.stepNumber}>1</span>
+          <span className={styles.stepLabel}>Cos</span>
+        </div>
+        <div className={styles.stepDivider} />
+        <div className={`${styles.step} ${styles.stepActive}`}>
+          <span className={`${styles.stepNumber} ${styles.stepNumberActive}`}>2</span>
+          <span className={styles.stepLabel}>Livrare</span>
+        </div>
+        <div className={styles.stepDivider} />
+        <div className={styles.step}>
+          <span className={styles.stepNumber}>3</span>
+          <span className={styles.stepLabel}>Plata</span>
+        </div>
+      </div>
 
       <div className={styles.content}>
         <div className={styles.formSection}>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <h2>Informatii livrare</h2>
 
             <div className={styles.row}>
+              <div className={styles.field}>
+                <label htmlFor="firstName">Prenume</label>
+                <input
+                  id="firstName"
+                  type="text"
+                  name="firstName"
+                  placeholder="Prenume"
+                  className={inputClass('firstName')}
+                  value={formData.firstName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="lastName">Nume</label>
+                <input
+                  id="lastName"
+                  type="text"
+                  name="lastName"
+                  placeholder="Nume"
+                  className={inputClass('lastName')}
+                  value={formData.lastName}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="email">Email</label>
               <input
-                type="text"
-                name="firstName"
-                placeholder="Prenume"
-                required
-                value={formData.firstName}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Nume"
-                required
-                value={formData.lastName}
+                id="email"
+                type="email"
+                name="email"
+                placeholder="exemplu@email.com"
+                className={inputClass('email')}
+                value={formData.email}
                 onChange={handleChange}
               />
             </div>
 
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              required
-              value={formData.email}
-              onChange={handleChange}
-            />
-            <input
-              type="tel"
-              name="phone"
-              placeholder="Telefon"
-              required
-              value={formData.phone}
-              onChange={handleChange}
-            />
-
-            <input
-              type="text"
-              name="street"
-              placeholder="Adresa (strada, numar, bloc, apartament)"
-              required
-              value={formData.street}
-              onChange={handleChange}
-            />
-
-            <div className={styles.row}>
+            <div className={styles.field}>
+              <label htmlFor="phone">Telefon</label>
               <input
-                type="text"
-                name="city"
-                placeholder="Oras"
-                required
-                value={formData.city}
+                id="phone"
+                type="tel"
+                name="phone"
+                placeholder="07XX XXX XXX"
+                className={inputClass('phone')}
+                value={formData.phone}
                 onChange={handleChange}
               />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="street">Adresa</label>
               <input
+                id="street"
                 type="text"
-                name="state"
-                placeholder="Judet"
-                required
-                value={formData.state}
+                name="street"
+                placeholder="Strada, numar, bloc, apartament"
+                className={inputClass('street')}
+                value={formData.street}
                 onChange={handleChange}
               />
             </div>
 
             <div className={styles.row}>
-              <input
-                type="text"
-                name="zip"
-                placeholder="Cod postal"
-                required
-                value={formData.zip}
-                onChange={handleChange}
-              />
-              <input
-                type="text"
-                name="country"
-                placeholder="Tara"
-                required
-                value={formData.country}
-                onChange={handleChange}
-              />
+              <div className={styles.field}>
+                <label htmlFor="city">Oras</label>
+                <input
+                  id="city"
+                  type="text"
+                  name="city"
+                  placeholder="Oras"
+                  className={inputClass('city')}
+                  value={formData.city}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="state">Judet</label>
+                <input
+                  id="state"
+                  type="text"
+                  name="state"
+                  placeholder="Judet"
+                  className={inputClass('state')}
+                  value={formData.state}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className={styles.row}>
+              <div className={styles.field}>
+                <label htmlFor="zip">Cod postal</label>
+                <input
+                  id="zip"
+                  type="text"
+                  name="zip"
+                  placeholder="XXXXXX"
+                  className={inputClass('zip')}
+                  value={formData.zip}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="country">Tara</label>
+                <input
+                  id="country"
+                  type="text"
+                  name="country"
+                  placeholder="Tara"
+                  className={inputClass('country')}
+                  value={formData.country}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
 
             <h2 className={styles.paymentTitle}>Metoda de plata</h2>
@@ -252,27 +358,40 @@ export default function CheckoutPage() {
                   <span className={styles.paymentIcon}>{method.icon}</span>
                   <div className={styles.paymentInfo}>
                     <span className={styles.paymentLabel}>{method.label}</span>
-                    <span className={styles.paymentSubtitle}>{method.subtitle}</span>
+                    <span className={styles.paymentSubtitle}>
+                      {method.subtitle}
+                    </span>
                   </div>
                 </label>
               ))}
             </div>
 
-            {paymentMethod === 'ramburs' && (
+            {isRamburs && (
               <div className={styles.rambursNote}>
-                Vei plati suma de <strong>${cart.total.toFixed(2)}</strong> curierului la livrare.
-                Se accepta numerar sau card la curier.
+                Vei plati suma de{' '}
+                <strong>{orderTotal.toFixed(2)} lei</strong> curierului la
+                livrare. Se accepta numerar sau card la curier.
               </div>
             )}
 
+            {/* Securitate trust section */}
+            <div className={styles.trustSection}>
+              <span className={styles.trustIcon}>&#128274;</span>
+              <span className={styles.trustText}>
+                Datele tale sunt protejate
+              </span>
+            </div>
+
             <button
               type="submit"
-              className={styles.submitBtn}
+              className={`${styles.submitBtn} ${
+                isRamburs ? styles.submitBtnGreen : styles.submitBtnGold
+              }`}
               disabled={submitting}
             >
               {submitting
                 ? 'Se proceseaza...'
-                : paymentMethod === 'ramburs'
+                : isRamburs
                 ? 'Plaseaza comanda (Plata la livrare)'
                 : 'Continua catre plata'}
             </button>
@@ -285,29 +404,43 @@ export default function CheckoutPage() {
           <div className={styles.itemsList}>
             {cart.items.map((item, i) => (
               <div key={item._id || i} className={styles.summaryItem}>
-                <span>{item.name} x {item.quantity}</span>
-                <span>${(item.price * item.quantity).toFixed(2)}</span>
+                <div className={styles.summaryItemLeft}>
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    width={40}
+                    height={40}
+                    className={styles.summaryItemImage}
+                  />
+                  <span className={styles.summaryItemName}>
+                    {item.name} x {item.quantity}
+                  </span>
+                </div>
+                <span className={styles.summaryItemPrice}>
+                  {(item.price * item.quantity).toFixed(2)} lei
+                </span>
               </div>
             ))}
           </div>
 
           <div className={styles.summaryLine}>
             <span>Subtotal:</span>
-            <span>${cart.total.toFixed(2)}</span>
+            <span>{cart.total.toFixed(2)} lei</span>
           </div>
           <div className={styles.summaryLine}>
             <span>Livrare:</span>
-            <span>GRATIS</span>
+            <span>
+              {shippingCost === 0 ? 'GRATIS' : `${shippingCost.toFixed(2)} lei`}
+            </span>
           </div>
-          {paymentMethod === 'ramburs' && (
-            <div className={styles.summaryLine}>
-              <span>Taxa ramburs:</span>
-              <span>$0.00</span>
+          {shippingCost === 0 && (
+            <div className={styles.freeShippingNote}>
+              Transport gratuit pentru comenzi peste {SHIPPING_THRESHOLD} lei
             </div>
           )}
           <div className={`${styles.summaryLine} ${styles.total}`}>
             <span>Total:</span>
-            <span>${cart.total.toFixed(2)}</span>
+            <span>{orderTotal.toFixed(2)} lei</span>
           </div>
         </div>
       </div>
