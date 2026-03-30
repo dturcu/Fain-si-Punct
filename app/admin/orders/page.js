@@ -1,8 +1,25 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import styles from '@/styles/admin-orders.module.css'
-import axios from 'axios'
+
+const STATUS_LABELS = {
+  pending: 'In asteptare',
+  processing: 'In procesare',
+  shipped: 'Expediat',
+  delivered: 'Livrat',
+  cancelled: 'Anulat',
+}
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Toate' },
+  { value: 'pending', label: 'In asteptare' },
+  { value: 'processing', label: 'In procesare' },
+  { value: 'shipped', label: 'Expediat' },
+  { value: 'delivered', label: 'Livrat' },
+  { value: 'cancelled', label: 'Anulat' },
+]
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([])
@@ -23,13 +40,11 @@ export default function AdminOrders() {
       const params = new URLSearchParams()
       if (filter) params.append('status', filter)
 
-      const response = await fetch(
-        `/api/orders?${params}`
-      )
+      const response = await fetch(`/api/orders?${params}`)
       const data = await response.json()
-      setOrders(data.data)
+      setOrders(data.data || [])
     } catch (error) {
-      console.error('Error fetching orders:', error)
+      console.error('Eroare la incarcarea comenzilor:', error)
     } finally {
       setLoading(false)
     }
@@ -37,73 +52,68 @@ export default function AdminOrders() {
 
   const fetchEmailLogs = async (orderId) => {
     try {
-      const response = await axios.get('/api/emails/logs', {
-        params: { orderId, limit: 100 },
-      })
+      const response = await fetch(`/api/emails/logs?orderId=${orderId}&limit=100`)
+      const data = await response.json()
 
-      if (response.data.success) {
+      if (data.success) {
         setEmailLogs((prev) => ({
           ...prev,
-          [orderId]: response.data.data.logs,
+          [orderId]: data.data.logs,
         }))
       }
     } catch (error) {
-      console.error('Error fetching email logs:', error)
+      console.error('Eroare la incarcarea jurnalelor de email:', error)
     }
   }
 
   const updateStatus = async (orderId, newStatus) => {
     try {
       const trackingInfo = trackingData[orderId] || {}
-      const response = await fetch(
-        `/api/orders/${orderId}/status`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: newStatus,
-            trackingNumber: trackingInfo.trackingNumber,
-            trackingUrl: trackingInfo.trackingUrl,
-          }),
-        }
-      )
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          trackingNumber: trackingInfo.trackingNumber,
+          trackingUrl: trackingInfo.trackingUrl,
+        }),
+      })
 
       if (response.ok) {
         fetchOrders()
         setExpandedOrder(null)
       }
     } catch (error) {
-      console.error('Error updating order:', error)
+      console.error('Eroare la actualizarea comenzii:', error)
     }
   }
 
   const resendEmail = async (emailLogId) => {
     try {
-      setResending((prev) => ({
-        ...prev,
-        [emailLogId]: true,
-      }))
+      setResending((prev) => ({ ...prev, [emailLogId]: true }))
 
-      const response = await axios.post('/api/emails/resend', { emailLogId })
+      const response = await fetch('/api/emails/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailLogId }),
+      })
+      const data = await response.json()
 
-      if (response.data.success) {
-        // Refresh email logs
+      if (data.success) {
         const orderIdWithThisEmail = Object.keys(emailLogs).find((orderId) =>
           emailLogs[orderId].some((log) => log._id === emailLogId)
         )
-
         if (orderIdWithThisEmail) {
           await fetchEmailLogs(orderIdWithThisEmail)
         }
+      } else {
+        alert(data.error || 'Eroare la retrimiterea emailului')
       }
     } catch (error) {
-      console.error('Error resending email:', error)
-      alert(error.response?.data?.error || 'Failed to resend email')
+      console.error('Eroare la retrimiterea emailului:', error)
+      alert('Eroare la retrimiterea emailului')
     } finally {
-      setResending((prev) => ({
-        ...prev,
-        [emailLogId]: false,
-      }))
+      setResending((prev) => ({ ...prev, [emailLogId]: false }))
     }
   }
 
@@ -126,200 +136,181 @@ export default function AdminOrders() {
     }))
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>Se incarca...</div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.container}>
-      <h2>Manage Orders</h2>
-
-      <div className={styles.filter}>
-        <label>Filter by Status:</label>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">All</option>
-          <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Gestionare comenzi</h1>
+        <Link href="/admin" className={styles.backLink}>Inapoi la panou</Link>
       </div>
 
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Customer</th>
-            <th>Items</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <tbody key={order._id}>
-              <tr>
-                <td>{order.orderNumber}</td>
-                <td>{order.customer.name}</td>
-                <td>{order.items.length}</td>
-                <td>${order.total.toFixed(2)}</td>
-                <td>
-                  <span className={`${styles.status} ${styles[order.status]}`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                <td className={styles.actions}>
-                  <button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => toggleOrderExpand(order._id)}
-                  >
-                    {expandedOrder === order._id ? 'Hide' : 'Details'}
-                  </button>
-                </td>
-              </tr>
+      <div className={styles.filterBar}>
+        <label className={styles.filterLabel}>Filtreaza dupa status:</label>
+        <select
+          className={styles.filterSelect}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        >
+          {STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <span className={styles.orderCount}>{orders.length} comenzi</span>
+      </div>
 
-              {expandedOrder === order._id && (
-                <tr>
-                  <td colSpan="7" style={{ padding: '20px', backgroundColor: '#f9f9f9' }}>
-                    <div style={{ marginBottom: '20px' }}>
-                      <h4 style={{ marginBottom: '10px' }}>Update Status & Tracking</h4>
-                      <div style={{ display: 'grid', gap: '10px', marginBottom: '15px' }}>
-                        <div>
-                          <label>New Status:</label>
-                          <select
-                            value={order.status}
-                            onChange={(e) => updateStatus(order._id, e.target.value)}
-                            style={{ marginTop: '5px', padding: '5px' }}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </div>
-
-                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                          <>
-                            <div>
-                              <label>Tracking Number:</label>
-                              <input
-                                type="text"
-                                placeholder="Enter tracking number"
-                                value={trackingData[order._id]?.trackingNumber || ''}
-                                onChange={(e) =>
-                                  handleTrackingChange(order._id, 'trackingNumber', e.target.value)
-                                }
-                                style={{
-                                  marginTop: '5px',
-                                  padding: '5px',
-                                  width: '100%',
-                                  boxSizing: 'border-box',
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label>Tracking URL:</label>
-                              <input
-                                type="url"
-                                placeholder="Enter tracking URL"
-                                value={trackingData[order._id]?.trackingUrl || ''}
-                                onChange={(e) =>
-                                  handleTrackingChange(order._id, 'trackingUrl', e.target.value)
-                                }
-                                style={{
-                                  marginTop: '5px',
-                                  padding: '5px',
-                                  width: '100%',
-                                  boxSizing: 'border-box',
-                                }}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {emailLogs[order._id] && (
-                      <div>
-                        <h4 style={{ marginBottom: '10px' }}>Email History</h4>
-                        <div style={{ marginBottom: '15px' }}>
-                          {emailLogs[order._id].length === 0 ? (
-                            <p style={{ color: '#666' }}>No emails sent for this order</p>
-                          ) : (
-                            emailLogs[order._id].map((log) => (
-                              <div
-                                key={log._id}
-                                style={{
-                                  padding: '10px',
-                                  marginBottom: '8px',
-                                  backgroundColor: '#fff',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                }}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <div>
-                                    <strong>{log.type.replace('_', ' ')}</strong>
-                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '3px' }}>
-                                      {log.subject}
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#666' }}>
-                                      {log.recipient}
-                                    </div>
-                                    <div
-                                      style={{
-                                        fontSize: '12px',
-                                        marginTop: '3px',
-                                        color:
-                                          log.status === 'sent'
-                                            ? '#28a745'
-                                            : log.status === 'failed'
-                                            ? '#dc3545'
-                                            : '#666',
-                                        fontWeight: 'bold',
-                                      }}
-                                    >
-                                      Status: {log.status}
-                                    </div>
-                                    {log.error && (
-                                      <div style={{ fontSize: '12px', color: '#dc3545', marginTop: '3px' }}>
-                                        Error: {log.error}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={() => resendEmail(log._id)}
-                                    disabled={resending[log._id]}
-                                    style={{
-                                      padding: '5px 10px',
-                                      fontSize: '12px',
-                                      backgroundColor: '#007bff',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      opacity: resending[log._id] ? 0.6 : 1,
-                                    }}
-                                  >
-                                    {resending[log._id] ? 'Resending...' : 'Resend'}
-                                  </button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
+      <div className={styles.tableWrapper}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Nr. comanda</th>
+              <th>Client</th>
+              <th>Produse</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th>Actiuni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <>
+                <tr key={order._id}>
+                  <td className={styles.orderNumber}>{order.orderNumber}</td>
+                  <td>{order.customer?.name || 'N/A'}</td>
+                  <td>{order.items?.length || 0}</td>
+                  <td className={styles.price}>{order.total.toFixed(2)} lei</td>
+                  <td>
+                    <span className={`${styles.status} ${styles[order.status]}`}>
+                      {STATUS_LABELS[order.status] || order.status}
+                    </span>
+                  </td>
+                  <td>{new Date(order.createdAt).toLocaleDateString('ro-RO')}</td>
+                  <td>
+                    <button
+                      className={styles.detailsBtn}
+                      onClick={() => toggleOrderExpand(order._id)}
+                    >
+                      {expandedOrder === order._id ? 'Ascunde' : 'Detalii'}
+                    </button>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          ))}
-        </tbody>
-      </table>
+
+                {expandedOrder === order._id && (
+                  <tr key={`${order._id}-expanded`}>
+                    <td colSpan="7" className={styles.expandedCell}>
+                      <div className={styles.expandedContent}>
+                        <div className={styles.updateSection}>
+                          <h4 className={styles.expandedTitle}>Actualizeaza status si tracking</h4>
+                          <div className={styles.updateGrid}>
+                            <div className={styles.formGroup}>
+                              <label>Status nou:</label>
+                              <select
+                                className={styles.statusSelect}
+                                value={order.status}
+                                onChange={(e) => updateStatus(order._id, e.target.value)}
+                              >
+                                <option value="pending">In asteptare</option>
+                                <option value="processing">In procesare</option>
+                                <option value="shipped">Expediat</option>
+                                <option value="delivered">Livrat</option>
+                                <option value="cancelled">Anulat</option>
+                              </select>
+                            </div>
+
+                            {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                              <>
+                                <div className={styles.formGroup}>
+                                  <label>Numar de tracking:</label>
+                                  <input
+                                    type="text"
+                                    className={styles.trackingInput}
+                                    placeholder="Introdu numarul de tracking"
+                                    value={trackingData[order._id]?.trackingNumber || ''}
+                                    onChange={(e) =>
+                                      handleTrackingChange(order._id, 'trackingNumber', e.target.value)
+                                    }
+                                  />
+                                </div>
+                                <div className={styles.formGroup}>
+                                  <label>URL tracking:</label>
+                                  <input
+                                    type="url"
+                                    className={styles.trackingInput}
+                                    placeholder="Introdu URL-ul de tracking"
+                                    value={trackingData[order._id]?.trackingUrl || ''}
+                                    onChange={(e) =>
+                                      handleTrackingChange(order._id, 'trackingUrl', e.target.value)
+                                    }
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {emailLogs[order._id] && (
+                          <div className={styles.emailSection}>
+                            <h4 className={styles.expandedTitle}>Istoric emailuri</h4>
+                            {emailLogs[order._id].length === 0 ? (
+                              <p className={styles.noEmails}>Niciun email trimis pentru aceasta comanda</p>
+                            ) : (
+                              <div className={styles.emailList}>
+                                {emailLogs[order._id].map((log) => (
+                                  <div key={log._id} className={styles.emailCard}>
+                                    <div className={styles.emailInfo}>
+                                      <strong className={styles.emailType}>
+                                        {log.type.replace('_', ' ')}
+                                      </strong>
+                                      <div className={styles.emailMeta}>{log.subject}</div>
+                                      <div className={styles.emailMeta}>{log.recipient}</div>
+                                      <div
+                                        className={`${styles.emailStatus} ${
+                                          log.status === 'sent'
+                                            ? styles.emailSent
+                                            : log.status === 'failed'
+                                            ? styles.emailFailed
+                                            : ''
+                                        }`}
+                                      >
+                                        Status: {log.status}
+                                      </div>
+                                      {log.error && (
+                                        <div className={styles.emailError}>Eroare: {log.error}</div>
+                                      )}
+                                    </div>
+                                    <button
+                                      className={styles.resendBtn}
+                                      onClick={() => resendEmail(log._id)}
+                                      disabled={resending[log._id]}
+                                    >
+                                      {resending[log._id] ? 'Se retrimite...' : 'Retrimite'}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {orders.length === 0 && (
+        <div className={styles.emptyState}>Nicio comanda gasita.</div>
+      )}
     </div>
   )
 }
