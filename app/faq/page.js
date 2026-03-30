@@ -40,7 +40,7 @@ export default function FAQPage() {
     {
       question: 'How can I track my order?',
       answer:
-        'You'll receive a tracking number via email once your order ships.',
+        "You'll receive a tracking number via email once your order ships.",
     },
     {
       question: 'What payment methods do you accept?',
