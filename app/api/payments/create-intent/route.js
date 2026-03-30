@@ -71,7 +71,7 @@ async function handleStripePayment(order, auth) {
 
     const result = await createPaymentIntent({
       amount: amountInCents,
-      currency: 'usd',
+      currency: 'ron',
       orderId: order.id,
       metadata: {
         userId: auth.userId,
@@ -90,7 +90,7 @@ async function handleStripePayment(order, auth) {
         type: 'stripe',
         external_id: result.id,
         amount: amountInCents,
-        currency: 'USD',
+        currency: 'RON',
         status: 'pending',
         payment_method: 'card',
         metadata: { clientSecret: result.clientSecret },
@@ -131,7 +131,7 @@ async function handlePayPalPayment(order, auth) {
   try {
     const result = await createPayPalOrder({
       amount: Math.round(order.total * 100),
-      currency: 'USD',
+      currency: 'RON',
       orderId: order.id,
       items: order.items,
       returnUrl: `${process.env.NEXT_PUBLIC_API_URL}/payments/paypal/return`,
@@ -150,7 +150,7 @@ async function handlePayPalPayment(order, auth) {
         type: 'paypal',
         external_id: result.id,
         amount: Math.round(order.total * 100),
-        currency: 'USD',
+        currency: 'RON',
         status: 'pending',
         payment_method: 'paypal',
       })
