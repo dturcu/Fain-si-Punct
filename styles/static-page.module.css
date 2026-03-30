@@ -1,0 +1,155 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #888;
+  margin-bottom: 1.5rem;
+}
+
+.breadcrumbs a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.separator {
+  color: #ccc;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 2.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0 0 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.content {
+  color: #555;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.content h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 2rem 0 1rem;
+}
+
+.content h2:first-child {
+  margin-top: 0;
+}
+
+.content p {
+  margin: 0 0 1rem;
+}
+
+.content ul,
+.content ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+
+.content li {
+  margin-bottom: 0.5rem;
+}
+
+.content a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.content a:hover {
+  text-decoration: underline;
+}
+
+.content strong {
+  color: #2c3e50;
+}
+
+.comingSoon {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.comingSoonIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.comingSoonTitle {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.comingSoonText {
+  color: #888;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.jobCard {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid #3498db;
+}
+
+.jobTitle {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.jobMeta {
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.emailLink {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #3498db;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.emailLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .content h2 {
+    font-size: 1.15rem;
+  }
+}
