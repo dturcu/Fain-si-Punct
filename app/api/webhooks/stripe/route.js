@@ -72,6 +72,15 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
       return
     }
 
+    // Validate amount: webhook amount must match the stored payment amount
+    // (prevents an attacker constructing a webhook for a lesser amount)
+    if (paymentIntent.amount !== payment.amount) {
+      console.error(
+        `Amount mismatch for ${paymentIntent.id}: expected ${payment.amount}, got ${paymentIntent.amount}`
+      )
+      return
+    }
+
     // Update payment status
     await supabaseAdmin
       .from('payments')
