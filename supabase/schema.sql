@@ -82,13 +82,17 @@ CREATE TABLE IF NOT EXISTS products (
   condition TEXT DEFAULT 'New',
   grade TEXT,
   weight NUMERIC(10,3),
-  currency TEXT DEFAULT 'USD',
+  currency TEXT DEFAULT 'RON',
   total_rrp NUMERIC(10,2) DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Generated tsvector column for full-text search (Romanian language)
+  search_vector TSVECTOR GENERATED ALWAYS AS (
+    to_tsvector('romanian', COALESCE(name, '') || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '') || ' ' || COALESCE(category, ''))
+  ) STORED
 );
 
-CREATE INDEX idx_products_name ON products USING gin(to_tsvector('english', name || ' ' || COALESCE(description, '')));
+CREATE INDEX idx_products_search ON products USING gin(search_vector);
 CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_products_price ON products(price);
 CREATE INDEX idx_products_avg_rating ON products(avg_rating);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import styles from '@/styles/home.module.css'
 
 function StarRating({ rating, count }) {
@@ -57,6 +58,7 @@ function getCategoryIcon(name) {
 }
 
 export default function Home() {
+  const router = useRouter()
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -94,7 +96,7 @@ export default function Home() {
   const handleSearch = (e) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      window.location.href = `/products?search=${encodeURIComponent(searchQuery.trim())}`
+      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
 
@@ -110,8 +112,8 @@ export default function Home() {
   if (error) {
     return (
       <div className={styles.errorContainer}>
-        <p>Eroare la incarcarea datelor: {error}</p>
-        <button onClick={() => window.location.reload()} className={styles.retryBtn}>
+        <p>Eroare la incarcarea datelor. Incearca din nou.</p>
+        <button onClick={() => router.refresh()} className={styles.retryBtn}>
           Reincearca
         </button>
       </div>

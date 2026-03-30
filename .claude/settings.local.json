@@ -83,7 +83,10 @@
       "Bash(grep -r \"zod\\\\|yup\\\\|joi\\\\|validator\" C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.jsx)",
       "Bash(grep -r \"zod\\\\|yup\\\\|joi\" C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.jsx --exclude-dir=.next --exclude-dir=node_modules)",
       "Bash(rm -rf models/)",
-      "Bash(rm -f lib/review-stats.js lib/purchase-verification.js lib/jobs/email-job.js)"
+      "Bash(rm -f lib/review-stats.js lib/purchase-verification.js lib/jobs/email-job.js)",
+      "Bash(grep -n \"<img\" /c/Users/danie/OneDrive/Documents/ecommerce/.claude/worktrees/awesome-wilbur/app/page.js /c/Users/danie/OneDrive/Documents/ecommerce/.claude/worktrees/awesome-wilbur/app/products/[id]/page.js /c/Users/danie/OneDrive/Documents/ecommerce/.claude/worktrees/awesome-wilbur/app/products/page.js /c/Users/danie/OneDrive/Documents/ecommerce/.claude/worktrees/awesome-wilbur/app/checkout/page.js /c/Users/danie/OneDrive/Documents/ecommerce/.claude/worktrees/awesome-wilbur/app/cart/page.js)",
+      "Bash(grep -r addEmailJob C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.ts --include=*.tsx)",
+      "Bash(grep -r from.*job-queue C:UsersdanieOneDriveDocumentsecommerce.claudeworktreesawesome-wilbur --include=*.js --include=*.ts --include=*.tsx)"
     ]
   }
 }

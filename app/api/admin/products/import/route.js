@@ -115,7 +115,7 @@ export async function POST(request) {
             .eq('id', existingProduct.id)
 
           if (updateError) {
-            errors.push(`Row ${i + 2}: ${updateError.message}`)
+            errors.push(`Row ${i + 2}: update failed`)
             errorCount++
           } else {
             successCount++
@@ -127,17 +127,15 @@ export async function POST(request) {
             .insert([product])
 
           if (insertError) {
-            errors.push(`Row ${i + 2}: ${insertError.message}`)
+            errors.push(`Row ${i + 2}: insert failed`)
             errorCount++
           } else {
             successCount++
           }
         }
       } catch (error) {
-        
         console.error('admin/products/import error:', error)
-
-        errors.push(`Row ${i + 2}: ${error.message}`)
+        errors.push(`Row ${i + 2}: processing failed`)
         errorCount++
       }
     }
