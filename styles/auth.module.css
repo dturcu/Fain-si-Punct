@@ -3,86 +3,173 @@
   align-items: center;
   justify-content: center;
   min-height: calc(100vh - 200px);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f5f5f5;
+  padding: 2rem 1rem;
 }
 
-.form {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+.card {
+  background: #fff;
   width: 100%;
   max-width: 400px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2rem 2.25rem;
 }
 
-.form h1 {
-  color: #2c3e50;
-  margin-bottom: 1.5rem;
+.logo {
   text-align: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #232f3e;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.5px;
 }
 
-.form form {
+.logo span {
+  color: #febd69;
+}
+
+.title {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #232f3e;
+  margin-bottom: 1.5rem;
+}
+
+.error {
+  background-color: #fde8e8;
+  border: 1px solid #f5c6c6;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.formBody {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.form input {
-  padding: 0.75rem;
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #232f3e;
+}
+
+.input {
+  padding: 0.6rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #febd69;
+  box-shadow: 0 0 0 3px rgba(254, 189, 105, 0.25);
+}
+
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordWrapper .input {
+  padding-right: 2.75rem;
+}
+
+.eyeButton {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.eyeButton:hover {
+  color: #232f3e;
+}
+
+.submitButton {
+  margin-top: 0.5rem;
+  padding: 0.7rem;
+  background-color: #febd69;
+  color: #232f3e;
+  border: 1px solid #f0a83a;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
   font-family: inherit;
 }
 
-.form input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.submitButton:hover:not(:disabled) {
+  background-color: #f0a83a;
 }
 
-.form button {
-  padding: 0.75rem;
-  background-color: #667eea;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.form button:hover:not(:disabled) {
-  background-color: #5568d3;
-}
-
-.form button:disabled {
-  background-color: #ccc;
+.submitButton:disabled {
+  background-color: #e8d5b0;
+  border-color: #d9c49e;
+  color: #8c7a5a;
   cursor: not-allowed;
 }
 
-.error {
-  color: #e74c3c;
-  background-color: #fadbd8;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+.divider {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 1.5rem 0 1rem;
 }
 
-.form p {
+.switchText {
   text-align: center;
-  margin-top: 1rem;
-  color: #666;
+  font-size: 0.875rem;
+  color: #555;
+  margin: 0;
 }
 
-.form a {
-  color: #667eea;
+.switchText a {
+  color: #0066c0;
   text-decoration: none;
   font-weight: 500;
 }
 
-.form a:hover {
+.switchText a:hover {
   text-decoration: underline;
+  color: #c45500;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 1.5rem 1.25rem;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .container {
+    padding: 1rem 0;
+  }
 }
