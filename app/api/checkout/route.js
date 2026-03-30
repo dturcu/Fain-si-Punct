@@ -78,7 +78,9 @@ export async function POST(request) {
       )
     }
 
-    // Check stock availability before deducting
+    // Decrement stock using optimistic locking: read the current value, then update only if
+    // it hasn't changed (via .eq('stock', currentStock)). This prevents overselling when two
+    // requests race — the second update will find no matching row and return an empty array.
     for (const item of cart.items) {
       const { data: product } = await supabaseAdmin
         .from('products')
@@ -93,21 +95,21 @@ export async function POST(request) {
           { status: 400 }
         )
       }
-    }
 
-    // Update product stock for each item
-    for (const item of cart.items) {
-      const { data: product } = await supabaseAdmin
+      // Only update if stock hasn't changed since we read it (optimistic locking)
+      const { data: updated } = await supabaseAdmin
         .from('products')
-        .select('stock')
+        .update({ stock: product.stock - item.quantity })
         .eq('id', item.productId)
-        .single()
+        .eq('stock', product.stock)
+        .select('id')
 
-      if (product) {
-        await supabaseAdmin
-          .from('products')
-          .update({ stock: product.stock - item.quantity })
-          .eq('id', item.productId)
+      if (!updated || updated.length === 0) {
+        const productName = product?.name || item.name || item.productId
+        return Response.json(
+          { success: false, error: `Produsul ${productName} nu mai este disponibil in cantitatea solicitata` },
+          { status: 400 }
+        )
       }
     }
 
@@ -183,7 +185,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Checkout error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare la finalizarea comenzii' },
       { status: 500 }
     )
   }

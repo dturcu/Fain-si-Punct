@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getProductReviews, updateProductRatingStats, userHasReviewed } from '@/lib/reviews-supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
 
 /**
  * GET /api/products/[id]/reviews
@@ -60,16 +61,20 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
+    // Authenticate from token, never trust client-supplied userId
+    const token = getCookieToken(request)
+    if (!token) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
+    const userId = decoded.userId
+
     const { id } = await params
     const body = await request.json()
-    const { rating, title, comment, userId } = body
-
-    if (!userId) {
-      return Response.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      )
-    }
+    const { rating, title, comment } = body
 
     // Validate inputs
     if (!rating || rating < 1 || rating > 5) {
@@ -82,6 +87,20 @@ export async function POST(request, { params }) {
     if (!title || title.trim().length === 0) {
       return Response.json(
         { success: false, error: 'Title is required' },
+        { status: 400 }
+      )
+    }
+
+    if (title.trim().length > 200) {
+      return Response.json(
+        { success: false, error: 'Title must be 200 characters or less' },
+        { status: 400 }
+      )
+    }
+
+    if (comment && comment.length > 5000) {
+      return Response.json(
+        { success: false, error: 'Comment must be 5000 characters or less' },
         { status: 400 }
       )
     }
@@ -100,14 +119,16 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Verify user purchased the product
-    const { data: order } = await supabaseAdmin
+    // Verify THIS user purchased the product (join order_items with orders to check user ownership)
+    const { data: orderItem } = await supabaseAdmin
       .from('order_items')
-      .select('order_id')
+      .select('order_id, orders!inner(user_id)')
       .eq('product_id', id)
+      .eq('orders.user_id', userId)
+      .limit(1)
       .single()
 
-    if (!order) {
+    if (!orderItem) {
       return Response.json(
         { success: false, error: 'You must purchase this product to review it' },
         { status: 403 }
@@ -129,7 +150,7 @@ export async function POST(request, { params }) {
       .insert({
         product_id: id,
         user_id: userId,
-        order_id: order.order_id,
+        order_id: orderItem.order_id,
         rating: parseInt(rating),
         title: title.trim(),
         comment: comment ? comment.trim() : '',
