@@ -86,6 +86,11 @@
   font-style: italic;
 }
 
+.revolutContainer {
+  margin: 1rem 0;
+  min-height: 50px;
+}
+
 /* Header */
 .header {
   margin-bottom: 1.5rem;
