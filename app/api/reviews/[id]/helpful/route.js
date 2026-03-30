@@ -39,14 +39,14 @@ export async function PATCH(request, { params }) {
   } catch (error) {
     if (error.message === 'Review not found') {
       return Response.json(
-        { success: false, error: error.message },
+        { success: false, error: 'A apărut o eroare internă' },
         { status: 404 }
       )
     }
 
     console.error('Error updating helpful vote:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -82,7 +82,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching helpful votes:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

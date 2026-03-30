@@ -49,7 +49,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching reviews:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -175,7 +175,7 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error('Error creating review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

@@ -6,6 +6,11 @@ export const metadata = {
   description: 'Descopera peste 14.000 produse la cele mai bune preturi',
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="ro">

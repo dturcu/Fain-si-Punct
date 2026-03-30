@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyPayPalIPN } from '@/lib/paypal'
 
+async function restoreStock(orderId) {
+  const { data: items } = await supabaseAdmin
+    .from('order_items')
+    .select('product_id, quantity')
+    .eq('order_id', orderId)
+
+  if (!items || items.length === 0) return
+
+  for (const item of items) {
+    await supabaseAdmin.rpc('increment_stock', {
+      p_product_id: item.product_id,
+      p_quantity: item.quantity,
+    })
+  }
+}
+
 /**
  * POST /api/webhooks/paypal
  * Handle PayPal webhook events (IPN - Instant Payment Notification)
@@ -175,6 +191,15 @@ async function handlePaymentCaptureDenied(params) {
           .from('orders')
           .update({ payment_status: 'failed' })
           .eq('id', order.id)
+
+        // Restore stock for denied payment
+        try {
+          await restoreStock(order.id)
+          console.log('Stock restored for denied PayPal payment on order:', order.id)
+        } catch (stockError) {
+          console.error('Failed to restore stock for PayPal payment denial:', stockError)
+        }
+
         console.log('Order payment marked as failed:', order.id)
       } else {
         console.log('Order already marked as failed (idempotent):', order.id)

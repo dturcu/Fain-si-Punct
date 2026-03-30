@@ -53,7 +53,7 @@ export async function GET(request, { params }) {
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -116,7 +116,7 @@ export async function PUT(request, { params }) {
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 400 }
     )
   }

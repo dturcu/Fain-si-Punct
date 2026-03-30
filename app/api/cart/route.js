@@ -1,6 +1,7 @@
 import { getCartByUserId, addToCart } from '@/lib/supabase-queries'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
 
 export async function GET(request) {
   try {
@@ -27,8 +28,9 @@ export async function GET(request) {
       data: cart || { items: [], total: 0 },
     })
   } catch (error) {
+    console.error('Cart GET error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -53,6 +55,20 @@ export async function POST(request) {
     }
 
     const { productId, quantity } = await request.json()
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return Response.json(
+        { success: false, error: 'Cantitatea trebuie să fie un număr întreg pozitiv' },
+        { status: 400 }
+      )
+    }
+
+    if (quantity > MAX_QUANTITY_PER_ITEM) {
+      return Response.json(
+        { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
+        { status: 400 }
+      )
+    }
 
     // Get product
     const { data: product, error: productError } = await supabaseAdmin
@@ -79,8 +95,9 @@ export async function POST(request) {
 
     return Response.json({ success: true, data: cart })
   } catch (error) {
+    console.error('Cart POST error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

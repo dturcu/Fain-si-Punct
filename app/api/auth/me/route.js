@@ -33,7 +33,7 @@ export async function GET(request) {
     })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -73,7 +73,7 @@ export async function PUT(request) {
     })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
