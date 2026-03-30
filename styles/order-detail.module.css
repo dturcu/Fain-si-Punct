@@ -40,6 +40,52 @@
 
 .infoBanner h3 { margin-bottom: 0.25rem; }
 
+.payBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 2rem;
+  background: #27ae60;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.payBtn:hover:not(:disabled) {
+  background: #219a52;
+}
+
+.payBtn:disabled {
+  background: #7dcea0;
+  cursor: wait;
+}
+
+.paySpinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: paySpin 0.6s linear infinite;
+}
+
+@keyframes paySpin {
+  to { transform: rotate(360deg); }
+}
+
+.payNote {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #999;
+  font-style: italic;
+}
+
 /* Header */
 .header {
   margin-bottom: 1.5rem;
