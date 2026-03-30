@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import styles from '@/styles/cart.module.css'
+import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
 
 export default function CartPage() {
   const router = useRouter()
@@ -104,7 +105,7 @@ export default function CartPage() {
 
   const getShipping = () => {
     const subtotal = getSubtotal()
-    return subtotal >= 200 ? 0 : 15.99
+    return subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
   }
 
   const getTotal = () => {
@@ -337,7 +338,7 @@ export default function CartPage() {
 
             {shipping > 0 && (
               <div className={styles.shippingHint}>
-                Mai adauga {(200 - subtotal).toFixed(2)} lei pentru livrare
+                Mai adauga {(SHIPPING_THRESHOLD - subtotal).toFixed(2)} lei pentru livrare
                 gratuita
               </div>
             )}

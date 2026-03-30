@@ -3,9 +3,13 @@ import { getCartByUserId, clearCart, getUserById, createOrder } from '@/lib/supa
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
+import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
+
+import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
-  return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+  // Use first 8 chars of a UUID for uniqueness without collision risk
+  return 'ORD-' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()
 }
 
 export async function POST(request) {
@@ -118,7 +122,7 @@ export async function POST(request) {
       (sum, item) => sum + item.price * item.quantity,
       0
     )
-    const shippingCost = subtotal >= 200 ? 0 : 15.99
+    const shippingCost = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
     const orderTotal = subtotal + shippingCost
 
     // Create order

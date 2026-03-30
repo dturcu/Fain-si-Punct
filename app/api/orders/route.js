@@ -2,8 +2,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 
+import { randomUUID } from 'crypto'
+
 function generateOrderNumber() {
-  return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+  return 'ORD-' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()
 }
 
 export async function GET(request) {

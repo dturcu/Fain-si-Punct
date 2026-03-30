@@ -32,8 +32,7 @@ const PAYMENT_METHODS = [
   },
 ]
 
-const SHIPPING_THRESHOLD = 200
-const SHIPPING_COST = 15.99
+import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
 
 export default function CheckoutPage() {
   const router = useRouter()
