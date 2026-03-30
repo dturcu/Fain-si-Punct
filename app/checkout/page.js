@@ -42,6 +42,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [errors, setErrors] = useState({})
   const [attempted, setAttempted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -121,6 +122,7 @@ export default function CheckoutPage() {
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
+    setSubmitError('')
     setSubmitting(true)
 
     try {
@@ -155,10 +157,10 @@ export default function CheckoutPage() {
           router.push(`/orders/${order.id}?pay=${paymentMethod}`)
         }
       } else {
-        alert(`Eroare: ${data.error}`)
+        setSubmitError(data.error || 'A apărut o eroare. Încearcă din nou.')
       }
     } catch (err) {
-      alert(`Eroare: ${err.message}`)
+      setSubmitError('A apărut o eroare de rețea. Verifică conexiunea și încearcă din nou.')
     } finally {
       setSubmitting(false)
     }
@@ -370,6 +372,13 @@ export default function CheckoutPage() {
                 Vei plati suma de{' '}
                 <strong>{orderTotal.toFixed(2)} lei</strong> curierului la
                 livrare. Se accepta numerar sau card la curier.
+              </div>
+            )}
+
+            {/* Inline submission error */}
+            {submitError && (
+              <div className={styles.submitError} role="alert">
+                {submitError}
               </div>
             )}
 

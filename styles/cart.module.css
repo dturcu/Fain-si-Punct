@@ -561,3 +561,33 @@
     border-radius: 8px;
   }
 }
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 1000;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.2s ease;
+  max-width: 320px;
+}
+
+.toastSuccess {
+  background: #27ae60;
+  color: #fff;
+}
+
+.toastError {
+  background: #e74c3c;
+  color: #fff;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
