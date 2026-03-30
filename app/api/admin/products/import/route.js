@@ -51,25 +51,53 @@ export async function POST(request) {
       if (!lines[i].trim()) continue
 
       try {
-        const [name, price, category, stock, description, image, sku] = lines[i]
-          .split(',')
-          .map((field) => field.trim())
+        // Parse CSV respecting quoted fields (handles commas inside quoted values)
+        const fields = []
+        let current = ''
+        let inQuotes = false
+        for (const char of lines[i]) {
+          if (char === '"') {
+            inQuotes = !inQuotes
+          } else if (char === ',' && !inQuotes) {
+            fields.push(current.trim())
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        fields.push(current.trim())
+
+        const [name, price, category, stock, description, image, sku] = fields
 
         if (!name || !price || !category) {
-          errors.push(`Row ${i + 2}: Missing required fields`)
+          errors.push(`Row ${i + 2}: Missing required fields (name, price, category)`)
+          errorCount++
+          continue
+        }
+
+        const parsedPrice = parseFloat(price)
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          errors.push(`Row ${i + 2}: Invalid price "${price}"`)
+          errorCount++
+          continue
+        }
+
+        const parsedStock = parseInt(stock, 10)
+        if (stock !== undefined && stock !== '' && isNaN(parsedStock)) {
+          errors.push(`Row ${i + 2}: Invalid stock value "${stock}"`)
           errorCount++
           continue
         }
 
         const product = {
           name,
-          slug: name.toLowerCase().replace(/\s+/g, '-'),
-          price: parseFloat(price),
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+          price: parsedPrice,
           category,
-          stock: parseInt(stock) || 0,
+          stock: isNaN(parsedStock) ? 0 : Math.max(0, parsedStock),
           description: description || '',
           image: image || '',
-          sku: sku || `SKU-${Date.now()}-${Math.random()}`,
+          sku: sku || `SKU-${Date.now()}-${i}`,
         }
 
         // Check if product with same SKU exists

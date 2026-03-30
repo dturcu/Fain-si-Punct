@@ -1,4 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { getUserById } from '@/lib/supabase-queries'
+import { verifyToken, getCookieToken } from '@/lib/auth'
 
 function generateOrderNumber() {
   return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
@@ -6,6 +8,19 @@ function generateOrderNumber() {
 
 export async function GET(request) {
   try {
+    const token = getCookieToken(request)
+    if (!token) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
+    const user = await getUserById(decoded.userId)
+    if (!user || user.role !== 'admin') {
+      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
     const status = searchParams.get('status')
@@ -20,25 +35,22 @@ export async function GET(request) {
       query = query.eq('status', status)
     }
 
-    const { data: orders, error } = await query.order('created_at', { ascending: false })
+    const { data: orders, error } = await query
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false })
 
     if (error) throw error
 
-    // Fetch items for each order
-    const ordersWithItems = await Promise.all(
-      (orders || []).map(async (order) => {
-        const { data: items } = await supabaseAdmin
-          .from('order_items')
-          .select('*')
-          .eq('order_id', order.id)
-        return orderRowToObj(order, items || [])
-      })
-    )
+    const ordersWithItems = (orders || []).map((order) => {
+      const { order_items: items, ...orderRow } = order
+      return orderRowToObj(orderRow, items || [])
+    })
 
     return Response.json({ success: true, data: ordersWithItems })
   } catch (error) {
+    console.error('Get orders error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to retrieve orders' },
       { status: 500 }
     )
   }
@@ -46,7 +58,18 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const token = getCookieToken(request)
+    if (!token) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
+
     const body = await request.json()
+    // Always use the authenticated user's ID, never trust the client-supplied userId
+    body.userId = decoded.userId
 
     const { data: order, error } = await supabaseAdmin
       .from('orders')
@@ -65,7 +88,7 @@ export async function POST(request) {
     )
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to create order' },
       { status: 400 }
     )
   }

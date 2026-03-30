@@ -34,6 +34,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
+    // Verify the authenticated user owns this order
+    if (order.userId !== auth.userId && order.user_id !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     if (paymentMethod === 'stripe') {
       return confirmStripePayment(order, paymentIntentId)
     } else if (paymentMethod === 'paypal') {

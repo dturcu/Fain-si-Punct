@@ -1,5 +1,17 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { rowToProduct, productToRow } from '../route'
+import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
+
+async function requireAdmin(request) {
+  const token = getCookieToken(request)
+  if (!token) return null
+  const decoded = verifyToken(token)
+  if (!decoded) return null
+  const user = await getUserById(decoded.userId)
+  if (!user || user.role !== 'admin') return null
+  return user
+}
 
 export async function GET(request, { params }) {
   try {
@@ -24,8 +36,9 @@ export async function GET(request, { params }) {
 
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
+    console.error('Get product error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to retrieve product' },
       { status: 500 }
     )
   }
@@ -33,6 +46,11 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
+    const admin = await requireAdmin(request)
+    if (!admin) {
+      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const { id } = await params
     const body = await request.json()
 
@@ -52,8 +70,9 @@ export async function PUT(request, { params }) {
 
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
+    console.error('Update product error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to update product' },
       { status: 400 }
     )
   }
@@ -61,6 +80,11 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
+    const admin = await requireAdmin(request)
+    if (!admin) {
+      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const { id } = await params
 
     const { data: product, error } = await supabaseAdmin
@@ -79,8 +103,9 @@ export async function DELETE(request, { params }) {
 
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
+    console.error('Delete product error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to delete product' },
       { status: 500 }
     )
   }
