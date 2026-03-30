@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Script from 'next/script'
 import styles from '@/styles/order-detail.module.css'
 
 export default function OrderDetailPage() {
@@ -16,6 +17,10 @@ export default function OrderDetailPage() {
   const [error, setError] = useState('')
   const [paying, setPaying] = useState(false)
   const [paymentDone, setPaymentDone] = useState(false)
+  const [revolutToken, setRevolutToken] = useState(null)
+  const [revolutLoading, setRevolutLoading] = useState(false)
+  const revolutContainerRef = useRef(null)
+  const revolutInitialized = useRef(false)
 
   const isConfirmed = searchParams.get('status') === 'confirmed'
   const payMethod = searchParams.get('pay')
@@ -42,6 +47,64 @@ export default function OrderDetailPage() {
       setLoading(false)
     }
   }
+
+  // Initialize Revolut payment for card/revolut
+  const initRevolutPayment = useCallback(async () => {
+    if (!orderId || revolutLoading || revolutToken) return
+    setRevolutLoading(true)
+    try {
+      const res = await fetch('/api/payments/revolut/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRevolutToken(data.data.token || data.data.publicId)
+      } else {
+        console.error('Revolut order creation failed:', data.error)
+        // Fall back to simulated payment
+        setRevolutToken(null)
+      }
+    } catch (err) {
+      console.error('Revolut init error:', err)
+    } finally {
+      setRevolutLoading(false)
+    }
+  }, [orderId, revolutLoading, revolutToken])
+
+  // Load Revolut widget when token is ready
+  useEffect(() => {
+    if (!revolutToken || !revolutContainerRef.current || revolutInitialized.current) return
+    if (typeof window === 'undefined' || !window.RevolutCheckout) return
+
+    revolutInitialized.current = true
+    window.RevolutCheckout(revolutToken).then((instance) => {
+      instance.payWithPopup({
+        onSuccess() {
+          setPaymentDone(true)
+          fetchOrder()
+          router.replace(`/orders/${orderId}`)
+        },
+        onError(error) {
+          console.error('Revolut payment error:', error)
+          setError('Plata a esuat. Te rugam sa incerci din nou.')
+        },
+        onCancel() {
+          // User closed the popup
+        },
+      })
+    }).catch((err) => {
+      console.error('RevolutCheckout init error:', err)
+    })
+  }, [revolutToken, orderId])
+
+  // Auto-init Revolut payment when payMethod is card or revolut
+  useEffect(() => {
+    if (payMethod && (payMethod === 'card' || payMethod === 'revolut') && order && !paymentDone) {
+      initRevolutPayment()
+    }
+  }, [payMethod, order, paymentDone, initRevolutPayment])
 
   const handleSimulatePayment = async () => {
     setPaying(true)
@@ -115,6 +178,28 @@ export default function OrderDetailPage() {
             Metoda selectata: <strong>{paymentMethodLabels[payMethod] || payMethod}</strong>
           </p>
           <p>Total de plata: <strong>{formatPrice(order.total)}</strong></p>
+
+          {/* Revolut Pay widget container for card/revolut */}
+          {(payMethod === 'card' || payMethod === 'revolut') && (
+            <>
+              <Script
+                src="https://sandbox-merchant.revolut.com/embed.js"
+                strategy="afterInteractive"
+                onLoad={() => {
+                  if (revolutToken && !revolutInitialized.current) {
+                    // Trigger re-render to init widget
+                    setRevolutToken((t) => t)
+                  }
+                }}
+              />
+              <div ref={revolutContainerRef} id="revolut-payment-container" className={styles.revolutContainer} />
+              {revolutLoading && (
+                <p className={styles.payNote}>Se incarca formularul de plata Revolut...</p>
+              )}
+            </>
+          )}
+
+          {/* Fallback / manual pay button */}
           <button
             className={styles.payBtn}
             onClick={handleSimulatePayment}
@@ -129,9 +214,16 @@ export default function OrderDetailPage() {
               `Plateste ${formatPrice(order.total)} cu ${paymentMethodLabels[payMethod] || payMethod}`
             )}
           </button>
-          <p className={styles.payNote}>
-            Plata este simulata in scopuri demonstrative.
-          </p>
+          {(payMethod === 'card' || payMethod === 'revolut') ? (
+            <p className={styles.payNote}>
+              Platile sunt procesate securizat prin Revolut Business.
+              Butonul de mai sus confirma plata manual daca widgetul Revolut nu se incarca.
+            </p>
+          ) : (
+            <p className={styles.payNote}>
+              Plata este simulata in scopuri demonstrative.
+            </p>
+          )}
         </div>
       )}
 
