@@ -1,35 +1,21 @@
 import '@/styles/globals.css'
+import Navbar from '@/components/Navbar'
 
 export const metadata = {
-  title: 'ECommerce Store - 15k+ Products',
-  description: 'Shop from thousands of quality products',
+  title: 'ShopHub - Magazin Online',
+  description: 'Descopera peste 14.000 produse la cele mai bune preturi',
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="ro">
       <body>
-        <header className="navbar">
-          <div className="nav-container">
-            <h1 className="logo">ShopHub</h1>
-            <nav>
-              <a href="/">Home</a>
-              <a href="/products">Products</a>
-              <a href="/cart">Cart</a>
-              <a href="/about">About</a>
-              <a href="/contact">Contact</a>
-              <a href="/faq">FAQ</a>
-              <a href="/auth/login">Login</a>
-              <a href="/auth/register">Register</a>
-              <a href="/admin">Admin</a>
-            </nav>
-          </div>
-        </header>
+        <Navbar />
 
         <main>{children}</main>
 
         <footer>
-          <p>&copy; 2024 ShopHub. All rights reserved.</p>
+          <p>&copy; 2024 ShopHub. Toate drepturile rezervate.</p>
         </footer>
       </body>
     </html>
