@@ -5,11 +5,15 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params
 
-    const { data: product, error } = await supabaseAdmin
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Support lookup by UUID or slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    const query = supabaseAdmin.from('products').select('*')
+    if (isUUID) {
+      query.eq('id', id)
+    } else {
+      query.eq('slug', id)
+    }
+    const { data: product, error } = await query.single()
 
     if (error || !product) {
       return Response.json(

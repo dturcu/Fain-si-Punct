@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, use } from 'react'
 import Link from 'next/link'
 import StarRating from '@/components/StarRating'
 import styles from '@/styles/product-detail.module.css'
 
-export default function ProductDetail({ params }) {
+export default function ProductDetail({ params: paramsPromise }) {
+  const params = use(paramsPromise)
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

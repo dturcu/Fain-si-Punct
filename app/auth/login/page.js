@@ -39,7 +39,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/')
+      window.location.href = '/'
     } catch (err) {
       setError(err.message)
     } finally {

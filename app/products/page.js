@@ -364,7 +364,7 @@ function ProductsContent() {
             <div className={styles.grid}>
               {products.map((product) => (
                 <div key={product._id} className={styles.card}>
-                  <Link href={`/products/${product.slug || product._id}`} className={styles.cardLink}>
+                  <Link href={`/products/${product.id}`} className={styles.cardLink}>
                     <div className={styles.cardImageWrap}>
                       {product.image ? (
                         <img src={product.image} alt={product.name} loading="lazy" />

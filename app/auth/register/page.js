@@ -41,7 +41,7 @@ export default function RegisterPage() {
         return
       }
 
-      router.push('/')
+      window.location.href = '/'
     } catch (err) {
       setError(err.message)
     } finally {
