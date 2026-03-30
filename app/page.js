@@ -70,7 +70,7 @@ export default function Home() {
         setLoading(true)
         const [catRes, prodRes] = await Promise.all([
           fetch('/api/products/categories'),
-          fetch('/api/products?limit=8&sort=rating'),
+          fetch('/api/products?limit=8&sort=-avgRating'),
         ])
         const catData = await catRes.json()
         const prodData = await prodRes.json()
