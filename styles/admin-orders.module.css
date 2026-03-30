@@ -159,6 +159,40 @@
   color: #842029;
 }
 
+.paymentStatus {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.payment_unpaid {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.payment_paid {
+  background: #d1e7dd;
+  color: #0a3622;
+}
+
+.payment_processing {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.payment_failed {
+  background: #f5c6cb;
+  color: #721c24;
+}
+
+.payment_refunded {
+  background: #e2e3e5;
+  color: #41464b;
+}
+
 .detailsBtn {
   padding: 0.45rem 1rem;
   background: #232f3e;

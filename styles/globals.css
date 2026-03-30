@@ -1,7 +1,18 @@
+/* Breakpoints: 480px (mobile), 768px (tablet), 1024px (desktop), 1200px (wide) */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+*:focus-visible {
+  outline: 2px solid #febd69;
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
 }
 
 body {

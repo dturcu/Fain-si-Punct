@@ -12,6 +12,14 @@ const STATUS_LABELS = {
   cancelled: 'Anulat',
 }
 
+const PAYMENT_STATUS_LABELS = {
+  unpaid: 'Neplatita',
+  paid: 'Platita',
+  processing: 'In procesare',
+  failed: 'Esuata',
+  refunded: 'Rambursata',
+}
+
 const STATUS_OPTIONS = [
   { value: '', label: 'Toate' },
   { value: 'pending', label: 'In asteptare' },
@@ -174,6 +182,7 @@ export default function AdminOrders() {
               <th>Produse</th>
               <th>Total</th>
               <th>Status</th>
+              <th>Plata</th>
               <th>Data</th>
               <th>Actiuni</th>
             </tr>
@@ -191,6 +200,11 @@ export default function AdminOrders() {
                       {STATUS_LABELS[order.status] || order.status}
                     </span>
                   </td>
+                  <td>
+                    <span className={`${styles.paymentStatus} ${styles['payment_' + (order.paymentStatus || 'unpaid')]}`}>
+                      {PAYMENT_STATUS_LABELS[order.paymentStatus] || PAYMENT_STATUS_LABELS.unpaid}
+                    </span>
+                  </td>
                   <td>{new Date(order.createdAt).toLocaleDateString('ro-RO')}</td>
                   <td>
                     <button
@@ -204,7 +218,7 @@ export default function AdminOrders() {
 
                 {expandedOrder === order._id && (
                   <tr key={`${order._id}-expanded`}>
-                    <td colSpan="7" className={styles.expandedCell}>
+                    <td colSpan="8" className={styles.expandedCell}>
                       <div className={styles.expandedContent}>
                         <div className={styles.updateSection}>
                           <h4 className={styles.expandedTitle}>Actualizeaza status si tracking</h4>
