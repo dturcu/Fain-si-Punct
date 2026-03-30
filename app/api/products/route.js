@@ -32,13 +32,16 @@ export async function GET(request) {
     }
 
     if (search) {
-      // Use full-text search for multi-word queries (leverages GIN index on search_vector);
-      // fall back to ILIKE for very short terms where FTS is less useful.
-      if (search.trim().length >= 3) {
-        const ftsQuery = search.trim().split(/\s+/).join(' & ')
-        query = query.or(`name.ilike.%${search}%,search_vector.fts(romanian).${ftsQuery}`)
+      // Sanitize: strip characters that could break PostgREST filter syntax
+      const sanitized = search.replace(/[%_(),."'\\]/g, '').trim()
+      if (sanitized.length === 0) {
+        // no-op: empty after sanitization
+      } else if (sanitized.length >= 3) {
+        // Use full-text search for multi-word queries (leverages GIN index)
+        const ftsQuery = sanitized.split(/\s+/).filter(Boolean).join(' & ')
+        query = query.or(`name.ilike.%${sanitized}%,search_vector.fts(romanian).${ftsQuery}`)
       } else {
-        query = query.ilike('name', `%${search}%`)
+        query = query.ilike('name', `%${sanitized}%`)
       }
     }
 
@@ -59,11 +62,13 @@ export async function GET(request) {
       }
     }
 
-    // Handle sorting
-    if (sort.startsWith('-')) {
-      query = query.order(toSnakeCase(sort.slice(1)), { ascending: false })
+    // Handle sorting — only allow known sort fields
+    const allowedSorts = ['createdAt', 'updatedAt', 'price', 'name', 'avgRating', 'reviewCount']
+    const sortField = sort.startsWith('-') ? sort.slice(1) : sort
+    if (allowedSorts.includes(sortField)) {
+      query = query.order(toSnakeCase(sortField), { ascending: !sort.startsWith('-') })
     } else {
-      query = query.order(toSnakeCase(sort), { ascending: true })
+      query = query.order('created_at', { ascending: false })
     }
 
     query = query.range(offset, offset + limit - 1)

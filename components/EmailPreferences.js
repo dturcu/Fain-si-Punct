@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import axios from 'axios'
 
 export default function EmailPreferences({ userId }) {
   const [preferences, setPreferences] = useState({
@@ -22,10 +21,11 @@ export default function EmailPreferences({ userId }) {
   const fetchPreferences = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`/api/users/${userId}/preferences`)
+      const res = await fetch(`/api/users/${userId}/preferences`)
+      const data = await res.json()
 
-      if (response.data.success) {
-        setPreferences(response.data.data || {})
+      if (data.success) {
+        setPreferences(data.data || {})
       }
     } catch (err) {
       console.error('Failed to fetch preferences:', err)
@@ -49,15 +49,22 @@ export default function EmailPreferences({ userId }) {
       setError('')
       setMessage('')
 
-      const response = await axios.put(`/api/users/${userId}/preferences`, preferences)
+      const res = await fetch(`/api/users/${userId}/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preferences),
+      })
+      const data = await res.json()
 
-      if (response.data.success) {
+      if (data.success) {
         setMessage('Preferences updated successfully!')
         setTimeout(() => setMessage(''), 3000)
+      } else {
+        setError(data.error || 'Failed to update preferences')
       }
     } catch (err) {
       console.error('Failed to update preferences:', err)
-      setError(err.response?.data?.error || 'Failed to update preferences')
+      setError('Failed to update preferences')
     } finally {
       setSaving(false)
     }
