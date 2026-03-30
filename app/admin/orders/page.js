@@ -37,6 +37,10 @@ export default function AdminOrders() {
   const [trackingData, setTrackingData] = useState({})
   const [emailLogs, setEmailLogs] = useState({})
   const [resending, setResending] = useState({})
+  const [awbLoading, setAwbLoading] = useState({})
+  const [awbResults, setAwbResults] = useState({})
+  const [invoiceLoading, setInvoiceLoading] = useState({})
+  const [invoiceResult, setInvoiceResult] = useState({})
 
   useEffect(() => {
     fetchOrders()
@@ -122,6 +126,70 @@ export default function AdminOrders() {
       alert('Eroare la retrimiterea emailului')
     } finally {
       setResending((prev) => ({ ...prev, [emailLogId]: false }))
+    }
+  }
+
+  const generateSamedayAWB = async (orderId) => {
+    try {
+      setAwbLoading((prev) => ({ ...prev, [orderId]: true }))
+
+      const response = await fetch('/api/shipping/sameday/create-awb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setAwbResults((prev) => ({
+          ...prev,
+          [orderId]: {
+            awbNumber: data.data.awbNumber,
+            trackingUrl: data.data.trackingUrl,
+          },
+        }))
+        // Refresh orders to reflect new status and tracking info
+        fetchOrders()
+      } else {
+        alert(data.error || 'Eroare la generarea AWB Sameday')
+      }
+    } catch (error) {
+      console.error('Eroare la generarea AWB Sameday:', error)
+      alert('Eroare la generarea AWB Sameday')
+    } finally {
+      setAwbLoading((prev) => ({ ...prev, [orderId]: false }))
+    }
+  }
+
+  const generateInvoice = async (orderId) => {
+    try {
+      setInvoiceLoading((prev) => ({ ...prev, [orderId]: true }))
+
+      const response = await fetch('/api/billing/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setInvoiceResult((prev) => ({
+          ...prev,
+          [orderId]: {
+            invoiceNumber: data.data.invoiceNumber,
+            invoiceSeries: data.data.invoiceSeries,
+            invoiceLink: data.data.invoiceLink,
+          },
+        }))
+        alert(`Factura generata cu succes: ${data.data.invoiceSeries || ''}${data.data.invoiceNumber || ''}`)
+      } else {
+        alert(data.error || 'Eroare la generarea facturii')
+      }
+    } catch (error) {
+      console.error('Eroare la generarea facturii:', error)
+      alert('Eroare la generarea facturii')
+    } finally {
+      setInvoiceLoading((prev) => ({ ...prev, [orderId]: false }))
     }
   }
 
@@ -220,6 +288,151 @@ export default function AdminOrders() {
                   <tr key={`${order._id}-expanded`}>
                     <td colSpan="8" className={styles.expandedCell}>
                       <div className={styles.expandedContent}>
+                        {/* Order Items */}
+                        {order.items && order.items.length > 0 && (
+                          <div className={styles.orderItemsSection}>
+                            <h4 className={styles.expandedTitle}>Produse comandate</h4>
+                            <div className={styles.orderItemsList}>
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className={styles.orderItem}>
+                                  {item.image && (
+                                    <img src={item.image} alt={item.name} className={styles.orderItemImg} />
+                                  )}
+                                  <div className={styles.orderItemInfo}>
+                                    <span className={styles.orderItemName}>{item.name}</span>
+                                    <span className={styles.orderItemMeta}>
+                                      {item.quantity} x {Number(item.price).toFixed(2)} lei = {(item.quantity * item.price).toFixed(2)} lei
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Shipping & Customer Info */}
+                        <div className={styles.shippingSection}>
+                          <h4 className={styles.expandedTitle}>Informatii livrare</h4>
+                          <div className={styles.shippingGrid}>
+                            <div>
+                              <strong>Client:</strong> {order.customer?.name || 'N/A'}
+                            </div>
+                            <div>
+                              <strong>Email:</strong> {order.customer?.email || 'N/A'}
+                            </div>
+                            {order.customer?.phone && (
+                              <div>
+                                <strong>Telefon:</strong> {order.customer.phone}
+                              </div>
+                            )}
+                            {order.shippingAddress && (
+                              <div className={styles.shippingAddress}>
+                                <strong>Adresa:</strong>{' '}
+                                {[
+                                  order.shippingAddress.street,
+                                  order.shippingAddress.city,
+                                  order.shippingAddress.state,
+                                  order.shippingAddress.zip,
+                                  order.shippingAddress.country,
+                                ].filter(Boolean).join(', ')}
+                              </div>
+                            )}
+                            {order.paymentMethod && (
+                              <div>
+                                <strong>Metoda plata:</strong> {order.paymentMethod}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Sameday AWB Generation */}
+                        {order.status === 'processing' && !order.trackingNumber && !awbResults[order._id] && (
+                          <div className={styles.updateSection}>
+                            <h4 className={styles.expandedTitle}>Expediere Sameday</h4>
+                            <button
+                              className={styles.detailsBtn}
+                              style={{ backgroundColor: '#e53e3e', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                              onClick={() => generateSamedayAWB(order._id)}
+                              disabled={awbLoading[order._id]}
+                            >
+                              {awbLoading[order._id] ? 'Se genereaza...' : 'Genereaza AWB Sameday'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Show AWB result after generation */}
+                        {awbResults[order._id] && (
+                          <div className={styles.updateSection}>
+                            <h4 className={styles.expandedTitle}>AWB Sameday generat</h4>
+                            <div className={styles.shippingGrid}>
+                              <div>
+                                <strong>Numar AWB:</strong> {awbResults[order._id].awbNumber}
+                              </div>
+                              <div>
+                                <strong>Tracking URL:</strong>{' '}
+                                <a href={awbResults[order._id].trackingUrl} target="_blank" rel="noopener noreferrer">
+                                  {awbResults[order._id].trackingUrl}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show existing tracking info if already shipped via Sameday */}
+                        {order.trackingNumber && !awbResults[order._id] && (
+                          <div className={styles.updateSection}>
+                            <h4 className={styles.expandedTitle}>Informatii AWB</h4>
+                            <div className={styles.shippingGrid}>
+                              <div>
+                                <strong>Numar AWB:</strong> {order.trackingNumber}
+                              </div>
+                              {order.trackingUrl && (
+                                <div>
+                                  <strong>Tracking URL:</strong>{' '}
+                                  <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer">
+                                    {order.trackingUrl}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Oblio Invoice Generation */}
+                        {(order.paymentStatus === 'paid' || order.paymentMethod === 'ramburs' || order.paymentMethod === 'cod') && !invoiceResult[order._id] && (
+                          <div className={styles.updateSection}>
+                            <h4 className={styles.expandedTitle}>Facturare Oblio</h4>
+                            <button
+                              className={styles.detailsBtn}
+                              style={{ backgroundColor: '#2563eb', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                              onClick={() => generateInvoice(order._id)}
+                              disabled={invoiceLoading[order._id]}
+                            >
+                              {invoiceLoading[order._id] ? 'Se genereaza...' : 'Genereaza factura'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Show invoice result after generation */}
+                        {invoiceResult[order._id] && (
+                          <div className={styles.updateSection}>
+                            <h4 className={styles.expandedTitle}>Factura generata</h4>
+                            <div className={styles.shippingGrid}>
+                              <div>
+                                <strong>Numar factura:</strong> {invoiceResult[order._id].invoiceSeries}{invoiceResult[order._id].invoiceNumber}
+                              </div>
+                              {invoiceResult[order._id].invoiceLink && (
+                                <div>
+                                  <strong>Link factura:</strong>{' '}
+                                  <a href={invoiceResult[order._id].invoiceLink} target="_blank" rel="noopener noreferrer">
+                                    Descarca PDF
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         <div className={styles.updateSection}>
                           <h4 className={styles.expandedTitle}>Actualizeaza status si tracking</h4>
                           <div className={styles.updateGrid}>
