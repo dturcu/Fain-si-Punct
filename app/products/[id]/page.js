@@ -328,11 +328,11 @@ export default function ProductDetail({ params: paramsPromise }) {
           {/* Price */}
           <div className={styles.priceBlock}>
             <span className={styles.price}>
-              {product.price?.toFixed(2)} {product.currency || 'RON'}
+              {product.price?.toFixed(2)} lei
             </span>
             {product.totalRrp > 0 && product.totalRrp > product.price && (
               <span className={styles.oldPrice}>
-                {product.totalRrp.toFixed(2)} {product.currency || 'RON'}
+                {product.totalRrp.toFixed(2)} lei
               </span>
             )}
           </div>
@@ -522,7 +522,7 @@ export default function ProductDetail({ params: paramsPromise }) {
                       <span className={styles.relatedReviewCount}>({rp.reviewCount || 0})</span>
                     </div>
                     <p className={styles.relatedPrice}>
-                      {rp.price?.toFixed(2)} {rp.currency || 'RON'}
+                      {rp.price?.toFixed(2)} lei
                     </p>
                   </div>
                 </Link>
