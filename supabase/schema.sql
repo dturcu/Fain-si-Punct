@@ -334,3 +334,13 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_cart_total_on_insert AFTER INSERT ON cart_items FOR EACH ROW EXECUTE FUNCTION update_cart_total();
 CREATE TRIGGER update_cart_total_on_update AFTER UPDATE ON cart_items FOR EACH ROW EXECUTE FUNCTION update_cart_total();
 CREATE TRIGGER update_cart_total_on_delete AFTER DELETE ON cart_items FOR EACH ROW EXECUTE FUNCTION update_cart_total();
+
+-- ============================================
+-- STOCK INCREMENT FUNCTION (used for payment failure rollback)
+-- ============================================
+CREATE OR REPLACE FUNCTION increment_stock(p_product_id UUID, p_quantity INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE products SET stock = stock + p_quantity WHERE id = p_product_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

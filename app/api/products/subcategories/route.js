@@ -118,6 +118,9 @@ export async function GET(request) {
       data: subcategories,
     })
   } catch (error) {
+    
+    console.error('products/subcategories error:', error)
+
     return Response.json(
       { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }

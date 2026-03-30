@@ -32,6 +32,9 @@ export async function GET(request) {
 
     return Response.json({ success: true, data: result })
   } catch (error) {
+    
+    console.error('orders/my error:', error)
+
     return Response.json({ success: false, error: 'A apărut o eroare internă' }, { status: 500 })
   }
 }

@@ -64,6 +64,25 @@ export async function PUT(request, { params }) {
 
     const oldStatus = order.status
 
+    // Enforce state machine transitions — prevent nonsensical moves
+    const allowedTransitions = {
+      pending:     ['processing', 'cancelled'],
+      processing:  ['shipped', 'cancelled'],
+      shipped:     ['delivered', 'cancelled'],
+      delivered:   [], // terminal
+      cancelled:   [], // terminal
+    }
+    const allowed = allowedTransitions[oldStatus] || []
+    if (oldStatus !== status && !allowed.includes(status)) {
+      return Response.json(
+        {
+          success: false,
+          error: `Cannot transition order from '${oldStatus}' to '${status}'. Allowed: ${allowed.length ? allowed.join(', ') : 'none (terminal state)'}`,
+        },
+        { status: 422 }
+      )
+    }
+
     // Update order
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('orders')

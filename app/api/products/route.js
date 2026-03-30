@@ -1,4 +1,15 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
+
+async function requireAdmin(request) {
+  const token = getCookieToken(request)
+  if (!token) return null
+  const decoded = verifyToken(token)
+  if (!decoded) return null
+  const user = await getUserById(decoded.userId)
+  return user?.role === 'admin' ? user : null
+}
 
 export async function GET(request) {
   try {
@@ -82,6 +93,14 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const admin = await requireAdmin(request)
+    if (!admin) {
+      return Response.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
 
     const { data: product, error } = await supabaseAdmin
