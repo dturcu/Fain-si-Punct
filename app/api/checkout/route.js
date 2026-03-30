@@ -26,7 +26,7 @@ export async function POST(request) {
       )
     }
 
-    const { shippingAddress, customer } = await request.json()
+    const { shippingAddress, customer, paymentMethod } = await request.json()
 
     // Get user's cart
     const cart = await getCartByUserId(decoded.userId)
@@ -61,7 +61,8 @@ export async function POST(request) {
       cart.total,
       customer,
       shippingAddress,
-      orderNumber
+      orderNumber,
+      paymentMethod || 'card'
     )
 
     // Get user for email preferences

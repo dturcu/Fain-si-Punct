@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H \"Authorization: Bearer sbp_c3c876dd6c0821346352c65179d7d2fe107599e0\" https://api.supabase.com/v1/organizations)",
+      "Bash(curl -s -H \"Authorization: Bearer sbp_c3c876dd6c0821346352c65179d7d2fe107599e0\" https://api.supabase.com/v1/projects)",
+      "Bash(curl -s -H \"Authorization: Bearer sbp_c3c876dd6c0821346352c65179d7d2fe107599e0\" -H \"Content-Type: application/json\" https://api.supabase.com/v1/projects)",
+      "Bash(npm list:*)",
+      "Bash(npx vercel:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(ls -la .env*)",
+      "Bash(vercel --version)",
+      "Bash(node scripts/import-from-excel.js \"/c/Users/danie/OneDrive/Documents/Claude/site/perplexity output/manifest_new.xlsx\")",
+      "Bash(set -a)",
+      "Bash(source .env.local)",
+      "Bash(set +a)",
+      "Bash(node -e \":*)"
+    ]
+  }
+}
