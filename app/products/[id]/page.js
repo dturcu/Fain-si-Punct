@@ -20,6 +20,9 @@ export default function ProductDetail({ params: paramsPromise }) {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [selectedColor, setSelectedColor] = useState(null)
+  const [selectedSize, setSelectedSize] = useState(null)
+  const [selectedVariant, setSelectedVariant] = useState(null)
   const [reviews, setReviews] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState([])
@@ -34,8 +37,48 @@ export default function ProductDetail({ params: paramsPromise }) {
     if (product) {
       fetchReviews()
       fetchRelatedProducts()
+      // Auto-select first color/size if variants exist
+      if (product.variants && product.variants.length > 0) {
+        const colors = [...new Set(product.variants.map(v => v.color).filter(Boolean))]
+        const sizes = [...new Set(product.variants.map(v => v.size).filter(Boolean))]
+        if (colors.length > 0) setSelectedColor(colors[0])
+        if (sizes.length > 0) setSelectedSize(sizes[0])
+      }
     }
   }, [product?.id])
+
+  // Resolve variant when color/size selection changes
+  useEffect(() => {
+    if (!product?.variants || product.variants.length === 0) {
+      setSelectedVariant(null)
+      return
+    }
+    const match = product.variants.find(v =>
+      (!v.color || v.color === selectedColor) &&
+      (!v.size || v.size === selectedSize)
+    )
+    setSelectedVariant(match || null)
+  }, [selectedColor, selectedSize, product?.variants])
+
+  // Variant helper: get unique colors and sizes
+  const hasVariants = product?.variants && product.variants.length > 0
+  const variantColors = hasVariants ? [...new Set(product.variants.map(v => v.color).filter(Boolean))] : []
+  const variantSizes = hasVariants ? [...new Set(product.variants.map(v => v.size).filter(Boolean))] : []
+
+  // Check if a specific color+size combo is in stock
+  const isComboAvailable = (color, size) => {
+    if (!hasVariants) return true
+    const v = product.variants.find(v =>
+      (color ? v.color === color : !v.color) &&
+      (size ? v.size === size : !v.size)
+    )
+    return v ? v.stock > 0 : false
+  }
+
+  // Effective price/stock/image considering variant selection
+  const effectivePrice = selectedVariant?.priceOverride != null ? selectedVariant.priceOverride : product?.price
+  const effectiveStock = selectedVariant ? selectedVariant.stock : product?.stock
+  const effectiveImage = selectedVariant?.image || null
 
   const fetchProduct = async () => {
     try {
@@ -99,6 +142,13 @@ export default function ProductDetail({ params: paramsPromise }) {
 
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
 
+      // Require variant selection if product has variants
+      if (hasVariants && !selectedVariant) {
+        setMessageType('error')
+        setMessage('Te rugam sa selectezi o varianta (culoare/marime).')
+        return
+      }
+
       const response = await fetch(`/api/cart`, {
         method: 'POST',
         headers: {
@@ -108,6 +158,7 @@ export default function ProductDetail({ params: paramsPromise }) {
         body: JSON.stringify({
           productId: product.id,
           quantity: parseInt(quantity),
+          variantId: selectedVariant?.id || undefined,
         }),
       })
 
@@ -144,6 +195,13 @@ export default function ProductDetail({ params: paramsPromise }) {
       setMessage('')
       setMessageType('')
 
+      if (hasVariants && !selectedVariant) {
+        setMessageType('error')
+        setMessage('Te rugam sa selectezi o varianta (culoare/marime).')
+        setAddingToCart(false)
+        return
+      }
+
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
 
       const response = await fetch(`/api/cart`, {
@@ -155,6 +213,7 @@ export default function ProductDetail({ params: paramsPromise }) {
         body: JSON.stringify({
           productId: product.id,
           quantity: parseInt(quantity),
+          variantId: selectedVariant?.id || undefined,
         }),
       })
 
@@ -219,6 +278,24 @@ export default function ProductDetail({ params: paramsPromise }) {
     if (stock > 10) return 'In stoc'
     if (stock > 0) return `Ultimele ${stock} bucati`
     return 'Stoc epuizat'
+  }
+
+  const getColorHex = (colorName) => {
+    const map = {
+      'Rosu': '#e74c3c', 'rosu': '#e74c3c', 'Red': '#e74c3c', 'red': '#e74c3c',
+      'Albastru': '#3498db', 'albastru': '#3498db', 'Blue': '#3498db', 'blue': '#3498db',
+      'Verde': '#27ae60', 'verde': '#27ae60', 'Green': '#27ae60', 'green': '#27ae60',
+      'Negru': '#2c3e50', 'negru': '#2c3e50', 'Black': '#2c3e50', 'black': '#2c3e50',
+      'Alb': '#ecf0f1', 'alb': '#ecf0f1', 'White': '#ecf0f1', 'white': '#ecf0f1',
+      'Galben': '#f1c40f', 'galben': '#f1c40f', 'Yellow': '#f1c40f', 'yellow': '#f1c40f',
+      'Portocaliu': '#e67e22', 'portocaliu': '#e67e22', 'Orange': '#e67e22', 'orange': '#e67e22',
+      'Mov': '#9b59b6', 'mov': '#9b59b6', 'Purple': '#9b59b6', 'purple': '#9b59b6',
+      'Roz': '#e91e63', 'roz': '#e91e63', 'Pink': '#e91e63', 'pink': '#e91e63',
+      'Gri': '#95a5a6', 'gri': '#95a5a6', 'Grey': '#95a5a6', 'gray': '#95a5a6', 'Gray': '#95a5a6',
+      'Maro': '#8b4513', 'maro': '#8b4513', 'Brown': '#8b4513', 'brown': '#8b4513',
+      'Bej': '#f5deb3', 'bej': '#f5deb3', 'Beige': '#f5deb3', 'beige': '#f5deb3',
+    }
+    return map[colorName] || '#ccc'
   }
 
   const getStockClass = (stock) => {
@@ -290,15 +367,23 @@ export default function ProductDetail({ params: paramsPromise }) {
     setPan({ x: 0, y: 0 })
   }
 
+  const allImages = product?.images && product.images.length > 0
+    ? product.images
+    : product?.image
+      ? [product.image]
+      : []
+
+  // When variant with image is selected, update the main image
+  useEffect(() => {
+    if (effectiveImage && allImages.length > 0) {
+      const idx = allImages.indexOf(effectiveImage)
+      if (idx >= 0) setSelectedImage(idx)
+    }
+  }, [effectiveImage])
+
   if (loading) return <div className={styles.loading}>Se incarca...</div>
   if (error) return <div className={styles.error}>Eroare: {error}</div>
   if (!product) return <div className={styles.error}>Produsul nu a fost gasit</div>
-
-  const allImages = product.images && product.images.length > 0
-    ? product.images
-    : product.image
-      ? [product.image]
-      : []
 
   const filteredTags = filterTags(product.tags)
 
@@ -389,9 +474,9 @@ export default function ProductDetail({ params: paramsPromise }) {
           {/* Price */}
           <div className={styles.priceBlock}>
             <span className={styles.price}>
-              {product.price?.toFixed(2)} lei
+              {effectivePrice?.toFixed(2)} lei
             </span>
-            {product.totalRrp > 0 && product.totalRrp > product.price && (
+            {!hasVariants && product.totalRrp > 0 && product.totalRrp > product.price && (
               <span className={styles.oldPrice}>
                 {product.totalRrp.toFixed(2)} lei
               </span>
@@ -400,8 +485,8 @@ export default function ProductDetail({ params: paramsPromise }) {
 
           {/* Badges */}
           <div className={styles.badges}>
-            <span className={`${styles.stockBadge} ${getStockClass(product.stock)}`}>
-              {getStockLabel(product.stock)}
+            <span className={`${styles.stockBadge} ${getStockClass(hasVariants ? (effectiveStock ?? 0) : product.stock)}`}>
+              {getStockLabel(hasVariants ? (effectiveStock ?? 0) : product.stock)}
             </span>
             {product.condition && (
               <span className={styles.conditionBadge}>
@@ -410,55 +495,125 @@ export default function ProductDetail({ params: paramsPromise }) {
             )}
           </div>
 
+          {/* Variant Selectors */}
+          {hasVariants && (
+            <div className={styles.variantSection}>
+              {variantColors.length > 0 && (
+                <div className={styles.variantGroup}>
+                  <label className={styles.variantLabel}>Culoare:</label>
+                  <div className={styles.colorSwatches}>
+                    {variantColors.map((color) => {
+                      const available = variantSizes.length > 0
+                        ? variantSizes.some(s => isComboAvailable(color, s))
+                        : isComboAvailable(color, null)
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          className={`${styles.colorSwatch} ${selectedColor === color ? styles.colorSwatchActive : ''} ${!available ? styles.colorSwatchDisabled : ''}`}
+                          onClick={() => available && setSelectedColor(color)}
+                          disabled={!available}
+                          title={color}
+                          aria-label={`Culoare: ${color}`}
+                        >
+                          <span
+                            className={styles.colorDot}
+                            style={{ background: getColorHex(color) }}
+                          />
+                          <span className={styles.colorName}>{color}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {variantSizes.length > 0 && (
+                <div className={styles.variantGroup}>
+                  <label className={styles.variantLabel}>Marime:</label>
+                  <div className={styles.sizeButtons}>
+                    {variantSizes.map((size) => {
+                      const available = variantColors.length > 0
+                        ? isComboAvailable(selectedColor, size)
+                        : isComboAvailable(null, size)
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          className={`${styles.sizeBtn} ${selectedSize === size ? styles.sizeBtnActive : ''} ${!available ? styles.sizeBtnDisabled : ''}`}
+                          onClick={() => available && setSelectedSize(size)}
+                          disabled={!available}
+                          aria-label={`Marime: ${size}`}
+                        >
+                          {size}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Quantity + Buttons */}
           <div className={styles.actionsBlock}>
-            <div className={styles.quantitySelector}>
-              <label htmlFor="quantity">Cantitate:</label>
-              <div className={styles.quantityControls}>
-                <button
-                  type="button"
-                  className={styles.qtyBtn}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1 || product.stock === 0 || addingToCart}
-                >
-                  -
-                </button>
-                <input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  max={Math.min(product.stock, 10)}
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(Math.min(product.stock, 10), parseInt(e.target.value) || 1)))}
-                  disabled={product.stock === 0 || addingToCart}
-                />
-                <button
-                  type="button"
-                  className={styles.qtyBtn}
-                  onClick={() => setQuantity((q) => Math.min(Math.min(product.stock, 10), q + 1))}
-                  disabled={quantity >= Math.min(product.stock, 10) || product.stock === 0 || addingToCart}
-                >
-                  +
-                </button>
-              </div>
-            </div>
+            {(() => {
+              const stock = hasVariants ? (effectiveStock ?? 0) : product.stock
+              const maxQty = Math.min(stock, 10)
+              const outOfStock = stock === 0
+              const needsVariant = hasVariants && !selectedVariant
+              return (
+                <>
+                  <div className={styles.quantitySelector}>
+                    <label htmlFor="quantity">Cantitate:</label>
+                    <div className={styles.quantityControls}>
+                      <button
+                        type="button"
+                        className={styles.qtyBtn}
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        disabled={quantity <= 1 || outOfStock || addingToCart}
+                      >
+                        -
+                      </button>
+                      <input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        max={maxQty}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1)))}
+                        disabled={outOfStock || addingToCart}
+                      />
+                      <button
+                        type="button"
+                        className={styles.qtyBtn}
+                        onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                        disabled={quantity >= maxQty || outOfStock || addingToCart}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
 
-            <div className={styles.buttonRow}>
-              <button
-                className={styles.addToCartBtn}
-                onClick={handleAddToCart}
-                disabled={product.stock === 0 || addingToCart}
-              >
-                {addingToCart ? 'Se adauga...' : 'Adauga in cos'}
-              </button>
-              <button
-                className={styles.buyNowBtn}
-                onClick={handleBuyNow}
-                disabled={product.stock === 0 || addingToCart}
-              >
-                Cumpara acum
-              </button>
-            </div>
+                  <div className={styles.buttonRow}>
+                    <button
+                      className={styles.addToCartBtn}
+                      onClick={handleAddToCart}
+                      disabled={outOfStock || addingToCart || needsVariant}
+                    >
+                      {addingToCart ? 'Se adauga...' : 'Adauga in cos'}
+                    </button>
+                    <button
+                      className={styles.buyNowBtn}
+                      onClick={handleBuyNow}
+                      disabled={outOfStock || addingToCart || needsVariant}
+                    >
+                      Cumpara acum
+                    </button>
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* Inline success/error message */}

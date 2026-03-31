@@ -167,6 +167,13 @@
   color: #27ae60;
 }
 
+.variantLabel {
+  display: block;
+  font-size: 0.82rem;
+  color: #666;
+  margin-top: 0.15rem;
+}
+
 .mobilePrice {
   display: none;
   font-size: 0.85rem;

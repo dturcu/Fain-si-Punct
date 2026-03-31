@@ -104,6 +104,27 @@ CREATE INDEX idx_products_brand ON products(brand);
 CREATE INDEX idx_products_slug ON products(slug);
 
 -- ============================================
+-- PRODUCT VARIANTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS product_variants (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  color TEXT,
+  size TEXT,
+  stock INTEGER NOT NULL DEFAULT 0,
+  price_override NUMERIC(10,2),
+  image TEXT,
+  sku TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Each color+size combo must be unique per product
+  UNIQUE(product_id, color, size)
+);
+
+CREATE INDEX idx_product_variants_product ON product_variants(product_id);
+CREATE INDEX idx_product_variants_sku ON product_variants(sku);
+
+-- ============================================
 -- ORDERS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS orders (
@@ -154,7 +175,9 @@ CREATE TABLE IF NOT EXISTS order_items (
   name TEXT NOT NULL,
   price NUMERIC(10,2) NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
-  image TEXT
+  image TEXT,
+  variant_id UUID REFERENCES product_variants(id),
+  variant_label TEXT
 );
 
 CREATE INDEX idx_order_items_order ON order_items(order_id);
@@ -256,7 +279,9 @@ CREATE TABLE IF NOT EXISTS cart_items (
   price NUMERIC(10,2) NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
   image TEXT,
-  UNIQUE(cart_id, product_id)
+  variant_id UUID REFERENCES product_variants(id),
+  variant_label TEXT,
+  UNIQUE(cart_id, product_id, variant_id)
 );
 
 CREATE INDEX idx_cart_items_cart ON cart_items(cart_id);
@@ -326,6 +351,7 @@ CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products FOR EACH ROW
 CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_variants_updated_at BEFORE UPDATE ON product_variants FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_carts_updated_at BEFORE UPDATE ON carts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_email_logs_updated_at BEFORE UPDATE ON email_logs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -354,5 +380,12 @@ CREATE OR REPLACE FUNCTION increment_stock(p_product_id UUID, p_quantity INTEGER
 RETURNS VOID AS $$
 BEGIN
   UPDATE products SET stock = stock + p_quantity WHERE id = p_product_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION increment_variant_stock(p_variant_id UUID, p_quantity INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE product_variants SET stock = stock + p_quantity WHERE id = p_variant_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -281,6 +281,9 @@ export default function CartPage() {
                     >
                       {item.name}
                     </Link>
+                    {item.variantLabel && (
+                      <span className={styles.variantLabel}>{item.variantLabel}</span>
+                    )}
                     <span className={styles.mobilePrice}>
                       {item.price.toFixed(2)} lei
                     </span>

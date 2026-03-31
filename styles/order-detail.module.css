@@ -250,6 +250,14 @@
   border-radius: 4px;
 }
 
+.variantLabel {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 400;
+  margin-top: 0.15rem;
+}
+
 .subtotal {
   font-weight: 600;
   color: #2c3e50;

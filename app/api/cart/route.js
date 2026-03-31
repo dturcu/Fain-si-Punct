@@ -38,7 +38,7 @@ export async function POST(request) {
   try {
     const session = getSessionContext(request)
 
-    const { productId, quantity } = await request.json()
+    const { productId, quantity, variantId } = await request.json()
 
     if (!Number.isInteger(quantity) || quantity < 1) {
       return Response.json(
@@ -68,24 +68,67 @@ export async function POST(request) {
       )
     }
 
+    // If a variant is specified, look it up and use its price/image/stock
+    let itemPrice = product.price
+    let itemImage = product.image
+    let variantLabel = null
+    let resolvedVariantId = null
+
+    if (variantId) {
+      const { data: variant, error: variantError } = await supabaseAdmin
+        .from('product_variants')
+        .select('*')
+        .eq('id', variantId)
+        .eq('product_id', productId)
+        .single()
+
+      if (variantError || !variant) {
+        return Response.json(
+          { success: false, error: 'Varianta selectata nu exista' },
+          { status: 404 }
+        )
+      }
+
+      if (variant.stock < quantity) {
+        return Response.json(
+          { success: false, error: 'Stoc insuficient pentru varianta selectata' },
+          { status: 400 }
+        )
+      }
+
+      if (variant.price_override != null) itemPrice = parseFloat(variant.price_override)
+      if (variant.image) itemImage = variant.image
+      resolvedVariantId = variant.id
+
+      // Build label like "Albastru / XL"
+      const parts = []
+      if (variant.color) parts.push(variant.color)
+      if (variant.size) parts.push(variant.size)
+      variantLabel = parts.join(' / ') || null
+    }
+
     let cart
     if (session.userId) {
       cart = await addToCart(
         session.userId,
         productId,
         product.name,
-        product.price,
-        product.image,
-        quantity
+        itemPrice,
+        itemImage,
+        quantity,
+        resolvedVariantId,
+        variantLabel
       )
     } else {
       cart = await addToGuestCart(
         session.guestSessionId,
         productId,
         product.name,
-        product.price,
-        product.image,
-        quantity
+        itemPrice,
+        itemImage,
+        quantity,
+        resolvedVariantId,
+        variantLabel
       )
     }
 
