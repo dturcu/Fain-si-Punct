@@ -15,6 +15,11 @@ export default function ProductDetail({ params: paramsPromise }) {
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('')
   const [selectedImage, setSelectedImage] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [reviews, setReviews] = useState([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState([])
@@ -222,6 +227,69 @@ export default function ProductDetail({ params: paramsPromise }) {
     return styles.outOfStock
   }
 
+  const openLightbox = (index) => {
+    setSelectedImage(index ?? selectedImage)
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+    setLightboxOpen(true)
+    document.body.style.overflow = 'hidden'
+  }
+
+  const closeLightbox = () => {
+    setLightboxOpen(false)
+    document.body.style.overflow = ''
+  }
+
+  const handleLightboxWheel = (e) => {
+    e.preventDefault()
+    setZoom((z) => {
+      const next = z + (e.deltaY > 0 ? -0.2 : 0.2)
+      const clamped = Math.min(5, Math.max(1, next))
+      if (clamped === 1) setPan({ x: 0, y: 0 })
+      return clamped
+    })
+  }
+
+  const handleMouseDown = (e) => {
+    if (zoom <= 1) return
+    e.preventDefault()
+    setDragging(true)
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y })
+  }
+
+  const handleMouseMove = (e) => {
+    if (!dragging) return
+    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y })
+  }
+
+  const handleMouseUp = () => setDragging(false)
+
+  const handleTouchStart = (e) => {
+    if (zoom <= 1 || e.touches.length !== 1) return
+    setDragging(true)
+    setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y })
+  }
+
+  const handleTouchMove = (e) => {
+    if (!dragging || e.touches.length !== 1) return
+    e.preventDefault()
+    setPan({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y })
+  }
+
+  const lightboxPrev = () => {
+    if (allImages.length <= 1) return
+    setSelectedImage((i) => (i === 0 ? allImages.length - 1 : i - 1))
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }
+
+  const lightboxNext = () => {
+    if (allImages.length <= 1) return
+    setSelectedImage((i) => (i === allImages.length - 1 ? 0 : i + 1))
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }
+
   if (loading) return <div className={styles.loading}>Se incarca...</div>
   if (error) return <div className={styles.error}>Eroare: {error}</div>
   if (!product) return <div className={styles.error}>Produsul nu a fost gasit</div>
@@ -265,11 +333,22 @@ export default function ProductDetail({ params: paramsPromise }) {
       <div className={styles.mainContent}>
         {/* Left: Image Gallery */}
         <div className={styles.imageSection}>
-          <div className={styles.mainImage}>
+          <div
+            className={styles.mainImage}
+            onClick={() => allImages.length > 0 && openLightbox()}
+            style={{ cursor: allImages.length > 0 ? 'zoom-in' : 'default' }}
+            role={allImages.length > 0 ? 'button' : undefined}
+            aria-label={allImages.length > 0 ? 'Mareste imaginea' : undefined}
+            tabIndex={allImages.length > 0 ? 0 : undefined}
+            onKeyDown={(e) => e.key === 'Enter' && allImages.length > 0 && openLightbox()}
+          >
             {allImages.length > 0 ? (
               <img src={allImages[selectedImage]} alt={product.name} />
             ) : (
               <div className={styles.placeholder}>Imagine indisponibila</div>
+            )}
+            {allImages.length > 0 && (
+              <span className={styles.zoomHint}>Apasa pentru a mari</span>
             )}
           </div>
           {allImages.length > 1 && (
@@ -513,6 +592,108 @@ export default function ProductDetail({ params: paramsPromise }) {
           </section>
         )}
       </div>
+
+      {/* Lightbox overlay */}
+      {lightboxOpen && allImages.length > 0 && (
+        <div
+          className={styles.lightboxOverlay}
+          onClick={closeLightbox}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') closeLightbox()
+            if (e.key === 'ArrowLeft') lightboxPrev()
+            if (e.key === 'ArrowRight') lightboxNext()
+          }}
+          tabIndex={0}
+          role="dialog"
+          aria-label="Vizualizare imagine"
+        >
+          <button className={styles.lightboxClose} onClick={closeLightbox} aria-label="Inchide">
+            &times;
+          </button>
+
+          {allImages.length > 1 && (
+            <>
+              <button
+                className={`${styles.lightboxNav} ${styles.lightboxPrev}`}
+                onClick={(e) => { e.stopPropagation(); lightboxPrev() }}
+                aria-label="Imaginea anterioara"
+              >
+                &#8249;
+              </button>
+              <button
+                className={`${styles.lightboxNav} ${styles.lightboxNext}`}
+                onClick={(e) => { e.stopPropagation(); lightboxNext() }}
+                aria-label="Imaginea urmatoare"
+              >
+                &#8250;
+              </button>
+            </>
+          )}
+
+          <div
+            className={styles.lightboxImageWrap}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={handleLightboxWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={() => setDragging(false)}
+            style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
+          >
+            <img
+              src={allImages[selectedImage]}
+              alt={product.name}
+              className={styles.lightboxImage}
+              style={{
+                transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                transition: dragging ? 'none' : 'transform 0.2s ease',
+              }}
+              draggable={false}
+              onClick={() => {
+                if (zoom === 1) {
+                  setZoom(2)
+                } else {
+                  setZoom(1)
+                  setPan({ x: 0, y: 0 })
+                }
+              }}
+            />
+          </div>
+
+          <div className={styles.lightboxControls}>
+            <button
+              className={styles.lightboxZoomBtn}
+              onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.min(5, z + 0.5)) }}
+              aria-label="Mareste"
+            >
+              +
+            </button>
+            <span className={styles.lightboxZoomLevel}>{Math.round(zoom * 100)}%</span>
+            <button
+              className={styles.lightboxZoomBtn}
+              onClick={(e) => {
+                e.stopPropagation()
+                setZoom((z) => {
+                  const next = Math.max(1, z - 0.5)
+                  if (next === 1) setPan({ x: 0, y: 0 })
+                  return next
+                })
+              }}
+              aria-label="Micsoreaza"
+            >
+              -
+            </button>
+            {allImages.length > 1 && (
+              <span className={styles.lightboxCounter}>
+                {selectedImage + 1} / {allImages.length}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
