@@ -14,7 +14,7 @@
   "crons": [
     {
       "path": "/api/cron/process-emails",
-      "schedule": "* * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/cleanup-guest-carts",
