@@ -415,7 +415,7 @@ export default function CheckoutPage() {
                     className={styles.summaryItemImage}
                   />
                   <span className={styles.summaryItemName}>
-                    {item.name} x {item.quantity}
+                    {item.name}{item.variantLabel ? ` (${item.variantLabel})` : ''} x {item.quantity}
                   </span>
                 </div>
                 <span className={styles.summaryItemPrice}>

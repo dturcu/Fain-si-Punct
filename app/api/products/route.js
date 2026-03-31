@@ -171,8 +171,23 @@ function rowToProduct(row) {
     weight: row.weight ? parseFloat(row.weight) : null,
     currency: row.currency,
     totalRrp: row.total_rrp ? parseFloat(row.total_rrp) : 0,
+    variants: (row.product_variants || []).map(variantRowToObj),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  }
+}
+
+function variantRowToObj(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    productId: row.product_id,
+    color: row.color,
+    size: row.size,
+    stock: row.stock,
+    priceOverride: row.price_override ? parseFloat(row.price_override) : null,
+    image: row.image,
+    sku: row.sku,
   }
 }
 
@@ -198,4 +213,4 @@ function productToRow(body) {
   return row
 }
 
-export { rowToProduct, productToRow }
+export { rowToProduct, productToRow, variantRowToObj }

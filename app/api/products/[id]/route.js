@@ -19,7 +19,7 @@ export async function GET(request, { params }) {
 
     // Support lookup by UUID or slug
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-    const query = supabaseAdmin.from('products').select('*')
+    const query = supabaseAdmin.from('products').select('*, product_variants(*)')
     if (isUUID) {
       query.eq('id', id)
     } else {

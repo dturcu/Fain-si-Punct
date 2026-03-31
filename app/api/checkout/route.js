@@ -95,31 +95,71 @@ export async function POST(request) {
         .eq('id', item.productId)
         .single()
 
-      if (!product || product.stock < item.quantity) {
-        const productName = product?.name || item.name || item.productId
+      if (!product) {
         return Response.json(
-          { success: false, error: `Produsul ${productName} nu mai este disponibil in cantitatea solicitata` },
+          { success: false, error: `Produsul ${item.name || item.productId} nu mai este disponibil` },
           { status: 400 }
         )
       }
 
-      // Price re-validation: always use the current DB price
-      item.price = parseFloat(product.price)
+      // If variant, check variant stock and use variant price
+      if (item.variantId) {
+        const { data: variant } = await supabaseAdmin
+          .from('product_variants')
+          .select('id, stock, price_override')
+          .eq('id', item.variantId)
+          .single()
 
-      // Only update if stock hasn't changed since we read it (optimistic locking)
-      const { data: updated } = await supabaseAdmin
-        .from('products')
-        .update({ stock: product.stock - item.quantity })
-        .eq('id', item.productId)
-        .eq('stock', product.stock)
-        .select('id')
+        if (!variant || variant.stock < item.quantity) {
+          return Response.json(
+            { success: false, error: `Varianta selectata pentru ${product.name} nu mai este disponibila in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
 
-      if (!updated || updated.length === 0) {
-        const productName = product?.name || item.name || item.productId
-        return Response.json(
-          { success: false, error: `Produsul ${productName} nu mai este disponibil in cantitatea solicitata` },
-          { status: 400 }
-        )
+        // Use variant price if set, otherwise product price
+        item.price = variant.price_override != null ? parseFloat(variant.price_override) : parseFloat(product.price)
+
+        // Optimistic lock on variant stock
+        const { data: updatedVariant } = await supabaseAdmin
+          .from('product_variants')
+          .update({ stock: variant.stock - item.quantity })
+          .eq('id', item.variantId)
+          .eq('stock', variant.stock)
+          .select('id')
+
+        if (!updatedVariant || updatedVariant.length === 0) {
+          return Response.json(
+            { success: false, error: `Varianta selectata pentru ${product.name} nu mai este disponibila in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
+      } else {
+        // No variant — use product-level stock
+        if (product.stock < item.quantity) {
+          return Response.json(
+            { success: false, error: `Produsul ${product.name} nu mai este disponibil in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
+
+        // Price re-validation: always use the current DB price
+        item.price = parseFloat(product.price)
+
+        // Only update if stock hasn't changed since we read it (optimistic locking)
+        const { data: updated } = await supabaseAdmin
+          .from('products')
+          .update({ stock: product.stock - item.quantity })
+          .eq('id', item.productId)
+          .eq('stock', product.stock)
+          .select('id')
+
+        if (!updated || updated.length === 0) {
+          return Response.json(
+            { success: false, error: `Produsul ${product.name} nu mai este disponibil in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
       }
     }
 

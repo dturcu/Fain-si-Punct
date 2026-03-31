@@ -422,7 +422,12 @@ export default function OrderDetailPage() {
               <div key={i} className={styles.tableRow}>
                 <div className={styles.itemName}>
                   {item.image && <img src={item.image} alt={item.name} className={styles.itemImg} />}
-                  <span>{item.name}</span>
+                  <div>
+                    <span>{item.name}</span>
+                    {item.variantLabel && (
+                      <span className={styles.variantLabel}>{item.variantLabel}</span>
+                    )}
+                  </div>
                 </div>
                 <span>{formatPrice(item.price)}</span>
                 <span>{item.quantity}</span>
