@@ -33,6 +33,8 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [expandedOrder, setExpandedOrder] = useState(null)
   const [trackingData, setTrackingData] = useState({})
   const [emailLogs, setEmailLogs] = useState({})
@@ -44,13 +46,14 @@ export default function AdminOrders() {
 
   useEffect(() => {
     fetchOrders()
-  }, [filter])
+  }, [filter, searchQuery])
 
   const fetchOrders = async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
       if (filter) params.append('status', filter)
+      if (searchQuery) params.append('search', searchQuery)
 
       const response = await fetch(`/api/orders?${params}`)
       const data = await response.json()
@@ -228,17 +231,48 @@ export default function AdminOrders() {
       </div>
 
       <div className={styles.filterBar}>
-        <label className={styles.filterLabel}>Filtreaza dupa status:</label>
-        <select
-          className={styles.filterSelect}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+        <form
+          className={styles.searchForm}
+          onSubmit={(e) => {
+            e.preventDefault()
+            setSearchQuery(searchInput.trim())
+          }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        <span className={styles.orderCount}>{orders.length} comenzi</span>
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Cauta dupa nr. comanda, client, email..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button type="submit" className={styles.searchBtn}>Cauta</button>
+          {searchQuery && (
+            <button
+              type="button"
+              className={styles.clearBtn}
+              onClick={() => {
+                setSearchInput('')
+                setSearchQuery('')
+              }}
+            >
+              Sterge
+            </button>
+          )}
+        </form>
+
+        <div className={styles.filterRow}>
+          <label className={styles.filterLabel}>Filtreaza dupa status:</label>
+          <select
+            className={styles.filterSelect}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <span className={styles.orderCount}>{orders.length} comenzi</span>
+        </div>
       </div>
 
       <div className={styles.tableWrapper}>

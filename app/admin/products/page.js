@@ -14,6 +14,7 @@ export default function AdminProducts() {
   const [editData, setEditData] = useState({})
   const [search, setSearch] = useState('')
   const [searchDebounce, setSearchDebounce] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,7 +56,35 @@ export default function AdminProducts() {
       stock: product.stock || 0,
       category: product.category || '',
       description: product.description || '',
+      image: product.image || '',
     })
+  }
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setEditData((prev) => ({ ...prev, image: data.data.url }))
+      } else {
+        alert(data.error || 'Eroare la incarcarea imaginii')
+      }
+    } catch {
+      alert('Eroare la incarcarea imaginii')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleSave = async () => {
@@ -221,6 +250,28 @@ export default function AdminProducts() {
                 rows="3"
                 value={editData.description}
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Imagine produs</label>
+              {editData.image && (
+                <div className={styles.imagePreview}>
+                  <img src={editData.image} alt="Preview" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleImageUpload}
+                disabled={uploading}
+              />
+              {uploading && <span className={styles.uploadingText}>Se incarca...</span>}
+              <input
+                type="text"
+                placeholder="Sau introdu URL-ul imaginii"
+                value={editData.image}
+                onChange={(e) => setEditData({ ...editData, image: e.target.value })}
+                style={{ marginTop: '0.5rem' }}
               />
             </div>
             <div className={styles.modalActions}>
