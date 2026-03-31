@@ -126,10 +126,7 @@ function ProductsContent() {
       .catch(() => setSubcategories([]))
   }, [category])
 
-  // Scroll to top when page changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [page])
+  const scrollToTop = () => window.scrollTo(0, 0)
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -514,7 +511,7 @@ function ProductsContent() {
               <button
                 className={styles.pageBtn}
                 disabled={page === 1}
-                onClick={() => setPage(page - 1)}
+                onClick={() => { setPage(page - 1); scrollToTop() }}
               >
                 &laquo; Inapoi
               </button>
@@ -528,7 +525,7 @@ function ProductsContent() {
                   <button
                     key={p}
                     className={`${styles.pageBtn} ${p === page ? styles.pageBtnActive : ''}`}
-                    onClick={() => setPage(p)}
+                    onClick={() => { setPage(p); scrollToTop() }}
                   >
                     {p}
                   </button>
@@ -538,7 +535,7 @@ function ProductsContent() {
               <button
                 className={styles.pageBtn}
                 disabled={page === pagination.pages}
-                onClick={() => setPage(page + 1)}
+                onClick={() => { setPage(page + 1); scrollToTop() }}
               >
                 Inainte &raquo;
               </button>
