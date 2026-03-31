@@ -108,15 +108,6 @@ export default function ProductDetail({ params: paramsPromise }) {
 
       const data = await response.json()
 
-      if (response.status === 401) {
-        setMessageType('error')
-        setMessage('Te rugam sa te autentifici pentru a adauga produse in cos.')
-        setTimeout(() => {
-          window.location.href = '/auth/login'
-        }, 2000)
-        return
-      }
-
       if (!response.ok || !data.success) {
         setMessageType('error')
         setMessage(data.error || 'Nu s-a putut adauga produsul in cos.')
@@ -163,15 +154,6 @@ export default function ProductDetail({ params: paramsPromise }) {
       })
 
       const data = await response.json()
-
-      if (response.status === 401) {
-        setMessageType('error')
-        setMessage('Te rugam sa te autentifici pentru a continua.')
-        setTimeout(() => {
-          window.location.href = '/auth/login'
-        }, 2000)
-        return
-      }
 
       if (!response.ok || !data.success) {
         setMessageType('error')

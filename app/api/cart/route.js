@@ -1,32 +1,30 @@
-import { getCartByUserId, addToCart } from '@/lib/supabase-queries'
+import { getCartByUserId, addToCart, getCartByGuestSession, addToGuestCart } from '@/lib/supabase-queries'
 import { supabaseAdmin } from '@/lib/supabase'
-import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getSessionContext, guestSessionCookie } from '@/lib/auth'
 import { MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
 
 export async function GET(request) {
   try {
-    const token = getCookieToken(request)
-    if (!token) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const session = getSessionContext(request)
+
+    let cart
+    if (session.userId) {
+      cart = await getCartByUserId(session.userId)
+    } else {
+      cart = await getCartByGuestSession(session.guestSessionId)
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    const cart = await getCartByUserId(decoded.userId)
-
-    return Response.json({
+    const response = Response.json({
       success: true,
       data: cart || { items: [], total: 0 },
     })
+
+    // Set guest session cookie if new
+    if (session.isNew) {
+      response.headers.set('Set-Cookie', guestSessionCookie(session.guestSessionId))
+    }
+
+    return response
   } catch (error) {
     console.error('Cart GET error:', error)
     return Response.json(
@@ -38,21 +36,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const token = getCookieToken(request)
-    if (!token) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
-      )
-    }
+    const session = getSessionContext(request)
 
     const { productId, quantity } = await request.json()
 
@@ -84,16 +68,34 @@ export async function POST(request) {
       )
     }
 
-    const cart = await addToCart(
-      decoded.userId,
-      productId,
-      product.name,
-      product.price,
-      product.image,
-      quantity
-    )
+    let cart
+    if (session.userId) {
+      cart = await addToCart(
+        session.userId,
+        productId,
+        product.name,
+        product.price,
+        product.image,
+        quantity
+      )
+    } else {
+      cart = await addToGuestCart(
+        session.guestSessionId,
+        productId,
+        product.name,
+        product.price,
+        product.image,
+        quantity
+      )
+    }
 
-    return Response.json({ success: true, data: cart })
+    const response = Response.json({ success: true, data: cart })
+
+    if (session.isNew) {
+      response.headers.set('Set-Cookie', guestSessionCookie(session.guestSessionId))
+    }
+
+    return response
   } catch (error) {
     console.error('Cart POST error:', error)
     return Response.json(

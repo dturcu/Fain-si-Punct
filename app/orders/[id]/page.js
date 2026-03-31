@@ -22,6 +22,13 @@ export default function OrderDetailPage() {
   const revolutContainerRef = useRef(null)
   const revolutInitialized = useRef(false)
 
+  // Guest account creation state
+  const [showRegister, setShowRegister] = useState(false)
+  const [regData, setRegData] = useState({ password: '', confirmPassword: '' })
+  const [regError, setRegError] = useState('')
+  const [regSuccess, setRegSuccess] = useState(false)
+  const [regSubmitting, setRegSubmitting] = useState(false)
+
   const isConfirmed = searchParams.get('status') === 'confirmed'
   const payMethod = searchParams.get('pay')
 
@@ -135,6 +142,51 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleGuestRegister = async (e) => {
+    e.preventDefault()
+    setRegError('')
+
+    if (regData.password.length < 6) {
+      setRegError('Parola trebuie sa aiba minim 6 caractere')
+      return
+    }
+    if (regData.password !== regData.confirmPassword) {
+      setRegError('Parolele nu coincid')
+      return
+    }
+
+    setRegSubmitting(true)
+    try {
+      const [firstName, ...lastParts] = (order.customer?.name || '').split(' ')
+      const lastName = lastParts.join(' ')
+
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: order.customer?.email,
+          password: regData.password,
+          firstName: firstName || '',
+          lastName: lastName || '',
+        }),
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        setRegSuccess(true)
+        // Refresh order to show it's now linked to the user
+        await fetchOrder()
+      } else {
+        setRegError(data.error || 'Eroare la crearea contului')
+      }
+    } catch {
+      setRegError('Eroare de retea. Incearca din nou.')
+    } finally {
+      setRegSubmitting(false)
+    }
+  }
+
+  const isGuestOrder = order && order.guestSessionId && !order.userId
   const formatPrice = (val) => parseFloat(val).toFixed(2) + ' lei'
 
   if (loading) return <div className={styles.loading}>Se incarca...</div>
@@ -168,6 +220,72 @@ export default function OrderDetailPage() {
         <div className={styles.successBanner}>
           <h3>Plata a fost procesata cu succes!</h3>
           <p>Comanda ta este acum in curs de pregatire.</p>
+        </div>
+      )}
+
+      {/* Guest account creation prompt */}
+      {isGuestOrder && !regSuccess && (
+        <div className={styles.guestBanner}>
+          {!showRegister ? (
+            <>
+              <h3>Creeaza un cont pentru a urmari comanda</h3>
+              <p>
+                Salveaza datele tale si urmareste toate comenzile dintr-un singur loc.
+                Contul va fi creat cu adresa <strong>{order.customer?.email}</strong>.
+              </p>
+              <button
+                className={styles.btn}
+                onClick={() => setShowRegister(true)}
+              >
+                Creeaza cont
+              </button>
+            </>
+          ) : (
+            <form onSubmit={handleGuestRegister}>
+              <h3>Creeaza cont cu {order.customer?.email}</h3>
+              <div className={styles.regFields}>
+                <input
+                  type="password"
+                  placeholder="Parola (minim 6 caractere)"
+                  value={regData.password}
+                  onChange={(e) => setRegData(prev => ({ ...prev, password: e.target.value }))}
+                  className={styles.regInput}
+                  autoComplete="new-password"
+                />
+                <input
+                  type="password"
+                  placeholder="Confirma parola"
+                  value={regData.confirmPassword}
+                  onChange={(e) => setRegData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className={styles.regInput}
+                  autoComplete="new-password"
+                />
+              </div>
+              {regError && <p className={styles.regError}>{regError}</p>}
+              <button
+                type="submit"
+                className={styles.btn}
+                disabled={regSubmitting}
+              >
+                {regSubmitting ? 'Se creeaza...' : 'Creeaza cont'}
+              </button>
+              <button
+                type="button"
+                className={styles.btnSecondary}
+                onClick={() => setShowRegister(false)}
+                style={{ marginLeft: '0.5rem' }}
+              >
+                Anuleaza
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {regSuccess && (
+        <div className={styles.successBanner}>
+          <h3>Cont creat cu succes!</h3>
+          <p>Acum poti urmari comenzile tale din <Link href="/account">contul tau</Link>.</p>
         </div>
       )}
 

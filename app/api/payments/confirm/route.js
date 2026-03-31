@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getOrderById } from '@/lib/supabase-queries'
 import { getPaymentIntent } from '@/lib/stripe'
 import { capturePayPalOrder } from '@/lib/paypal'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, getGuestSessionId } from '@/lib/auth'
 
 /**
  * POST /api/payments/confirm
@@ -12,11 +12,12 @@ import { verifyAuth } from '@/lib/auth'
  */
 export async function POST(request) {
   try {
-    // Verify authentication
+    // Verify authentication (user or guest)
     const headersList = await headers()
     const auth = verifyAuth(headersList)
+    const guestSessionId = getGuestSessionId(request)
 
-    if (!auth) {
+    if (!auth && !guestSessionId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -34,8 +35,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Verify the authenticated user owns this order
-    if (order.userId !== auth.userId && order.user_id !== auth.userId) {
+    // Ownership check: user owns order OR guest session matches
+    const isOwner = (auth && (order.userId === auth.userId)) ||
+      (guestSessionId && order.guestSessionId === guestSessionId)
+    if (!isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

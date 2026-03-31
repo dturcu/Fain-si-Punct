@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getOrderById } from '@/lib/supabase-queries'
 import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, getGuestSessionId } from '@/lib/auth'
 
 /**
  * POST /api/payments/create-intent
@@ -12,11 +12,12 @@ import { verifyAuth } from '@/lib/auth'
  */
 export async function POST(request) {
   try {
-    // Verify authentication
+    // Verify authentication (user or guest)
     const headersList = await headers()
     const auth = verifyAuth(headersList)
+    const guestSessionId = getGuestSessionId(request)
 
-    if (!auth) {
+    if (!auth && !guestSessionId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -36,8 +37,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Ownership check: users can only pay for their own orders
-    if (order.userId !== auth.userId) {
+    // Ownership check: user owns order OR guest session matches
+    const isOwner = (auth && order.userId === auth.userId) ||
+      (guestSessionId && order.guestSessionId === guestSessionId)
+    if (!isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -57,9 +60,9 @@ export async function POST(request) {
     }
 
     if (method === 'stripe') {
-      return handleStripePayment(order, auth)
+      return handleStripePayment(order)
     } else {
-      return handlePayPalPayment(order, auth)
+      return handlePayPalPayment(order)
     }
   } catch (error) {
     console.error('Error creating payment intent:', error)
@@ -70,7 +73,7 @@ export async function POST(request) {
   }
 }
 
-async function handleStripePayment(order, auth) {
+async function handleStripePayment(order) {
   try {
     const amountInCents = Math.round(order.total * 100)
 
@@ -79,7 +82,7 @@ async function handleStripePayment(order, auth) {
       currency: 'ron',
       orderId: order.id,
       metadata: {
-        userId: auth.userId,
+        userId: auth?.userId || 'guest',
       },
     })
 
@@ -132,7 +135,7 @@ async function handleStripePayment(order, auth) {
   }
 }
 
-async function handlePayPalPayment(order, auth) {
+async function handlePayPalPayment(order) {
   try {
     const result = await createPayPalOrder({
       amount: Math.round(order.total * 100),

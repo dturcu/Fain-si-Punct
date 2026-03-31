@@ -26,12 +26,6 @@ export default function CartPage() {
   const fetchCart = async () => {
     try {
       const response = await fetch('/api/cart')
-
-      if (response.status === 401) {
-        router.push('/auth/login')
-        return
-      }
-
       const data = await response.json()
 
       if (data.success) {
@@ -65,11 +59,6 @@ export default function CartPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: newQuantity }),
       })
-
-      if (response.status === 401) {
-        router.push('/auth/login')
-        return
-      }
 
       const data = await response.json()
       if (data.success) {

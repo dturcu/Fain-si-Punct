@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { getCartByUserId, clearCart, getUserById, createOrder } from '@/lib/supabase-queries'
-import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getCartByUserId, clearCart, getUserById, createOrder, getCartByGuestSession, clearGuestCart } from '@/lib/supabase-queries'
+import { getSessionContext } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
 import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
@@ -8,25 +8,17 @@ import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
-  // Use first 8 chars of a UUID for uniqueness without collision risk
   return 'ORD-' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()
 }
 
 export async function POST(request) {
   try {
-    const token = getCookieToken(request)
-    if (!token) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const session = getSessionContext(request)
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
+    if (!session.userId && !session.guestSessionId) {
       return Response.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
+        { success: false, error: 'No session found' },
+        { status: 400 }
       )
     }
 
@@ -73,8 +65,11 @@ export async function POST(request) {
       )
     }
 
-    // Get user's cart
-    const cart = await getCartByUserId(decoded.userId)
+    // Get cart (authenticated or guest)
+    const cart = session.userId
+      ? await getCartByUserId(session.userId)
+      : await getCartByGuestSession(session.guestSessionId)
+
     if (!cart || !cart.items || cart.items.length === 0) {
       return Response.json(
         { success: false, error: 'Cart is empty' },
@@ -92,10 +87,7 @@ export async function POST(request) {
       }
     }
 
-    // Decrement stock using optimistic locking: read the current value, then update only if
-    // it hasn't changed (via .eq('stock', currentStock)). This prevents overselling when two
-    // requests race — the second update will find no matching row and return an empty array.
-    // Also re-validate prices against the DB to prevent stale/manipulated cart prices.
+    // Decrement stock using optimistic locking and re-validate prices
     for (const item of cart.items) {
       const { data: product } = await supabaseAdmin
         .from('products')
@@ -111,8 +103,7 @@ export async function POST(request) {
         )
       }
 
-      // Price re-validation: cart may hold a stale price if the product was updated
-      // or if a client tried to manipulate it. Always use the current DB price.
+      // Price re-validation: always use the current DB price
       item.price = parseFloat(product.price)
 
       // Only update if stock hasn't changed since we read it (optimistic locking)
@@ -143,20 +134,25 @@ export async function POST(request) {
     // Create order
     const orderNumber = generateOrderNumber()
     const order = await createOrder(
-      decoded.userId,
+      session.userId,
       cart.items,
       orderTotal,
       customer,
       shippingAddress,
       orderNumber,
-      paymentMethod || 'card'
+      paymentMethod || 'card',
+      session.userId ? null : session.guestSessionId
     )
 
-    // Get user for email preferences
-    const user = await getUserById(decoded.userId)
+    // Queue order confirmation email
+    const shouldSendEmail = session.userId
+      ? await (async () => {
+          const user = await getUserById(session.userId)
+          return user?.emailPreferences?.orderConfirmation !== false
+        })()
+      : true // Always send email for guest orders
 
-    // Queue order confirmation email if user hasn't opted out
-    if (user?.emailPreferences?.orderConfirmation !== false) {
+    if (shouldSendEmail) {
       try {
         const emailHtml = orderConfirmation(order)
         const subject = `Order Confirmation - ${order.orderNumber}`
@@ -167,14 +163,13 @@ export async function POST(request) {
           subject,
           html: emailHtml,
           orderId: order.id,
-          userId: decoded.userId,
+          userId: session.userId || null,
           metadata: {
             orderNumber: order.orderNumber,
             customerName: customer.name,
           },
         })
 
-        // Update order with email job tracking
         await supabaseAdmin
           .from('order_email_jobs')
           .insert({
@@ -190,12 +185,15 @@ export async function POST(request) {
         console.log(`Email job queued for order ${order.id}:`, emailJob.id)
       } catch (emailError) {
         console.error('Failed to queue order confirmation email:', emailError)
-        // Don't fail the order creation if email queuing fails
       }
     }
 
     // Clear cart
-    await clearCart(decoded.userId)
+    if (session.userId) {
+      await clearCart(session.userId)
+    } else {
+      await clearGuestCart(session.guestSessionId)
+    }
 
     return Response.json(
       { success: true, data: order },

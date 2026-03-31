@@ -62,12 +62,6 @@ export default function CheckoutPage() {
   const fetchCart = async () => {
     try {
       const response = await fetch('/api/cart')
-
-      if (response.status === 401) {
-        router.push('/auth/login')
-        return
-      }
-
       const data = await response.json()
       if (data.success) {
         if (!data.data || !data.data.items || data.data.items.length === 0) {

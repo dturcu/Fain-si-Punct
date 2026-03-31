@@ -1,21 +1,16 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { verifyToken, getCookieToken } from '@/lib/auth'
+import { verifyToken, getCookieToken, getGuestSessionId } from '@/lib/auth'
 import { createRevolutOrder, toMinorUnits } from '@/lib/revolut'
 
 export async function POST(request) {
   try {
     const token = getCookieToken(request)
-    if (!token) {
+    const decoded = token ? verifyToken(token) : null
+    const guestSessionId = getGuestSessionId(request)
+
+    if (!decoded && !guestSessionId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
         { status: 401 }
       )
     }
@@ -43,8 +38,10 @@ export async function POST(request) {
       )
     }
 
-    // Verify ownership
-    if (order.user_id !== decoded.userId) {
+    // Verify ownership: user or guest session
+    const isOwner = (decoded && order.user_id === decoded.userId) ||
+      (guestSessionId && order.guest_session_id === guestSessionId)
+    if (!isOwner) {
       return Response.json(
         { success: false, error: 'Not authorized' },
         { status: 403 }
