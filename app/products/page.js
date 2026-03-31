@@ -9,8 +9,8 @@ const SORT_OPTIONS = [
   { value: '', label: 'Relevanta' },
   { value: 'price', label: 'Pret crescator' },
   { value: '-price', label: 'Pret descrescator' },
-  { value: '-created_at', label: 'Cele mai noi' },
-  { value: '-avg_rating', label: 'Rating' },
+  { value: '-createdAt', label: 'Cele mai noi' },
+  { value: '-avgRating', label: 'Rating' },
 ]
 
 const ITEMS_PER_PAGE_OPTIONS = [20, 40, 60]
@@ -147,19 +147,12 @@ function ProductsContent() {
       const data = await response.json()
 
       if (data.success) {
-        let filtered = data.data
-        // Client-side filtering for price range and stock if API doesn't support it
-        if (minPrice) {
-          filtered = filtered.filter((p) => p.price >= parseFloat(minPrice))
-        }
-        if (maxPrice) {
-          filtered = filtered.filter((p) => p.price <= parseFloat(maxPrice))
-        }
-        if (inStockOnly) {
-          filtered = filtered.filter((p) => p.stock > 0)
-        }
-        setProducts(filtered)
+        setProducts(data.data)
         setPagination(data.pagination)
+        // Clamp page if beyond actual total (e.g. stale URL with page=999)
+        if (data.pagination.pages > 0 && page > data.pagination.pages) {
+          setPage(data.pagination.pages)
+        }
       }
     } catch (error) {
       console.error('Eroare la incarcarea produselor:', error)

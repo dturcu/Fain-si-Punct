@@ -22,6 +22,7 @@ export async function GET(request) {
     const sort = searchParams.get('sort') || '-createdAt'
     const minPrice = parseFloat(searchParams.get('minPrice'))
     const maxPrice = parseFloat(searchParams.get('maxPrice'))
+    const inStock = searchParams.get('inStock')
 
     const offset = (page - 1) * limit
 
@@ -51,6 +52,10 @@ export async function GET(request) {
 
     if (!isNaN(maxPrice)) {
       query = query.lte('price', maxPrice)
+    }
+
+    if (inStock === '1') {
+      query = query.gt('stock', 0)
     }
 
     if (tag) {
