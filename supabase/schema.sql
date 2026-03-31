@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
   email_pref_newsletter BOOLEAN NOT NULL DEFAULT true,
   email_pref_updated_at TIMESTAMPTZ,
   unsubscribe_token TEXT,
+  reset_token TEXT,
+  reset_token_expires TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -82,13 +84,17 @@ CREATE TABLE IF NOT EXISTS products (
   condition TEXT DEFAULT 'New',
   grade TEXT,
   weight NUMERIC(10,3),
-  currency TEXT DEFAULT 'USD',
+  currency TEXT DEFAULT 'RON',
   total_rrp NUMERIC(10,2) DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Generated tsvector column for full-text search (Romanian language)
+  search_vector TSVECTOR GENERATED ALWAYS AS (
+    to_tsvector('romanian', COALESCE(name, '') || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '') || ' ' || COALESCE(category, ''))
+  ) STORED
 );
 
-CREATE INDEX idx_products_name ON products USING gin(to_tsvector('english', name || ' ' || COALESCE(description, '')));
+CREATE INDEX idx_products_search ON products USING gin(search_vector);
 CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_products_price ON products(price);
 CREATE INDEX idx_products_avg_rating ON products(avg_rating);
@@ -98,12 +104,34 @@ CREATE INDEX idx_products_brand ON products(brand);
 CREATE INDEX idx_products_slug ON products(slug);
 
 -- ============================================
+-- PRODUCT VARIANTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS product_variants (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  color TEXT,
+  size TEXT,
+  stock INTEGER NOT NULL DEFAULT 0,
+  price_override NUMERIC(10,2),
+  image TEXT,
+  sku TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Each color+size combo must be unique per product
+  UNIQUE(product_id, color, size)
+);
+
+CREATE INDEX idx_product_variants_product ON product_variants(product_id);
+CREATE INDEX idx_product_variants_sku ON product_variants(sku);
+
+-- ============================================
 -- ORDERS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_number TEXT NOT NULL UNIQUE,
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID REFERENCES users(id),
+  guest_session_id TEXT,
   total NUMERIC(10,2) NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled')),
   -- Customer info (denormalized for order history)
@@ -118,7 +146,7 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_country TEXT,
   -- Payment
   payment_id UUID,
-  payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'processing', 'paid', 'failed', 'refunded')),
+  payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'processing', 'paid', 'failed', 'refunded', 'pending_collection')),
   payment_method TEXT CHECK (payment_method IN ('stripe', 'paypal')),
   paid_at TIMESTAMPTZ,
   -- Shipping tracking
@@ -132,6 +160,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_orders_guest_session ON orders(guest_session_id);
 CREATE INDEX idx_orders_number ON orders(order_number);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_customer_email ON orders(customer_email);
@@ -146,7 +175,9 @@ CREATE TABLE IF NOT EXISTS order_items (
   name TEXT NOT NULL,
   price NUMERIC(10,2) NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
-  image TEXT
+  image TEXT,
+  variant_id UUID REFERENCES product_variants(id),
+  variant_label TEXT
 );
 
 CREATE INDEX idx_order_items_order ON order_items(order_id);
@@ -225,13 +256,17 @@ CREATE INDEX idx_helpful_votes_review ON helpful_votes(review_id);
 -- ============================================
 CREATE TABLE IF NOT EXISTS carts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  guest_session_id TEXT UNIQUE,
   total NUMERIC(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Either user_id or guest_session_id must be set
+  CONSTRAINT carts_owner_check CHECK (user_id IS NOT NULL OR guest_session_id IS NOT NULL)
 );
 
 CREATE INDEX idx_carts_user ON carts(user_id);
+CREATE INDEX idx_carts_guest_session ON carts(guest_session_id);
 
 -- ============================================
 -- CART ITEMS (separate table for array)
@@ -244,7 +279,9 @@ CREATE TABLE IF NOT EXISTS cart_items (
   price NUMERIC(10,2) NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
   image TEXT,
-  UNIQUE(cart_id, product_id)
+  variant_id UUID REFERENCES product_variants(id),
+  variant_label TEXT,
+  UNIQUE(cart_id, product_id, variant_id)
 );
 
 CREATE INDEX idx_cart_items_cart ON cart_items(cart_id);
@@ -314,6 +351,7 @@ CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products FOR EACH ROW
 CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_product_variants_updated_at BEFORE UPDATE ON product_variants FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_carts_updated_at BEFORE UPDATE ON carts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_email_logs_updated_at BEFORE UPDATE ON email_logs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -334,3 +372,20 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_cart_total_on_insert AFTER INSERT ON cart_items FOR EACH ROW EXECUTE FUNCTION update_cart_total();
 CREATE TRIGGER update_cart_total_on_update AFTER UPDATE ON cart_items FOR EACH ROW EXECUTE FUNCTION update_cart_total();
 CREATE TRIGGER update_cart_total_on_delete AFTER DELETE ON cart_items FOR EACH ROW EXECUTE FUNCTION update_cart_total();
+
+-- ============================================
+-- STOCK INCREMENT FUNCTION (used for payment failure rollback)
+-- ============================================
+CREATE OR REPLACE FUNCTION increment_stock(p_product_id UUID, p_quantity INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE products SET stock = stock + p_quantity WHERE id = p_product_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION increment_variant_stock(p_variant_id UUID, p_quantity INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE product_variants SET stock = stock + p_quantity WHERE id = p_variant_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

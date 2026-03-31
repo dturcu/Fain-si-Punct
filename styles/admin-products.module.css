@@ -333,6 +333,26 @@
   background: #ccc;
 }
 
+.imagePreview {
+  margin-bottom: 0.5rem;
+}
+
+.imagePreview img {
+  max-width: 200px;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.uploadingText {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 1rem;

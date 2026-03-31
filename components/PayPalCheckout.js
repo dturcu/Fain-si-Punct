@@ -41,10 +41,7 @@ export default function PayPalCheckout({
       // Create PayPal order
       const response = await fetch('/api/payments/create-intent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId,
           method: 'paypal',
@@ -83,7 +80,7 @@ export default function PayPalCheckout({
         return
       }
 
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}`
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=RON`
       script.async = true
 
       script.onload = () => {
@@ -116,10 +113,7 @@ export default function PayPalCheckout({
             // Capture the payment on the server
             const response = await fetch('/api/payments/confirm', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${getAuthToken()}`,
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 orderId,
                 paymentMethod: 'paypal',
@@ -220,18 +214,3 @@ export default function PayPalCheckout({
   )
 }
 
-/**
- * Get authentication token from storage
- */
-function getAuthToken() {
-  if (typeof window === 'undefined') return ''
-
-  // Try localStorage first
-  const token = localStorage.getItem('token')
-  if (token) return token
-
-  // Try from cookie
-  const cookies = document.cookie.split('; ')
-  const tokenCookie = cookies.find((c) => c.startsWith('token='))
-  return tokenCookie ? tokenCookie.split('=')[1] : ''
-}

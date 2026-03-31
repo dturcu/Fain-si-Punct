@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import styles from '@/styles/cart.module.css'
+import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
 
 export default function CartPage() {
   const router = useRouter()
@@ -11,6 +12,12 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingItems, setUpdatingItems] = useState({})
+  const [toast, setToast] = useState({ message: '', type: '' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast({ message: '', type: '' }), 4000)
+  }
 
   useEffect(() => {
     fetchCart()
@@ -19,12 +26,6 @@ export default function CartPage() {
   const fetchCart = async () => {
     try {
       const response = await fetch('/api/cart')
-
-      if (response.status === 401) {
-        router.push('/auth/login')
-        return
-      }
-
       const data = await response.json()
 
       if (data.success) {
@@ -42,6 +43,14 @@ export default function CartPage() {
   const handleQuantityChange = async (itemId, newQuantity) => {
     if (newQuantity < 1) return
 
+    // Optimistic update — apply locally immediately, roll back on error
+    const previousCart = cart
+    setCart((prev) => ({
+      ...prev,
+      items: prev.items.map((i) =>
+        i._id === itemId ? { ...i, quantity: newQuantity } : i
+      ),
+    }))
     setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
 
     try {
@@ -51,24 +60,29 @@ export default function CartPage() {
         body: JSON.stringify({ quantity: newQuantity }),
       })
 
-      if (response.status === 401) {
-        router.push('/auth/login')
-        return
-      }
-
       const data = await response.json()
       if (data.success) {
         setCart(data.data)
         window.dispatchEvent(new Event('cart-updated'))
+      } else {
+        setCart(previousCart) // roll back
+        showToast(data.error || 'Nu s-a putut actualiza cantitatea.', 'error')
       }
     } catch (err) {
-      console.error('Error updating quantity:', err)
+      setCart(previousCart) // roll back
+      showToast('Eroare de rețea. Încearcă din nou.', 'error')
     } finally {
       setUpdatingItems((prev) => ({ ...prev, [itemId]: false }))
     }
   }
 
   const handleRemoveItem = async (itemId) => {
+    // Optimistic update — remove locally immediately, roll back on error
+    const previousCart = cart
+    setCart((prev) => ({
+      ...prev,
+      items: prev.items.filter((i) => i._id !== itemId),
+    }))
     setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
 
     try {
@@ -85,9 +99,14 @@ export default function CartPage() {
       if (data.success) {
         setCart(data.data)
         window.dispatchEvent(new Event('cart-updated'))
+        showToast('Produs eliminat din coș.')
+      } else {
+        setCart(previousCart) // roll back
+        showToast(data.error || 'Nu s-a putut elimina produsul.', 'error')
       }
     } catch (err) {
-      console.error('Error removing item:', err)
+      setCart(previousCart) // roll back
+      showToast('Eroare de rețea. Încearcă din nou.', 'error')
     } finally {
       setUpdatingItems((prev) => ({ ...prev, [itemId]: false }))
     }
@@ -104,7 +123,7 @@ export default function CartPage() {
 
   const getShipping = () => {
     const subtotal = getSubtotal()
-    return subtotal >= 200 ? 0 : 15.99
+    return subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
   }
 
   const getTotal = () => {
@@ -204,6 +223,17 @@ export default function CartPage() {
 
   return (
     <div className={styles.pageWrapper}>
+      {/* Toast notification */}
+      {toast.message && (
+        <div
+          className={`${styles.toast} ${toast.type === 'error' ? styles.toastError : styles.toastSuccess}`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
         <span className={styles.breadcrumbSep}>&gt;</span>
@@ -251,6 +281,9 @@ export default function CartPage() {
                     >
                       {item.name}
                     </Link>
+                    {item.variantLabel && (
+                      <span className={styles.variantLabel}>{item.variantLabel}</span>
+                    )}
                     <span className={styles.mobilePrice}>
                       {item.price.toFixed(2)} lei
                     </span>
@@ -337,7 +370,7 @@ export default function CartPage() {
 
             {shipping > 0 && (
               <div className={styles.shippingHint}>
-                Mai adauga {(200 - subtotal).toFixed(2)} lei pentru livrare
+                Mai adauga {(SHIPPING_THRESHOLD - subtotal).toFixed(2)} lei pentru livrare
                 gratuita
               </div>
             )}

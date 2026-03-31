@@ -104,6 +104,10 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className={styles.forgotLink}>
+          <Link href="/auth/forgot-password">Ai uitat parola?</Link>
+        </div>
+
         <hr className={styles.divider} />
 
         <p className={styles.switchText}>

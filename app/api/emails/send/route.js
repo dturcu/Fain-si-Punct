@@ -73,7 +73,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Send email error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

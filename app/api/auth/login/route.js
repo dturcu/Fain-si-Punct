@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
-import { createToken } from '@/lib/auth'
-import { getUserByEmail } from '@/lib/supabase-queries'
+import { createToken, getGuestSessionId } from '@/lib/auth'
+import { getUserByEmail, migrateGuestToUser } from '@/lib/supabase-queries'
 
 export async function POST(request) {
   try {
@@ -33,8 +33,25 @@ export async function POST(request) {
 
     const token = createToken(user.id, user.email, user.role)
 
+    // Migrate guest cart/orders to the logged-in user
+    const guestSessionId = getGuestSessionId(request)
+    if (guestSessionId) {
+      try {
+        await migrateGuestToUser(guestSessionId, user.id)
+      } catch (migrationError) {
+        console.error('Guest migration error:', migrationError)
+      }
+    }
+
     const userResponse = { ...user }
     delete userResponse.password
+
+    const cookies = [
+      `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`,
+    ]
+    if (guestSessionId) {
+      cookies.push('guest_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')
+    }
 
     return Response.json(
       {
@@ -45,13 +62,14 @@ export async function POST(request) {
       {
         status: 200,
         headers: {
-          'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
+          'Set-Cookie': cookies,
         },
       }
     )
   } catch (error) {
+    console.error('Login error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

@@ -1,28 +1,24 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { getCartByUserId, clearCart, getUserById, createOrder } from '@/lib/supabase-queries'
-import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getCartByUserId, clearCart, getUserById, createOrder, getCartByGuestSession, clearGuestCart } from '@/lib/supabase-queries'
+import { getSessionContext } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
+import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
+
+import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
-  return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+  return 'ORD-' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()
 }
 
 export async function POST(request) {
   try {
-    const token = getCookieToken(request)
-    if (!token) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const session = getSessionContext(request)
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
+    if (!session.userId && !session.guestSessionId) {
       return Response.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
+        { success: false, error: 'No session found' },
+        { status: 400 }
       )
     }
 
@@ -69,8 +65,11 @@ export async function POST(request) {
       )
     }
 
-    // Get user's cart
-    const cart = await getCartByUserId(decoded.userId)
+    // Get cart (authenticated or guest)
+    const cart = session.userId
+      ? await getCartByUserId(session.userId)
+      : await getCartByGuestSession(session.guestSessionId)
+
     if (!cart || !cart.items || cart.items.length === 0) {
       return Response.json(
         { success: false, error: 'Cart is empty' },
@@ -78,36 +77,89 @@ export async function POST(request) {
       )
     }
 
-    // Check stock availability before deducting
+    // Enforce per-item quantity cap at checkout too
     for (const item of cart.items) {
-      const { data: product } = await supabaseAdmin
-        .from('products')
-        .select('stock, name')
-        .eq('id', item.productId)
-        .single()
-
-      if (!product || product.stock < item.quantity) {
-        const productName = product?.name || item.name || item.productId
+      if (item.quantity > MAX_QUANTITY_PER_ITEM) {
         return Response.json(
-          { success: false, error: `Produsul ${productName} nu mai este disponibil in cantitatea solicitata` },
+          { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
           { status: 400 }
         )
       }
     }
 
-    // Update product stock for each item
+    // Decrement stock using optimistic locking and re-validate prices
     for (const item of cart.items) {
       const { data: product } = await supabaseAdmin
         .from('products')
-        .select('stock')
+        .select('stock, name, price')
         .eq('id', item.productId)
         .single()
 
-      if (product) {
-        await supabaseAdmin
+      if (!product) {
+        return Response.json(
+          { success: false, error: `Produsul ${item.name || item.productId} nu mai este disponibil` },
+          { status: 400 }
+        )
+      }
+
+      // If variant, check variant stock and use variant price
+      if (item.variantId) {
+        const { data: variant } = await supabaseAdmin
+          .from('product_variants')
+          .select('id, stock, price_override')
+          .eq('id', item.variantId)
+          .single()
+
+        if (!variant || variant.stock < item.quantity) {
+          return Response.json(
+            { success: false, error: `Varianta selectata pentru ${product.name} nu mai este disponibila in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
+
+        // Use variant price if set, otherwise product price
+        item.price = variant.price_override != null ? parseFloat(variant.price_override) : parseFloat(product.price)
+
+        // Optimistic lock on variant stock
+        const { data: updatedVariant } = await supabaseAdmin
+          .from('product_variants')
+          .update({ stock: variant.stock - item.quantity })
+          .eq('id', item.variantId)
+          .eq('stock', variant.stock)
+          .select('id')
+
+        if (!updatedVariant || updatedVariant.length === 0) {
+          return Response.json(
+            { success: false, error: `Varianta selectata pentru ${product.name} nu mai este disponibila in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
+      } else {
+        // No variant — use product-level stock
+        if (product.stock < item.quantity) {
+          return Response.json(
+            { success: false, error: `Produsul ${product.name} nu mai este disponibil in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
+
+        // Price re-validation: always use the current DB price
+        item.price = parseFloat(product.price)
+
+        // Only update if stock hasn't changed since we read it (optimistic locking)
+        const { data: updated } = await supabaseAdmin
           .from('products')
           .update({ stock: product.stock - item.quantity })
           .eq('id', item.productId)
+          .eq('stock', product.stock)
+          .select('id')
+
+        if (!updated || updated.length === 0) {
+          return Response.json(
+            { success: false, error: `Produsul ${product.name} nu mai este disponibil in cantitatea solicitata` },
+            { status: 400 }
+          )
+        }
       }
     }
 
@@ -116,26 +168,31 @@ export async function POST(request) {
       (sum, item) => sum + item.price * item.quantity,
       0
     )
-    const shippingCost = subtotal >= 200 ? 0 : 15.99
+    const shippingCost = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
     const orderTotal = subtotal + shippingCost
 
     // Create order
     const orderNumber = generateOrderNumber()
     const order = await createOrder(
-      decoded.userId,
+      session.userId,
       cart.items,
       orderTotal,
       customer,
       shippingAddress,
       orderNumber,
-      paymentMethod || 'card'
+      paymentMethod || 'card',
+      session.userId ? null : session.guestSessionId
     )
 
-    // Get user for email preferences
-    const user = await getUserById(decoded.userId)
+    // Queue order confirmation email
+    const shouldSendEmail = session.userId
+      ? await (async () => {
+          const user = await getUserById(session.userId)
+          return user?.emailPreferences?.orderConfirmation !== false
+        })()
+      : true // Always send email for guest orders
 
-    // Queue order confirmation email if user hasn't opted out
-    if (user?.emailPreferences?.orderConfirmation !== false) {
+    if (shouldSendEmail) {
       try {
         const emailHtml = orderConfirmation(order)
         const subject = `Order Confirmation - ${order.orderNumber}`
@@ -146,14 +203,13 @@ export async function POST(request) {
           subject,
           html: emailHtml,
           orderId: order.id,
-          userId: decoded.userId,
+          userId: session.userId || null,
           metadata: {
             orderNumber: order.orderNumber,
             customerName: customer.name,
           },
         })
 
-        // Update order with email job tracking
         await supabaseAdmin
           .from('order_email_jobs')
           .insert({
@@ -169,12 +225,15 @@ export async function POST(request) {
         console.log(`Email job queued for order ${order.id}:`, emailJob.id)
       } catch (emailError) {
         console.error('Failed to queue order confirmation email:', emailError)
-        // Don't fail the order creation if email queuing fails
       }
     }
 
     // Clear cart
-    await clearCart(decoded.userId)
+    if (session.userId) {
+      await clearCart(session.userId)
+    } else {
+      await clearGuestCart(session.guestSessionId)
+    }
 
     return Response.json(
       { success: true, data: order },
@@ -183,7 +242,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Checkout error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare la finalizarea comenzii' },
       { status: 500 }
     )
   }
