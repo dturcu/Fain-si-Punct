@@ -26,8 +26,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
     const status = searchParams.get('status')
+    const search = searchParams.get('search')
 
-    let query = supabaseAdmin.from('orders').select('*')
+    let query = supabaseAdmin.from('orders').select('*, order_items(*)')
 
     if (email) {
       query = query.eq('customer_email', email)
@@ -37,9 +38,17 @@ export async function GET(request) {
       query = query.eq('status', status)
     }
 
+    // Search by order number, customer name, or email
+    if (search) {
+      const term = search.replace(/[%_"'\\]/g, '')
+      query = query.or(
+        `order_number.ilike.%${term}%,customer_name.ilike.%${term}%,customer_email.ilike.%${term}%`
+      )
+    }
+
     const { data: orders, error } = await query
-      .select('*, order_items(*)')
       .order('created_at', { ascending: false })
+      .limit(200)
 
     if (error) throw error
 

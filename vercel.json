@@ -10,5 +10,15 @@
     }
   ],
   "redirects": [],
-  "headers": []
+  "headers": [],
+  "crons": [
+    {
+      "path": "/api/cron/process-emails",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-guest-carts",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }

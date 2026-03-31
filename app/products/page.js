@@ -126,6 +126,11 @@ function ProductsContent() {
       .catch(() => setSubcategories([]))
   }, [category])
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [page])
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)

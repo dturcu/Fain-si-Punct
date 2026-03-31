@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
   email_pref_newsletter BOOLEAN NOT NULL DEFAULT true,
   email_pref_updated_at TIMESTAMPTZ,
   unsubscribe_token TEXT,
+  reset_token TEXT,
+  reset_token_expires TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
