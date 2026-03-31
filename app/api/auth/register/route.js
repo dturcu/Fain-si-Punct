@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs'
-import { createToken } from '@/lib/auth'
-import { getUserByEmail, createUser } from '@/lib/supabase-queries'
-import { userRowToObj } from '@/lib/supabase-queries'
+import { createToken, getGuestSessionId } from '@/lib/auth'
+import { getUserByEmail, createUser, migrateGuestToUser } from '@/lib/supabase-queries'
 
 export async function POST(request) {
   try {
@@ -28,8 +27,27 @@ export async function POST(request) {
     const user = await createUser(email, hashedPassword, firstName, lastName)
     const token = createToken(user.id, user.email, user.role)
 
+    // Migrate guest cart/orders to the new user account
+    const guestSessionId = getGuestSessionId(request)
+    if (guestSessionId) {
+      try {
+        await migrateGuestToUser(guestSessionId, user.id)
+      } catch (migrationError) {
+        console.error('Guest migration error:', migrationError)
+        // Don't fail registration if migration fails
+      }
+    }
+
     const userResponse = { ...user }
     delete userResponse.password
+
+    // Clear guest session cookie + set auth token cookie
+    const cookies = [
+      `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`,
+    ]
+    if (guestSessionId) {
+      cookies.push('guest_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0')
+    }
 
     return Response.json(
       {
@@ -40,7 +58,7 @@ export async function POST(request) {
       {
         status: 201,
         headers: {
-          'Set-Cookie': `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`,
+          'Set-Cookie': cookies,
         },
       }
     )

@@ -83,10 +83,6 @@ function ProductsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, quantity: 1 }),
       })
-      if (response.status === 401) {
-        window.location.href = '/auth/login'
-        return
-      }
       const data = await response.json()
       if (data.success) {
         setCartMessage('Adaugat in cos!')

@@ -1,22 +1,17 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getUserById } from '@/lib/supabase-queries'
-import { verifyToken, getCookieToken } from '@/lib/auth'
+import { verifyToken, getCookieToken, getGuestSessionId } from '@/lib/auth'
 import { orderRowToObj } from '../route'
 
 export async function GET(request, { params }) {
   try {
     const token = getCookieToken(request)
-    if (!token) {
+    const decoded = token ? verifyToken(token) : null
+    const guestSessionId = getGuestSessionId(request)
+
+    if (!decoded && !guestSessionId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
         { status: 401 }
       )
     }
@@ -36,9 +31,17 @@ export async function GET(request, { params }) {
       )
     }
 
-    // Verify the requesting user owns this order or is admin
-    const user = await getUserById(decoded.userId)
-    if (order.user_id !== decoded.userId && (!user || user.role !== 'admin')) {
+    // Verify access: owner (user or guest session) or admin
+    let hasAccess = false
+    if (decoded) {
+      const user = await getUserById(decoded.userId)
+      hasAccess = order.user_id === decoded.userId || (user && user.role === 'admin')
+    }
+    if (!hasAccess && guestSessionId && order.guest_session_id === guestSessionId) {
+      hasAccess = true
+    }
+
+    if (!hasAccess) {
       return Response.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -52,7 +55,7 @@ export async function GET(request, { params }) {
 
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
-    
+
     console.error('orders/[id] error:', error)
 
     return Response.json(

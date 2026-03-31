@@ -50,10 +50,6 @@ export default function Navbar() {
   const fetchCartCount = async () => {
     try {
       const response = await fetch('/api/cart')
-      if (response.status === 401) {
-        setCartCount(0)
-        return
-      }
       const data = await response.json()
       const cart = data.cart || data.data
       if (data.success && cart && cart.items) {

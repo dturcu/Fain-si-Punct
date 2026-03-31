@@ -107,7 +107,8 @@ CREATE INDEX idx_products_slug ON products(slug);
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_number TEXT NOT NULL UNIQUE,
-  user_id UUID NOT NULL REFERENCES users(id),
+  user_id UUID REFERENCES users(id),
+  guest_session_id TEXT,
   total NUMERIC(10,2) NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled')),
   -- Customer info (denormalized for order history)
@@ -122,7 +123,7 @@ CREATE TABLE IF NOT EXISTS orders (
   shipping_country TEXT,
   -- Payment
   payment_id UUID,
-  payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'processing', 'paid', 'failed', 'refunded')),
+  payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'processing', 'paid', 'failed', 'refunded', 'pending_collection')),
   payment_method TEXT CHECK (payment_method IN ('stripe', 'paypal')),
   paid_at TIMESTAMPTZ,
   -- Shipping tracking
@@ -136,6 +137,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_orders_guest_session ON orders(guest_session_id);
 CREATE INDEX idx_orders_number ON orders(order_number);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_customer_email ON orders(customer_email);
@@ -229,13 +231,17 @@ CREATE INDEX idx_helpful_votes_review ON helpful_votes(review_id);
 -- ============================================
 CREATE TABLE IF NOT EXISTS carts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  guest_session_id TEXT UNIQUE,
   total NUMERIC(10,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Either user_id or guest_session_id must be set
+  CONSTRAINT carts_owner_check CHECK (user_id IS NOT NULL OR guest_session_id IS NOT NULL)
 );
 
 CREATE INDEX idx_carts_user ON carts(user_id);
+CREATE INDEX idx_carts_guest_session ON carts(guest_session_id);
 
 -- ============================================
 -- CART ITEMS (separate table for array)

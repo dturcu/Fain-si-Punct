@@ -103,6 +103,7 @@ function orderRowToObj(row, items = []) {
     id: row.id,
     orderNumber: row.order_number,
     userId: row.user_id,
+    guestSessionId: row.guest_session_id,
     items: items.map(item => ({
       productId: item.product_id,
       name: item.name,
