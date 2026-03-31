@@ -32,8 +32,7 @@ const PAYMENT_METHODS = [
   },
 ]
 
-const SHIPPING_THRESHOLD = 200
-const SHIPPING_COST = 15.99
+import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -43,6 +42,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [errors, setErrors] = useState({})
   const [attempted, setAttempted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -62,12 +62,6 @@ export default function CheckoutPage() {
   const fetchCart = async () => {
     try {
       const response = await fetch('/api/cart')
-
-      if (response.status === 401) {
-        router.push('/auth/login')
-        return
-      }
-
       const data = await response.json()
       if (data.success) {
         if (!data.data || !data.data.items || data.data.items.length === 0) {
@@ -122,6 +116,7 @@ export default function CheckoutPage() {
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
+    setSubmitError('')
     setSubmitting(true)
 
     try {
@@ -156,10 +151,10 @@ export default function CheckoutPage() {
           router.push(`/orders/${order.id}?pay=${paymentMethod}`)
         }
       } else {
-        alert(`Eroare: ${data.error}`)
+        setSubmitError(data.error || 'A apărut o eroare. Încearcă din nou.')
       }
     } catch (err) {
-      alert(`Eroare: ${err.message}`)
+      setSubmitError('A apărut o eroare de rețea. Verifică conexiunea și încearcă din nou.')
     } finally {
       setSubmitting(false)
     }
@@ -374,6 +369,13 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* Inline submission error */}
+            {submitError && (
+              <div className={styles.submitError} role="alert">
+                {submitError}
+              </div>
+            )}
+
             {/* Securitate trust section */}
             <div className={styles.trustSection}>
               <span className={styles.trustIcon}>&#128274;</span>
@@ -413,7 +415,7 @@ export default function CheckoutPage() {
                     className={styles.summaryItemImage}
                   />
                   <span className={styles.summaryItemName}>
-                    {item.name} x {item.quantity}
+                    {item.name}{item.variantLabel ? ` (${item.variantLabel})` : ''} x {item.quantity}
                   </span>
                 </div>
                 <span className={styles.summaryItemPrice}>

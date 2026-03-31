@@ -50,10 +50,6 @@ export default function Navbar() {
   const fetchCartCount = async () => {
     try {
       const response = await fetch('/api/cart')
-      if (response.status === 401) {
-        setCartCount(0)
-        return
-      }
       const data = await response.json()
       const cart = data.cart || data.data
       if (data.success && cart && cart.items) {
@@ -65,8 +61,12 @@ export default function Navbar() {
     }
   }
 
-  const handleLogout = () => {
-    document.cookie = 'token=; path=/; max-age=0'
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Ignore network errors — the redirect still clears state
+    }
     setUser(null)
     setCartCount(0)
     setDropdownOpen(false)
@@ -113,6 +113,8 @@ export default function Navbar() {
                     className="nav-user-btn"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     aria-expanded={dropdownOpen}
+                    aria-haspopup="menu"
+                    aria-label={`Meniu cont pentru ${user.firstName || user.email}`}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -124,10 +126,10 @@ export default function Navbar() {
                     </svg>
                   </button>
                   {dropdownOpen && (
-                    <div className="nav-dropdown">
-                      <Link href="/account" onClick={() => setDropdownOpen(false)}>Contul meu</Link>
-                      <Link href="/account/orders" onClick={() => setDropdownOpen(false)}>Comenzile mele</Link>
-                      <button onClick={handleLogout} className="nav-dropdown-logout">Deconectare</button>
+                    <div className="nav-dropdown" role="menu">
+                      <Link href="/account" onClick={() => setDropdownOpen(false)} role="menuitem">Contul meu</Link>
+                      <Link href="/account/orders" onClick={() => setDropdownOpen(false)} role="menuitem">Comenzile mele</Link>
+                      <button onClick={handleLogout} className="nav-dropdown-logout" role="menuitem">Deconectare</button>
                     </div>
                   )}
                 </div>
@@ -144,13 +146,17 @@ export default function Navbar() {
             </>
           )}
 
-          <Link href="/cart" className="nav-cart-link">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <Link
+            href="/cart"
+            className="nav-cart-link"
+            aria-label={`Coș de cumpărături, ${cartCount} ${cartCount === 1 ? 'produs' : 'produse'}`}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="9" cy="21" r="1" />
               <circle cx="20" cy="21" r="1" />
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
-            <span className="nav-cart-badge">{cartCount}</span>
+            <span className="nav-cart-badge" aria-hidden="true">{cartCount}</span>
           </Link>
 
           <button

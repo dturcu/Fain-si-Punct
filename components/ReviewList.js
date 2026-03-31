@@ -272,11 +272,11 @@ export default function ReviewList({ productId, userId, onReviewDeleted }) {
             onClick={() => handlePageChange(pagination.page - 1)}
             disabled={!pagination.hasPrevPage}
           >
-            Previous
+            Anterioara
           </button>
 
           <div className={styles.pageInfo}>
-            Page {pagination.page} of {pagination.totalPages}
+            Pagina {pagination.page} din {pagination.totalPages}
           </div>
 
           <button
@@ -284,7 +284,7 @@ export default function ReviewList({ productId, userId, onReviewDeleted }) {
             onClick={() => handlePageChange(pagination.page + 1)}
             disabled={!pagination.hasNextPage}
           >
-            Next
+            Urmatoarea
           </button>
         </div>
       )}

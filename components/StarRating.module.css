@@ -33,6 +33,10 @@
 
 .star.interactive {
   cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
 }
 
 .star.interactive:hover {

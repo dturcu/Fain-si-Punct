@@ -1,20 +1,15 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { verifyToken, getCookieToken } from '@/lib/auth'
+import { verifyToken, getCookieToken, getGuestSessionId } from '@/lib/auth'
 
 export async function POST(request, { params }) {
   try {
     const token = getCookieToken(request)
-    if (!token) {
+    const decoded = token ? verifyToken(token) : null
+    const guestSessionId = getGuestSessionId(request)
+
+    if (!decoded && !guestSessionId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
         { status: 401 }
       )
     }
@@ -35,7 +30,9 @@ export async function POST(request, { params }) {
       )
     }
 
-    if (order.user_id !== decoded.userId) {
+    const isOwner = (decoded && order.user_id === decoded.userId) ||
+      (guestSessionId && order.guest_session_id === guestSessionId)
+    if (!isOwner) {
       return Response.json(
         { success: false, error: 'Not authorized' },
         { status: 403 }
@@ -71,8 +68,11 @@ export async function POST(request, { params }) {
       },
     })
   } catch (error) {
+    
+    console.error('orders/[id]/pay error:', error)
+
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

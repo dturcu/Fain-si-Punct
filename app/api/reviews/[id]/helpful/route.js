@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { toggleHelpfulVote } from '@/lib/reviews-supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
 
 /**
  * PATCH /api/reviews/[id]/helpful
@@ -7,16 +8,15 @@ import { toggleHelpfulVote } from '@/lib/reviews-supabase'
  */
 export async function PATCH(request, { params }) {
   try {
+    const token = getCookieToken(request)
+    if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const decoded = verifyToken(token)
+    if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    const userId = decoded.userId
+
     const { id } = await params
     const body = await request.json()
-    const { userId, voteType } = body
-
-    if (!userId) {
-      return Response.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      )
-    }
+    const { voteType } = body
 
     if (!voteType || !['helpful', 'unhelpful'].includes(voteType)) {
       return Response.json(
@@ -39,14 +39,14 @@ export async function PATCH(request, { params }) {
   } catch (error) {
     if (error.message === 'Review not found') {
       return Response.json(
-        { success: false, error: error.message },
+        { success: false, error: 'A apărut o eroare internă' },
         { status: 404 }
       )
     }
 
     console.error('Error updating helpful vote:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -82,7 +82,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching helpful votes:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

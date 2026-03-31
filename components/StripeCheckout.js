@@ -52,10 +52,7 @@ export default function StripeCheckout({
 
       const response = await fetch('/api/payments/create-intent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId,
           method: 'stripe',
@@ -156,10 +153,7 @@ function StripePaymentForm({
         // Confirm payment on our backend
         const response = await fetch('/api/payments/confirm', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getAuthToken()}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             orderId,
             paymentMethod: 'stripe',
@@ -200,7 +194,7 @@ function StripePaymentForm({
         disabled={!stripe || !elements || processing}
         className="pay-button"
       >
-        {processing ? 'Processing...' : `Pay $${(amount / 100).toFixed(2)}`}
+        {processing ? 'Se proceseaza...' : `Plateste ${(amount / 100).toFixed(2)} lei`}
       </button>
 
       <style jsx>{`
@@ -244,18 +238,3 @@ function StripePaymentForm({
   )
 }
 
-/**
- * Get authentication token from storage
- */
-function getAuthToken() {
-  if (typeof window === 'undefined') return ''
-
-  // Try localStorage first
-  const token = localStorage.getItem('token')
-  if (token) return token
-
-  // Try from cookie
-  const cookies = document.cookie.split('; ')
-  const tokenCookie = cookies.find((c) => c.startsWith('token='))
-  return tokenCookie ? tokenCookie.split('=')[1] : ''
-}

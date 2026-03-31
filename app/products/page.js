@@ -9,8 +9,8 @@ const SORT_OPTIONS = [
   { value: '', label: 'Relevanta' },
   { value: 'price', label: 'Pret crescator' },
   { value: '-price', label: 'Pret descrescator' },
-  { value: '-created_at', label: 'Cele mai noi' },
-  { value: '-avg_rating', label: 'Rating' },
+  { value: '-createdAt', label: 'Cele mai noi' },
+  { value: '-avgRating', label: 'Rating' },
 ]
 
 const ITEMS_PER_PAGE_OPTIONS = [20, 40, 60]
@@ -83,10 +83,6 @@ function ProductsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, quantity: 1 }),
       })
-      if (response.status === 401) {
-        window.location.href = '/auth/login'
-        return
-      }
       const data = await response.json()
       if (data.success) {
         setCartMessage('Adaugat in cos!')
@@ -130,6 +126,8 @@ function ProductsContent() {
       .catch(() => setSubcategories([]))
   }, [category])
 
+  const scrollToTop = () => window.scrollTo(0, 0)
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)
@@ -149,19 +147,12 @@ function ProductsContent() {
       const data = await response.json()
 
       if (data.success) {
-        let filtered = data.data
-        // Client-side filtering for price range and stock if API doesn't support it
-        if (minPrice) {
-          filtered = filtered.filter((p) => p.price >= parseFloat(minPrice))
-        }
-        if (maxPrice) {
-          filtered = filtered.filter((p) => p.price <= parseFloat(maxPrice))
-        }
-        if (inStockOnly) {
-          filtered = filtered.filter((p) => p.stock > 0)
-        }
-        setProducts(filtered)
+        setProducts(data.data)
         setPagination(data.pagination)
+        // Clamp page if beyond actual total (e.g. stale URL with page=999)
+        if (data.pagination.pages > 0 && page > data.pagination.pages) {
+          setPage(data.pagination.pages)
+        }
       }
     } catch (error) {
       console.error('Eroare la incarcarea produselor:', error)
@@ -318,15 +309,19 @@ function ProductsContent() {
           {/* Categories */}
           <div className={styles.filterGroup}>
             <h4>Categorie</h4>
-            <ul className={styles.categoryList}>
+            <ul className={styles.categoryList} role="listbox" aria-label="Categorii">
               {categories.map((cat) => (
-                <li
-                  key={cat.name}
-                  className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
-                  onClick={() => handleCategorySelect(cat.name)}
-                >
-                  <span className={styles.categoryName}>{cat.name}</span>
-                  <span className={styles.categoryCount}>({cat.count})</span>
+                <li key={cat.name} role="presentation">
+                  <button
+                    type="button"
+                    className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
+                    onClick={() => handleCategorySelect(cat.name)}
+                    role="option"
+                    aria-selected={category === cat.name}
+                  >
+                    <span className={styles.categoryName}>{cat.name}</span>
+                    <span className={styles.categoryCount}>({cat.count})</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -341,7 +336,6 @@ function ProductsContent() {
                   <li
                     key={sub.name}
                     className={`${styles.subcategoryItem} ${selectedTags.includes(sub.name) ? styles.subcategoryActive : ''}`}
-                    onClick={() => handleTagToggle(sub.name)}
                   >
                     <label className={styles.subcategoryLabel}>
                       <input
@@ -349,11 +343,10 @@ function ProductsContent() {
                         checked={selectedTags.includes(sub.name)}
                         onChange={() => handleTagToggle(sub.name)}
                         className={styles.subcategoryCheckbox}
-                        onClick={(e) => e.stopPropagation()}
                       />
                       <span className={styles.categoryName}>{sub.name}</span>
+                      <span className={styles.categoryCount}>({sub.count})</span>
                     </label>
-                    <span className={styles.categoryCount}>({sub.count})</span>
                   </li>
                 ))}
               </ul>
@@ -511,7 +504,7 @@ function ProductsContent() {
               <button
                 className={styles.pageBtn}
                 disabled={page === 1}
-                onClick={() => setPage(page - 1)}
+                onClick={() => { setPage(page - 1); scrollToTop() }}
               >
                 &laquo; Inapoi
               </button>
@@ -525,7 +518,7 @@ function ProductsContent() {
                   <button
                     key={p}
                     className={`${styles.pageBtn} ${p === page ? styles.pageBtnActive : ''}`}
-                    onClick={() => setPage(p)}
+                    onClick={() => { setPage(p); scrollToTop() }}
                   >
                     {p}
                   </button>
@@ -535,7 +528,7 @@ function ProductsContent() {
               <button
                 className={styles.pageBtn}
                 disabled={page === pagination.pages}
-                onClick={() => setPage(page + 1)}
+                onClick={() => { setPage(page + 1); scrollToTop() }}
               >
                 Inainte &raquo;
               </button>

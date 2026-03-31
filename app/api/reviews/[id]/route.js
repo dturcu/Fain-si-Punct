@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { updateProductRatingStats } from '@/lib/reviews-supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
 
 /**
  * GET /api/reviews/[id]
@@ -29,7 +31,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -41,16 +43,15 @@ export async function GET(request, { params }) {
  */
 export async function PUT(request, { params }) {
   try {
+    const token = getCookieToken(request)
+    if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const decoded = verifyToken(token)
+    if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    const userId = decoded.userId
+
     const { id } = await params
     const body = await request.json()
-    const { rating, title, comment, userId } = body
-
-    if (!userId) {
-      return Response.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      )
-    }
+    const { rating, title, comment } = body
 
     // Find review
     const { data: review, error: fetchError } = await supabaseAdmin
@@ -66,7 +67,7 @@ export async function PUT(request, { params }) {
       )
     }
 
-    // Check ownership
+    // Check ownership using authenticated user, not client-supplied userId
     if (review.user_id !== userId) {
       return Response.json(
         { success: false, error: 'Unauthorized: only review owner can update' },
@@ -115,7 +116,7 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error('Error updating review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -127,16 +128,13 @@ export async function PUT(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
-    const { id } = await params
-    const body = await request.json()
-    const { userId, isAdmin } = body
+    const token = getCookieToken(request)
+    if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const decoded = verifyToken(token)
+    if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    const userId = decoded.userId
 
-    if (!userId) {
-      return Response.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      )
-    }
+    const { id } = await params
 
     // Find review
     const { data: review, error: fetchError } = await supabaseAdmin
@@ -152,8 +150,10 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    // Check authorization
+    // Check authorization: owner or admin (role from DB, not client)
     const isOwner = review.user_id === userId
+    const user = isOwner ? null : await getUserById(userId)
+    const isAdmin = !isOwner && user?.role === 'admin'
     if (!isOwner && !isAdmin) {
       return Response.json(
         { success: false, error: 'Unauthorized: only owner or admin can delete' },
@@ -187,7 +187,7 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error('Error deleting review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
