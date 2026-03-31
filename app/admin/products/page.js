@@ -41,7 +41,11 @@ export default function AdminProducts() {
       setProducts(data.data || [])
       if (data.pagination) {
         setTotal(data.pagination.total)
-        setTotalPages(Math.ceil(data.pagination.total / data.pagination.limit) || 1)
+        setTotalPages(data.pagination.pages || 1)
+        // Clamp page if beyond actual total
+        if (data.pagination.pages > 0 && page > data.pagination.pages) {
+          setPage(data.pagination.pages)
+        }
       }
     } catch (error) {
       console.error('Eroare la incarcarea produselor:', error)
