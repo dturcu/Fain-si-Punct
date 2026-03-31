@@ -19,7 +19,7 @@ export async function GET(request, { params }) {
 
     // Support lookup by UUID or slug
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-    const query = supabaseAdmin.from('products').select('*, product_variants(*)')
+    const query = supabaseAdmin.from('products').select('*')
     if (isUUID) {
       query.eq('id', id)
     } else {
@@ -33,6 +33,19 @@ export async function GET(request, { params }) {
         { status: 404 }
       )
     }
+
+    // Fetch variants separately (graceful — table may not exist yet)
+    let variants = []
+    try {
+      const { data: variantRows } = await supabaseAdmin
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', product.id)
+      if (variantRows) variants = variantRows
+    } catch {
+      // product_variants table may not exist yet — ignore
+    }
+    product.product_variants = variants
 
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
