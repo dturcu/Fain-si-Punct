@@ -20,6 +20,7 @@ export default function ProductDetail({ params: paramsPromise }) {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [swipeStart, setSwipeStart] = useState(null)
   const [selectedColor, setSelectedColor] = useState(null)
   const [selectedSize, setSelectedSize] = useState(null)
   const [selectedVariant, setSelectedVariant] = useState(null)
@@ -342,15 +343,39 @@ export default function ProductDetail({ params: paramsPromise }) {
   const handleMouseUp = () => setDragging(false)
 
   const handleTouchStart = (e) => {
-    if (zoom <= 1 || e.touches.length !== 1) return
-    setDragging(true)
-    setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y })
+    if (e.touches.length !== 1) return
+    const x = e.touches[0].clientX
+    const y = e.touches[0].clientY
+    if (zoom > 1) {
+      setDragging(true)
+      setDragStart({ x: x - pan.x, y: y - pan.y })
+    } else {
+      setSwipeStart({ x, y })
+    }
   }
 
   const handleTouchMove = (e) => {
-    if (!dragging || e.touches.length !== 1) return
-    e.preventDefault()
-    setPan({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y })
+    if (e.touches.length !== 1) return
+    if (dragging && zoom > 1) {
+      e.preventDefault()
+      setPan({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y })
+    }
+  }
+
+  const handleTouchEnd = (e) => {
+    setDragging(false)
+    if (swipeStart && zoom <= 1) {
+      const endX = e.changedTouches[0].clientX
+      const endY = e.changedTouches[0].clientY
+      const dx = endX - swipeStart.x
+      const dy = endY - swipeStart.y
+      // Only count as swipe if horizontal movement > 50px and greater than vertical
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx > 0) lightboxPrev()
+        else lightboxNext()
+      }
+    }
+    setSwipeStart(null)
   }
 
   const lightboxPrev = () => {
@@ -795,7 +820,7 @@ export default function ProductDetail({ params: paramsPromise }) {
             onMouseLeave={handleMouseUp}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
-            onTouchEnd={() => setDragging(false)}
+            onTouchEnd={handleTouchEnd}
             style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
           >
             <img
