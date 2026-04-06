@@ -151,7 +151,7 @@ export default function Home() {
             </button>
           </form>
           <Link href="/products" className={styles.heroCta}>
-            Exploreaza produsele
+            Exploreaza produsele &rarr;
           </Link>
         </div>
       </section>
@@ -160,41 +160,49 @@ export default function Home() {
       <section className={styles.benefits}>
         <div className={styles.benefitsGrid}>
           <div className={styles.benefitItem}>
-            <svg className={styles.benefitIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1" y="3" width="15" height="13" rx="2" />
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-              <circle cx="5.5" cy="18.5" r="2.5" />
-              <circle cx="18.5" cy="18.5" r="2.5" />
-            </svg>
+            <div className={styles.benefitIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="2" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+              </svg>
+            </div>
             <div>
               <strong>Livrare rapida</strong>
               <span>In toata tara</span>
             </div>
           </div>
           <div className={styles.benefitItem}>
-            <svg className={styles.benefitIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1" y="4" width="22" height="16" rx="2" />
-              <line x1="1" y1="10" x2="23" y2="10" />
-            </svg>
+            <div className={styles.benefitIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+            </div>
             <div>
               <strong>Plata securizata</strong>
               <span>Card sau ramburs</span>
             </div>
           </div>
           <div className={styles.benefitItem}>
-            <svg className={styles.benefitIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-            </svg>
+            <div className={styles.benefitIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
+            </div>
             <div>
               <strong>Retur gratuit 30 zile</strong>
               <span>Fara griji</span>
             </div>
           </div>
           <div className={styles.benefitItem}>
-            <svg className={styles.benefitIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-            </svg>
+            <div className={styles.benefitIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </div>
             <div>
               <strong>Suport 24/7</strong>
               <span>Suntem aici pentru tine</span>
@@ -206,9 +214,9 @@ export default function Home() {
       {/* Categories Section */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Categorii populare</h2>
+          <h2 className={`${styles.sectionTitle} ${styles.sectionHeading}`}>Categorii populare</h2>
           {hasMoreCategories && (
-            <Link href="/products" className={styles.seeAllLink}>
+            <Link href="/products" className={styles.seeAllBtn}>
               Vezi toate categoriile &rarr;
             </Link>
           )}
@@ -232,37 +240,46 @@ export default function Home() {
       {products.length > 0 && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Produse populare</h2>
-            <Link href="/products" className={styles.seeAllLink}>
+            <h2 className={`${styles.sectionTitle} ${styles.sectionHeading}`}>Produse populare</h2>
+            <Link href="/products" className={styles.seeAllBtn}>
               Vezi toate produsele &rarr;
             </Link>
           </div>
           <div className={styles.productGrid}>
-            {products.map((product) => (
-              <Link
-                key={product.id}
-                href={`/products/${product.id}`}
-                className={styles.productCard}
-              >
-                <div className={styles.productImageWrap}>
-                  <img
-                    src={product.image || (product.images && product.images[0]) || '/placeholder.png'}
-                    alt={product.name}
-                    className={styles.productImage}
-                  />
-                </div>
-                <div className={styles.productInfo}>
-                  <h3 className={styles.productName}>{product.name}</h3>
-                  <StarRating
-                    rating={product.avgRating || 0}
-                    count={product.reviewCount}
-                  />
-                  <span className={styles.productPrice}>
-                    {product.price?.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lei
-                  </span>
-                </div>
-              </Link>
-            ))}
+            {products.map((product) => {
+              const hasDiscount = product.totalRrp > product.price
+              const discountPercent = hasDiscount
+                ? Math.round((1 - product.price / product.totalRrp) * 100)
+                : 0
+              return (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.id}`}
+                  className={styles.productCard}
+                >
+                  <div className={styles.cardImageWrap}>
+                    {hasDiscount && (
+                      <span className={styles.discountBadge}>-{discountPercent}%</span>
+                    )}
+                    <img
+                      src={product.image || (product.images && product.images[0]) || '/placeholder.png'}
+                      alt={product.name}
+                      className={styles.productImage}
+                    />
+                  </div>
+                  <div className={styles.productInfo}>
+                    <h3 className={`${styles.productName} ${styles.cardName}`}>{product.name}</h3>
+                    <StarRating
+                      rating={product.avgRating || 0}
+                      count={product.reviewCount}
+                    />
+                    <span className={styles.productPrice}>
+                      {product.price?.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lei
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </section>
       )}
@@ -272,7 +289,7 @@ export default function Home() {
         <h2>Nu ai gasit ce cautai?</h2>
         <p>Exploreaza intregul nostru catalog de produse</p>
         <Link href="/products" className={styles.heroCta}>
-          Vezi toate produsele
+          Vezi toate produsele &rarr;
         </Link>
       </section>
     </div>

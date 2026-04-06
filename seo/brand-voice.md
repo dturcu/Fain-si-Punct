@@ -1,4 +1,4 @@
-# ShopHub Brand Voice
+# Fain si Punct Brand Voice
 
 ## Tone
 - Professional but approachable. Not corporate, not casual.

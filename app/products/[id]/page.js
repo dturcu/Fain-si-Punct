@@ -281,6 +281,12 @@ export default function ProductDetail({ params: paramsPromise }) {
     return 'Stoc epuizat'
   }
 
+  const getStockIcon = (stock) => {
+    if (stock > 10) return '\u2713 '
+    if (stock > 0) return '! '
+    return '\u2717 '
+  }
+
   const getColorHex = (colorName) => {
     const map = {
       'Rosu': '#e74c3c', 'rosu': '#e74c3c', 'Red': '#e74c3c', 'red': '#e74c3c',
@@ -525,7 +531,7 @@ export default function ProductDetail({ params: paramsPromise }) {
         {/* Right: Product Info */}
         <div className={styles.infoSection}>
           {product.brand && (
-            <p className={styles.brand}>{product.brand}</p>
+            <span className={styles.brandBadge}>{product.brand}</span>
           )}
 
           <h1 className={styles.title}>{product.name}</h1>
@@ -545,18 +551,24 @@ export default function ProductDetail({ params: paramsPromise }) {
           {/* Price */}
           <div className={styles.priceBlock}>
             <span className={styles.price}>
-              {effectivePrice?.toFixed(2)} lei
+              {effectivePrice?.toFixed(2)} <span className={styles.priceCurrency}>lei</span>
             </span>
             {!hasVariants && product.totalRrp > 0 && product.totalRrp > product.price && (
-              <span className={styles.oldPrice}>
-                {product.totalRrp.toFixed(2)} lei
-              </span>
+              <>
+                <span className={styles.oldPrice}>
+                  {product.totalRrp.toFixed(2)} lei
+                </span>
+                <span className={styles.discountTag}>
+                  -{Math.round((1 - product.price / product.totalRrp) * 100)}%
+                </span>
+              </>
             )}
           </div>
 
           {/* Badges */}
           <div className={styles.badges}>
             <span className={`${styles.stockBadge} ${getStockClass(hasVariants ? (effectiveStock ?? 0) : product.stock)}`}>
+              {getStockIcon(hasVariants ? (effectiveStock ?? 0) : product.stock)}
               {getStockLabel(hasVariants ? (effectiveStock ?? 0) : product.stock)}
             </span>
             {product.condition && (
@@ -672,6 +684,11 @@ export default function ProductDetail({ params: paramsPromise }) {
                       onClick={handleAddToCart}
                       disabled={outOfStock || addingToCart || needsVariant}
                     >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                      </svg>
                       {addingToCart ? 'Se adauga...' : 'Adauga in cos'}
                     </button>
                     <button
@@ -679,6 +696,10 @@ export default function ProductDetail({ params: paramsPromise }) {
                       onClick={handleBuyNow}
                       disabled={outOfStock || addingToCart || needsVariant}
                     >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
                       Cumpara acum
                     </button>
                   </div>
@@ -696,17 +717,23 @@ export default function ProductDetail({ params: paramsPromise }) {
 
           {/* Delivery info box */}
           <div className={styles.deliveryBox}>
-            <div className={styles.deliveryItem}>
-              <span className={styles.checkmark}>&#10003;</span>
-              Livrare gratuita
+            <div className={styles.deliveryCard}>
+              <div className={styles.deliveryIconWrap}>
+                <span className={styles.checkmark}>&#10003;</span>
+              </div>
+              <span className={styles.deliveryText}>Livrare gratuita</span>
             </div>
-            <div className={styles.deliveryItem}>
-              <span className={styles.checkmark}>&#10003;</span>
-              Retur in 30 zile
+            <div className={styles.deliveryCard}>
+              <div className={styles.deliveryIconWrap}>
+                <span className={styles.checkmark}>&#10003;</span>
+              </div>
+              <span className={styles.deliveryText}>Retur in 30 zile</span>
             </div>
-            <div className={styles.deliveryItem}>
-              <span className={styles.checkmark}>&#10003;</span>
-              Plata la livrare disponibila
+            <div className={styles.deliveryCard}>
+              <div className={styles.deliveryIconWrap}>
+                <span className={styles.checkmark}>&#10003;</span>
+              </div>
+              <span className={styles.deliveryText}>Plata la livrare disponibila</span>
             </div>
           </div>
         </div>

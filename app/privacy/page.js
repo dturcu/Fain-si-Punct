@@ -2,8 +2,8 @@ import Link from 'next/link'
 import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
-  title: 'Politica de confidentialitate - ShopHub',
-  description: 'Politica de confidentialitate ShopHub - cum protejam datele tale personale.',
+  title: 'Politica de confidentialitate - Fain si Punct',
+  description: 'Politica de confidentialitate Fain si Punct - cum protejam datele tale personale.',
 }
 
 export default function PrivacyPage() {
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         <div className={styles.content}>
           <h2>1. Introducere</h2>
           <p>
-            ShopHub SRL respecta confidentialitatea datelor dumneavoastra personale.
+            Fain si Punct SRL respecta confidentialitatea datelor dumneavoastra personale.
             Aceasta politica descrie modul in care colectam, utilizam, stocam si
             protejam datele personale, in conformitate cu Regulamentul General privind
             Protectia Datelor (GDPR - Regulamentul UE 2016/679) si cu legislatia
@@ -30,9 +30,9 @@ export default function PrivacyPage() {
 
           <h2>2. Operatorul de date</h2>
           <p>
-            Operatorul de date cu caracter personal este ShopHub SRL, cu sediul in
+            Operatorul de date cu caracter personal este Fain si Punct SRL, cu sediul in
             Bucuresti, Romania. Pentru orice intrebari legate de protectia datelor,
-            ne puteti contacta la adresa: <strong>dpo@shophub.ro</strong>.
+            ne puteti contacta la adresa: <strong>dpo@fain-si-punct.ro</strong>.
           </p>
 
           <h2>3. Date personale colectate</h2>
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
           <p>
             Pentru exercitarea drepturilor sau orice intrebari legate de protectia
             datelor personale, va rugam sa contactati responsabilul nostru cu protectia
-            datelor (DPO) la: <strong>dpo@shophub.ro</strong>.
+            datelor (DPO) la: <strong>dpo@fain-si-punct.ro</strong>.
           </p>
         </div>
       </div>

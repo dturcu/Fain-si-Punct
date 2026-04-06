@@ -60,7 +60,7 @@ export async function POST(request) {
     const revolutOrder = await createRevolutOrder({
       amount: toMinorUnits(order.total),
       currency: 'RON',
-      description: `Comanda ShopHub #${order.order_number}`,
+      description: `Comanda Fain si Punct #${order.order_number}`,
       merchantOrderId: order.id,
       customerEmail: order.customer_email,
       shippingAddress: {
