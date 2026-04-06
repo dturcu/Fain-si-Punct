@@ -420,8 +420,54 @@ export default function ProductDetail({ params: paramsPromise }) {
   if (product.weight) specs.push({ label: 'Greutate', value: `${product.weight} kg` })
   if (product.sku) specs.push({ label: 'SKU', value: product.sku })
 
+  // JSON-LD Product structured data
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description || '',
+    image: allImages.length > 0 ? allImages : undefined,
+    sku: product.sku || undefined,
+    brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    category: product.category || undefined,
+    offers: {
+      '@type': 'Offer',
+      price: effectivePrice,
+      priceCurrency: 'RON',
+      availability: (effectiveStock ?? product.stock) > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      url: `${siteUrl}/products/${product.id}`,
+    },
+    ...(product.avgRating > 0 && product.reviewCount > 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.avgRating,
+        reviewCount: product.reviewCount,
+      },
+    } : {}),
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Acasa', item: siteUrl || '/' },
+      { '@type': 'ListItem', position: 2, name: 'Produse', item: `${siteUrl}/products` },
+      ...(product.category ? [{
+        '@type': 'ListItem', position: 3,
+        name: product.category,
+        item: `${siteUrl}/products?category=${encodeURIComponent(product.category)}`,
+      }] : []),
+      { '@type': 'ListItem', position: product.category ? 4 : 3, name: product.name },
+    ],
+  }
+
   return (
     <div className={styles.container}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {/* Breadcrumbs */}
       <nav className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
