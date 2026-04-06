@@ -7,21 +7,21 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://awesome-wilbur.verc
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'ShopHub - Magazin Online',
-    template: '%s | ShopHub',
+    default: 'Fain si Punct - Magazin Online',
+    template: '%s | Fain si Punct',
   },
   description: 'Descopera peste 14.000 produse la cele mai bune preturi. Livrare gratuita, retur in 30 zile, plata la livrare.',
   openGraph: {
     type: 'website',
     locale: 'ro_RO',
-    siteName: 'ShopHub',
-    title: 'ShopHub - Magazin Online',
+    siteName: 'Fain si Punct',
+    title: 'Fain si Punct - Magazin Online',
     description: 'Descopera peste 14.000 produse la cele mai bune preturi.',
     url: siteUrl,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ShopHub - Magazin Online',
+    title: 'Fain si Punct - Magazin Online',
     description: 'Descopera peste 14.000 produse la cele mai bune preturi.',
   },
   robots: {
@@ -46,7 +46,7 @@ export default function RootLayout({ children }) {
         <JsonLd data={{
           '@context': 'https://schema.org',
           '@type': 'Organization',
-          name: 'ShopHub',
+          name: 'Fain si Punct',
           url: siteUrl,
           description: 'Magazin online cu peste 14.000 produse la cele mai bune preturi.',
           contactPoint: { '@type': 'ContactPoint', contactType: 'customer service', availableLanguage: 'Romanian' },
@@ -86,7 +86,7 @@ export default function RootLayout({ children }) {
             </div>
           </div>
           <div className="footer-bottom">
-            &copy; 2024 ShopHub. Toate drepturile rezervate.
+            &copy; 2024 Fain si Punct. Toate drepturile rezervate.
           </div>
         </footer>
       </body>

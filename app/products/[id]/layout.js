@@ -17,7 +17,7 @@ export async function generateMetadata({ params }) {
 
   const description = product.description
     ? product.description.slice(0, 155)
-    : `Cumpara ${product.name} la cel mai bun pret pe ShopHub.`
+    : `Cumpara ${product.name} la cel mai bun pret pe Fain si Punct.`
 
   const image = product.images?.[0] || product.image
   const images = image ? [{ url: image, width: 800, height: 800, alt: product.name }] : []
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }) {
       images,
       type: 'website',
       locale: 'ro_RO',
-      siteName: 'ShopHub',
+      siteName: 'Fain si Punct',
     },
     twitter: {
       card: 'summary_large_image',

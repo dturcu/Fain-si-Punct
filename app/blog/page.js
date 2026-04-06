@@ -2,8 +2,8 @@ import Link from 'next/link'
 import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
-  title: 'Blog - ShopHub',
-  description: 'Blogul ShopHub - ghiduri de cumparare, noutati si sfaturi utile.',
+  title: 'Blog - Fain si Punct',
+  description: 'Blogul Fain si Punct - ghiduri de cumparare, noutati si sfaturi utile.',
 }
 
 export default function BlogPage() {
@@ -26,7 +26,7 @@ export default function BlogPage() {
           <div className={styles.comingSoonText}>
             <p>
               Lucram la continut valoros pe care abia asteptam sa-l impartasim cu tine.
-              Pe blogul ShopHub vei gasi:
+              Pe blogul Fain si Punct vei gasi:
             </p>
             <ul style={{ textAlign: 'left', display: 'inline-block', marginTop: '1rem' }}>
               <li>Ghiduri de cumparare pentru a face cele mai bune alegeri</li>

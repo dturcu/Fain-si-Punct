@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Contact',
-  description: 'Contacteaza echipa ShopHub. Suntem aici sa te ajutam cu orice intrebare.',
+  description: 'Contacteaza echipa Fain si Punct. Suntem aici sa te ajutam cu orice intrebare.',
   alternates: { canonical: '/contact' },
 }
 

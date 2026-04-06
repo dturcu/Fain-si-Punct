@@ -1,10 +1,10 @@
-# ShopHub SEO Audit Checklist
+# Fain si Punct SEO Audit Checklist
 
 ## Technical SEO
 - [x] robots.txt — `app/robots.js`
 - [x] sitemap.xml — `app/sitemap.js` (dynamic, products + categories + static pages)
 - [x] Canonical URLs — via `alternates.canonical` in metadata
-- [x] Title template — `%s | ShopHub` via root layout
+- [x] Title template — `%s | Fain si Punct` via root layout
 - [x] Meta descriptions — all public pages
 - [x] Open Graph tags — root + product detail
 - [x] Twitter Card tags — root + product detail

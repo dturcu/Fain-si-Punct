@@ -2,8 +2,8 @@ import Link from 'next/link'
 import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
-  title: 'Termeni si conditii - ShopHub',
-  description: 'Termenii si conditiile de utilizare a platformei ShopHub.',
+  title: 'Termeni si conditii - Fain si Punct',
+  description: 'Termenii si conditiile de utilizare a platformei Fain si Punct.',
 }
 
 export default function TermsPage() {
@@ -22,24 +22,24 @@ export default function TermsPage() {
           <h2>1. Informatii generale</h2>
           <p>
             Prezentul document stabileste termenii si conditiile de utilizare a
-            platformei ShopHub (www.shophub.ro). Prin accesarea si utilizarea
+            platformei Fain si Punct (www.fain-si-punct.ro). Prin accesarea si utilizarea
             site-ului, acceptati in mod expres acesti termeni. Va rugam sa cititi
             cu atentie acest document inainte de a utiliza serviciile noastre.
           </p>
 
           <h2>2. Definitii</h2>
           <p>
-            <strong>Vanzator</strong> - ShopHub SRL, operatorul platformei.<br />
+            <strong>Vanzator</strong> - Fain si Punct SRL, operatorul platformei.<br />
             <strong>Cumparator</strong> - orice persoana fizica sau juridica care
             plaseaza o comanda pe platforma.<br />
-            <strong>Produs</strong> - orice bun listat pe platforma ShopHub.<br />
+            <strong>Produs</strong> - orice bun listat pe platforma Fain si Punct.<br />
             <strong>Comanda</strong> - documentul electronic prin care cumparatorul
             solicita achizitionarea unuia sau mai multor produse.
           </p>
 
           <h2>3. Comenzi</h2>
           <p>
-            Plasarea unei comenzi pe ShopHub constituie o oferta ferma de cumparare.
+            Plasarea unei comenzi pe Fain si Punct constituie o oferta ferma de cumparare.
             Comanda este confirmata prin email dupa procesarea acesteia. Ne rezervam
             dreptul de a refuza sau anula comenzile in cazuri justificate, cum ar fi
             indisponibilitatea produselor sau suspiciuni de frauda.
@@ -69,7 +69,7 @@ export default function TermsPage() {
           <p>
             Conform legislatiei in vigoare (OUG 34/2014), aveti dreptul de a va
             retrage din contract in termen de 14 zile calendaristice de la primirea
-            produsului, fara a fi necesara invocarea unui motiv. ShopHub extinde
+            produsului, fara a fi necesara invocarea unui motiv. Fain si Punct extinde
             acest termen la 30 de zile calendaristice.
           </p>
 
@@ -82,7 +82,7 @@ export default function TermsPage() {
 
           <h2>8. Raspundere</h2>
           <p>
-            ShopHub depune eforturi rezonabile pentru a asigura acuratetea
+            Fain si Punct depune eforturi rezonabile pentru a asigura acuratetea
             informatiilor prezentate pe site. Nu ne asumam raspunderea pentru
             eventualele erori tipografice sau inexactitati in descrierile produselor.
             Imaginile produselor au caracter informativ si pot diferi de aspectul real.
@@ -91,14 +91,14 @@ export default function TermsPage() {
           <h2>9. Proprietate intelectuala</h2>
           <p>
             Intregul continut al site-ului (texte, imagini, logo-uri, elemente
-            grafice) este proprietatea ShopHub sau a furnizorilor sai si este protejat
+            grafice) este proprietatea Fain si Punct sau a furnizorilor sai si este protejat
             de legislatia privind drepturile de autor. Reproducerea fara acordul scris
-            al ShopHub este interzisa.
+            al Fain si Punct este interzisa.
           </p>
 
           <h2>10. Modificarea termenilor</h2>
           <p>
-            ShopHub isi rezerva dreptul de a modifica prezentii termeni si conditii
+            Fain si Punct isi rezerva dreptul de a modifica prezentii termeni si conditii
             in orice moment. Modificarile intra in vigoare la data publicarii pe site.
             Continuarea utilizarii site-ului dupa publicarea modificarilor constituie
             acceptarea noilor termeni.
