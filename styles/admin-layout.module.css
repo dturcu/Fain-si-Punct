@@ -5,8 +5,8 @@
 }
 
 .sidebar {
-  background: #2c3e50;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   padding: 2rem 0;
   position: sticky;
   top: 0;
@@ -31,9 +31,9 @@
 
 .navItem {
   padding: 1rem 1.5rem;
-  color: white;
+  color: var(--color-bg-primary);
   text-decoration: none;
-  transition: background 0.3s, padding-left 0.3s;
+  transition: background var(--transition-normal), padding-left var(--transition-normal);
   display: block;
 }
 
@@ -46,36 +46,37 @@
   margin: auto 1.5rem 0;
   width: calc(100% - 3rem);
   padding: 0.75rem;
-  background: #e74c3c;
-  color: white;
+  background: var(--color-error);
+  color: var(--color-bg-primary);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background var(--transition-normal);
 }
 
 .logout:hover {
-  background: #c0392b;
+  background: var(--color-error);
+  filter: brightness(0.85);
 }
 
 .mainContent {
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
   overflow-y: auto;
 }
 
 .header {
-  background: white;
+  background: var(--color-bg-primary);
   padding: 2rem;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .header h1 {
-  color: #2c3e50;
+  color: var(--color-primary);
   margin: 0;
 }
 
 .header p {
-  color: #666;
+  color: var(--color-text-tertiary);
   margin: 0.5rem 0 0 0;
 }
 

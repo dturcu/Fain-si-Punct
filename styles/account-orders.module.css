@@ -13,8 +13,8 @@
 .spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #27ae60;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -26,7 +26,7 @@
 }
 
 .loaderText {
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 0.95rem;
 }
 
@@ -42,46 +42,46 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-text-sm);
   margin-bottom: 1.5rem;
-  color: #888;
+  color: var(--color-text-tertiary);
 }
 
 .breadLink {
-  color: #27ae60;
+  color: var(--color-accent);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
 }
 
 .breadLink:hover {
-  color: #1e8449;
+  color: var(--color-accent-hover);
   text-decoration: underline;
 }
 
 .breadSep {
-  color: #bbb;
+  color: var(--color-border);
   user-select: none;
 }
 
 .breadCurrent {
-  color: #2c3e50;
-  font-weight: 500;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Page title */
 .pageTitle {
-  color: #2c3e50;
+  color: var(--color-primary);
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   margin: 0 0 1.75rem;
 }
 
 /* Empty state */
 .emptyCard {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
   padding: 3rem 1.75rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 
@@ -92,35 +92,35 @@
 }
 
 .emptyMsg {
-  color: #2c3e50;
+  color: var(--color-primary);
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   margin: 0 0 0.4rem;
 }
 
 .emptyHint {
-  color: #999;
+  color: var(--color-text-tertiary);
   font-size: 0.9rem;
   margin: 0 0 1.25rem;
 }
 
 .btnOutline {
   display: inline-block;
-  border: 2px solid #27ae60;
-  color: #27ae60;
+  border: 2px solid var(--color-accent);
+  color: var(--color-accent);
   background: transparent;
   padding: 0.55rem 1.4rem;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .btnOutline:hover {
-  background: #27ae60;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-bg-primary);
   text-decoration: none;
 }
 
@@ -133,15 +133,15 @@
 
 /* Order card */
 .orderCard {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.15s;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .orderCard:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -151,7 +151,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-bg-secondary);
   gap: 1rem;
 }
 
@@ -162,13 +162,13 @@
 }
 
 .orderNumber {
-  color: #2c3e50;
-  font-weight: 700;
-  font-size: 1rem;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-text-md);
 }
 
 .orderDate {
-  color: #999;
+  color: var(--color-text-tertiary);
   font-size: 0.82rem;
 }
 
@@ -176,9 +176,9 @@
 .statusBadge {
   display: inline-block;
   padding: 0.25rem 0.7rem;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.3px;
   white-space: nowrap;
@@ -186,13 +186,13 @@
 }
 
 .status_pending {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--color-accent-light);
+  color: var(--color-warning);
 }
 
 .status_processing {
-  background: #cce5ff;
-  color: #004085;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .status_shipped {
@@ -201,13 +201,13 @@
 }
 
 .status_delivered {
-  background: #d4edda;
-  color: #155724;
+  background: #d1fae5;
+  color: var(--color-success);
 }
 
 .status_cancelled {
-  background: #f8d7da;
-  color: #721c24;
+  background: #fdf2f2;
+  color: var(--color-error);
 }
 
 /* Card body */
@@ -227,36 +227,36 @@
 }
 
 .infoLabel {
-  color: #999;
-  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .infoValue {
-  color: #2c3e50;
+  color: var(--color-primary);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Card footer */
 .cardFooter {
   padding: 0.85rem 1.5rem;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-top: 1px solid var(--color-bg-secondary);
+  background: var(--color-bg-secondary);
 }
 
 .detailsLink {
-  color: #27ae60;
-  font-size: 0.875rem;
-  font-weight: 600;
+  color: var(--color-accent);
+  font-size: var(--font-size-text-sm);
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
 }
 
 .detailsLink:hover {
-  color: #1e8449;
+  color: var(--color-accent-hover);
   text-decoration: underline;
 }
 
