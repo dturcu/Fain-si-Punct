@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Politica de confidentialitate',
-  description: 'Politica de confidentialitate ShopHub. Cum protejam datele tale personale.',
+  description: 'Politica de confidentialitate Fain si Punct. Cum protejam datele tale personale.',
   alternates: { canonical: '/privacy' },
 }
 

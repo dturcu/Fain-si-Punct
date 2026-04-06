@@ -1,4 +1,4 @@
-# ShopHub Internal Links Map
+# Fain si Punct Internal Links Map
 
 ## Primary Pages (highest authority)
 - `/` — Homepage (hub page, links to all categories)

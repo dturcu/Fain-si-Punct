@@ -1,10 +1,10 @@
-# ShopHub Target Keywords
+# Fain si Punct Target Keywords
 
 ## Primary Keywords (high volume, competitive)
 - magazin online romania
 - cumparaturi online
 - produse ieftine romania
-- ShopHub
+- Fain si Punct
 
 ## Category Keywords
 - [Fill per category as products are organized]
