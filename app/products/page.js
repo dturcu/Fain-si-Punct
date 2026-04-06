@@ -249,6 +249,8 @@ function ProductsContent() {
 
   const activeCategoryName = categories.find((c) => c.name === category)?.name
 
+  const hasActiveFilters = category || selectedTags.length > 0 || minPrice || maxPrice || inStockOnly
+
   return (
     <div className={styles.pageWrapper}>
       {cartMessage && (
@@ -431,6 +433,36 @@ function ProductsContent() {
             </div>
           </div>
 
+          {/* Active filters chips */}
+          {hasActiveFilters && (
+            <div className={styles.activeFilters}>
+              {category && (
+                <span className={styles.filterChip}>
+                  {activeCategoryName || category}
+                  <button onClick={() => { setCategory(''); setSelectedTags([]); setPage(1) }}>&times;</button>
+                </span>
+              )}
+              {selectedTags.map((tag) => (
+                <span key={tag} className={styles.filterChip}>
+                  {tag}
+                  <button onClick={() => handleTagToggle(tag)}>&times;</button>
+                </span>
+              ))}
+              {(minPrice || maxPrice) && (
+                <span className={styles.filterChip}>
+                  {minPrice || '0'} - {maxPrice || '...'} RON
+                  <button onClick={() => { setMinPrice(''); setMaxPrice(''); setPage(1) }}>&times;</button>
+                </span>
+              )}
+              {inStockOnly && (
+                <span className={styles.filterChip}>
+                  In stoc
+                  <button onClick={() => { setInStockOnly(false); setPage(1) }}>&times;</button>
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Loading */}
           {loading && (
             <div className={styles.loadingOverlay}>
@@ -455,6 +487,11 @@ function ProductsContent() {
                 <div key={product._id} className={styles.card}>
                   <Link href={`/products/${product.id}`} className={styles.cardLink}>
                     <div className={styles.cardImageWrap}>
+                      {product.totalRrp && product.totalRrp > product.price && (
+                        <span className={styles.discountBadge}>
+                          -{Math.round((1 - product.price / product.totalRrp) * 100)}%
+                        </span>
+                      )}
                       {product.image ? (
                         <img src={product.image} alt={product.name} loading="lazy" />
                       ) : (
@@ -468,7 +505,7 @@ function ProductsContent() {
                       )}
                     </div>
                     <div className={styles.cardBody}>
-                      <h3 className={styles.cardTitle}>{product.name}</h3>
+                      <h3 className={`${styles.cardTitle} ${styles.cardName}`}>{product.name}</h3>
                       <StarRating rating={product.avgRating} reviewCount={product.reviewCount} />
                       <div className={styles.cardPrice}>
                         {product.price?.toFixed(2)} <span className={styles.currency}>lei</span>
@@ -502,11 +539,11 @@ function ProductsContent() {
           {pagination.pages > 1 && (
             <div className={styles.pagination}>
               <button
-                className={styles.pageBtn}
+                className={`${styles.pageBtn} ${styles.pageBtnNav}`}
                 disabled={page === 1}
                 onClick={() => { setPage(page - 1); scrollToTop() }}
               >
-                &laquo; Inapoi
+                &larr;
               </button>
 
               {getPageNumbers().map((p, idx) =>
@@ -526,11 +563,11 @@ function ProductsContent() {
               )}
 
               <button
-                className={styles.pageBtn}
+                className={`${styles.pageBtn} ${styles.pageBtnNav}`}
                 disabled={page === pagination.pages}
                 onClick={() => { setPage(page + 1); scrollToTop() }}
               >
-                Inainte &raquo;
+                &rarr;
               </button>
             </div>
           )}

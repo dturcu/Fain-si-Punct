@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Despre noi',
-  description: 'Afla mai multe despre ShopHub, magazinul online cu cele mai bune preturi din Romania.',
+  description: 'Afla mai multe despre Fain si Punct, magazinul online cu cele mai bune preturi din Romania.',
   alternates: { canonical: '/about' },
 }
 

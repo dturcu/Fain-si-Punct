@@ -36,19 +36,19 @@ export default function ContactPage() {
           <div className={styles.infoItem}>
             <h3>Email</h3>
             <p>
-              <a href="mailto:support@shophub.com">support@shophub.com</a>
+              <a href="mailto:support@fain-si-punct.com">support@fain-si-punct.com</a>
             </p>
           </div>
 
           <div className={styles.infoItem}>
             <h3>Phone</h3>
-            <p>1-800-SHOPHUB</p>
+            <p>1-800-FAIN</p>
           </div>
 
           <div className={styles.infoItem}>
             <h3>Address</h3>
             <p>
-              ShopHub Inc.
+              Fain si Punct Inc.
               <br />
               123 Commerce Street
               <br />

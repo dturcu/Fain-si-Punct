@@ -40,7 +40,7 @@ export async function POST(request) {
         })
         .eq('id', user.id)
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://shophub.ro'
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://fain-si-punct.ro'
       const resetLink = `${baseUrl}/auth/reset-password?token=${token}`
 
       const html = passwordReset(resetLink, '1 ora')
@@ -49,7 +49,7 @@ export async function POST(request) {
         await addEmailJob({
           type: 'password_reset',
           recipient: user.email,
-          subject: 'Resetare parola - ShopHub',
+          subject: 'Resetare parola - Fain si Punct',
           html,
           userId: user.id,
           metadata: { resetToken: token },

@@ -1,4 +1,4 @@
-# ShopHub Design System
+# Fain si Punct Design System
 
 Premium Warm — Airbnb-inspired warmth, Apple product page feel, Stripe checkout trust.
 

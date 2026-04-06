@@ -2,8 +2,8 @@ import Link from 'next/link'
 import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
-  title: 'Politica cookies - ShopHub',
-  description: 'Informatii despre utilizarea cookie-urilor pe platforma ShopHub.',
+  title: 'Politica cookies - Fain si Punct',
+  description: 'Informatii despre utilizarea cookie-urilor pe platforma Fain si Punct.',
 }
 
 export default function CookiesPage() {
@@ -111,7 +111,7 @@ export default function CookiesPage() {
           <h2>8. Contact</h2>
           <p>
             Pentru intrebari legate de utilizarea cookie-urilor, va rugam sa ne
-            contactati la: <strong>dpo@shophub.ro</strong>. De asemenea, puteti
+            contactati la: <strong>dpo@fain-si-punct.ro</strong>. De asemenea, puteti
             consulta{' '}
             <Link href="/privacy">Politica de confidentialitate</Link> pentru
             informatii suplimentare despre protectia datelor personale.
