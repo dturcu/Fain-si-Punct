@@ -125,43 +125,45 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      {/* Hero Banner */}
-      <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <h1 className={styles.heroTitle}>
-            Descopera mii de produse la cele mai bune preturi
-          </h1>
-          <p className={styles.heroSubtitle}>
-            Peste {totalProducts.toLocaleString('ro-RO')} produse din {categories.length} categorii te asteapta
-          </p>
-          <form className={styles.heroSearch} onSubmit={handleSearch}>
-            <input
-              type="text"
-              className={styles.heroSearchInput}
-              placeholder="Cauta produse, categorii, marci..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button type="submit" className={styles.heroSearchBtn}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              Cauta
-            </button>
-          </form>
-          <Link href="/products" className={styles.heroCta}>
-            Exploreaza produsele &rarr;
-          </Link>
-        </div>
-      </section>
+      {/* Hero Banner — Full Bleed */}
+      <div className={styles.heroFullBleed}>
+        <section className={styles.hero}>
+          <div className={styles.heroContent}>
+            <h1 className={styles.heroTitle}>
+              Descopera mii de produse la cele mai bune preturi
+            </h1>
+            <p className={styles.heroSubtitle}>
+              Peste {totalProducts.toLocaleString('ro-RO')} produse din {categories.length} categorii te asteapta
+            </p>
+            <form className={styles.heroSearch} onSubmit={handleSearch}>
+              <input
+                type="text"
+                className={styles.heroSearchInput}
+                placeholder="Cauta produse, categorii, marci..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button type="submit" className={styles.heroSearchBtn}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                Cauta
+              </button>
+            </form>
+            <Link href="/products" className={styles.heroCta}>
+              Exploreaza produsele &rarr;
+            </Link>
+          </div>
+        </section>
+      </div>
 
-      {/* Benefits Bar */}
+      {/* Benefits Bar — Floating Card */}
       <section className={styles.benefits}>
         <div className={styles.benefitsGrid}>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="3" width="15" height="13" rx="2" />
                 <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
                 <circle cx="5.5" cy="18.5" r="2.5" />
@@ -175,7 +177,7 @@ export default function Home() {
           </div>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="1" y="4" width="22" height="16" rx="2" />
                 <line x1="1" y1="10" x2="23" y2="10" />
               </svg>
@@ -187,7 +189,7 @@ export default function Home() {
           </div>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="1 4 1 10 7 10" />
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
               </svg>
@@ -199,7 +201,7 @@ export default function Home() {
           </div>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </div>
@@ -284,14 +286,16 @@ export default function Home() {
         </section>
       )}
 
-      {/* Bottom CTA */}
-      <section className={styles.bottomCta}>
-        <h2>Nu ai gasit ce cautai?</h2>
-        <p>Exploreaza intregul nostru catalog de produse</p>
-        <Link href="/products" className={styles.heroCta}>
-          Vezi toate produsele &rarr;
-        </Link>
-      </section>
+      {/* Bottom CTA — Full Bleed */}
+      <div className={styles.bottomCtaFullBleed}>
+        <section className={styles.bottomCta}>
+          <h2>Nu ai gasit ce cautai?</h2>
+          <p>Exploreaza intregul nostru catalog de produse</p>
+          <Link href="/products" className={styles.heroCta}>
+            Vezi toate produsele &rarr;
+          </Link>
+        </section>
+      </div>
     </div>
   )
 }

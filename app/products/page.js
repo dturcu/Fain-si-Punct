@@ -251,6 +251,10 @@ function ProductsContent() {
 
   const hasActiveFilters = category || selectedTags.length > 0 || minPrice || maxPrice || inStockOnly
 
+  const formatTotal = (n) => {
+    return n?.toLocaleString('ro-RO') || '0'
+  }
+
   return (
     <div className={styles.pageWrapper}>
       {cartMessage && (
@@ -259,11 +263,11 @@ function ProductsContent() {
       {/* Breadcrumbs */}
       <nav className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
-        <span className={styles.breadcrumbSep}>&rsaquo;</span>
+        <span className={styles.breadcrumbSep}>/</span>
         {category ? (
           <>
             <Link href="/products">Produse</Link>
-            <span className={styles.breadcrumbSep}>&rsaquo;</span>
+            <span className={styles.breadcrumbSep}>/</span>
             <span className={styles.breadcrumbCurrent}>{activeCategoryName || category}</span>
           </>
         ) : (
@@ -276,7 +280,7 @@ function ProductsContent() {
         className={styles.mobileFilterBtn}
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="4" y1="6" x2="20" y2="6" />
           <line x1="4" y1="12" x2="16" y2="12" />
           <line x1="4" y1="18" x2="12" y2="18" />
@@ -305,8 +309,15 @@ function ProductsContent() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
-            <button type="submit">Cauta</button>
+            <button type="submit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
           </form>
+
+          <div className={styles.filterDivider} />
 
           {/* Categories */}
           <div className={styles.filterGroup}>
@@ -321,38 +332,44 @@ function ProductsContent() {
                     role="option"
                     aria-selected={category === cat.name}
                   >
+                    {category === cat.name && <span className={styles.activeDot} />}
                     <span className={styles.categoryName}>{cat.name}</span>
-                    <span className={styles.categoryCount}>({cat.count})</span>
+                    <span className={styles.categoryCount}>{cat.count}</span>
                   </button>
                 </li>
               ))}
             </ul>
           </div>
 
+          <div className={styles.filterDivider} />
+
           {/* Subcategories */}
           {category && subcategories.length > 0 && (
-            <div className={styles.filterGroup}>
-              <h4>Subcategorii</h4>
-              <ul className={styles.categoryList}>
-                {subcategories.map((sub) => (
-                  <li
-                    key={sub.name}
-                    className={`${styles.subcategoryItem} ${selectedTags.includes(sub.name) ? styles.subcategoryActive : ''}`}
-                  >
-                    <label className={styles.subcategoryLabel}>
-                      <input
-                        type="checkbox"
-                        checked={selectedTags.includes(sub.name)}
-                        onChange={() => handleTagToggle(sub.name)}
-                        className={styles.subcategoryCheckbox}
-                      />
-                      <span className={styles.categoryName}>{sub.name}</span>
-                      <span className={styles.categoryCount}>({sub.count})</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <>
+              <div className={styles.filterGroup}>
+                <h4>Subcategorii</h4>
+                <ul className={styles.categoryList}>
+                  {subcategories.map((sub) => (
+                    <li
+                      key={sub.name}
+                      className={`${styles.subcategoryItem} ${selectedTags.includes(sub.name) ? styles.subcategoryActive : ''}`}
+                    >
+                      <label className={styles.subcategoryLabel}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTags.includes(sub.name)}
+                          onChange={() => handleTagToggle(sub.name)}
+                          className={styles.subcategoryCheckbox}
+                        />
+                        <span className={styles.categoryName}>{sub.name}</span>
+                        <span className={styles.categoryCount}>{sub.count}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className={styles.filterDivider} />
+            </>
           )}
 
           {/* Price Range */}
@@ -366,7 +383,7 @@ function ProductsContent() {
                 onChange={(e) => setMinPrice(e.target.value)}
                 min="0"
               />
-              <span className={styles.priceSep}>-</span>
+              <span className={styles.priceSep}>&mdash;</span>
               <input
                 type="number"
                 placeholder="Max"
@@ -380,6 +397,8 @@ function ProductsContent() {
             </button>
           </div>
 
+          <div className={styles.filterDivider} />
+
           {/* In Stock Toggle */}
           <div className={styles.filterGroup}>
             <label className={styles.stockToggle}>
@@ -389,7 +408,7 @@ function ProductsContent() {
                 onChange={handleInStockToggle}
               />
               <span className={styles.toggleSlider}></span>
-              <span className={styles.toggleLabel}>Doar produse in stoc</span>
+              <span className={styles.toggleLabel}>Doar in stoc</span>
             </label>
           </div>
         </aside>
@@ -404,7 +423,7 @@ function ProductsContent() {
           {/* Top bar: results count + sort */}
           <div className={styles.topBar}>
             <span className={styles.resultsCount}>
-              <strong>{pagination.total}</strong> produse gasite
+              {formatTotal(pagination.total)} produse
               {search && (
                 <> pentru &quot;<em>{search}</em>&quot;</>
               )}
@@ -474,7 +493,7 @@ function ProductsContent() {
           {/* Products grid */}
           {!loading && products.length === 0 ? (
             <div className={styles.emptyState}>
-              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.25">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
@@ -483,8 +502,8 @@ function ProductsContent() {
             </div>
           ) : (
             <div className={styles.grid}>
-              {products.map((product) => (
-                <div key={product._id} className={styles.card}>
+              {products.map((product, index) => (
+                <div key={product._id} className={styles.card} style={{ animationDelay: `${index * 0.04}s` }}>
                   <Link href={`/products/${product.id}`} className={styles.cardLink}>
                     <div className={styles.cardImageWrap}>
                       {product.totalRrp && product.totalRrp > product.price && (
@@ -496,40 +515,40 @@ function ProductsContent() {
                         <img src={product.image} alt={product.name} loading="lazy" />
                       ) : (
                         <div className={styles.placeholder}>
-                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1">
+                          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.2">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                             <circle cx="8.5" cy="8.5" r="1.5" />
                             <polyline points="21 15 16 10 5 21" />
                           </svg>
                         </div>
                       )}
+                      <button
+                        className={styles.quickAddBtn}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleQuickAdd(product.id)
+                        }}
+                        disabled={product.stock <= 0 || addingToCartId === product.id}
+                      >
+                        {addingToCartId === product.id
+                          ? 'Se adauga...'
+                          : product.stock > 0
+                          ? 'Adauga in cos'
+                          : 'Indisponibil'}
+                      </button>
                     </div>
                     <div className={styles.cardBody}>
-                      <h3 className={`${styles.cardTitle} ${styles.cardName}`}>{product.name}</h3>
-                      <StarRating rating={product.avgRating} reviewCount={product.reviewCount} />
+                      <h3 className={styles.cardTitle}>{product.name}</h3>
                       <div className={styles.cardPrice}>
                         {product.price?.toFixed(2)} <span className={styles.currency}>lei</span>
                       </div>
+                      <StarRating rating={product.avgRating} reviewCount={product.reviewCount} />
                       <div className={product.stock > 0 ? styles.inStock : styles.outOfStock}>
                         {product.stock > 0 ? 'In stoc' : 'Stoc epuizat'}
                       </div>
                     </div>
                   </Link>
-                  <button
-                    className={styles.quickAddBtn}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleQuickAdd(product.id)
-                    }}
-                    disabled={product.stock <= 0 || addingToCartId === product.id}
-                  >
-                    {addingToCartId === product.id
-                      ? 'Se adauga...'
-                      : product.stock > 0
-                      ? 'Adauga in cos'
-                      : 'Indisponibil'}
-                  </button>
                 </div>
               ))}
             </div>
@@ -579,7 +598,7 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '2rem' }}>Se incarca...</div>}>
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#999', fontSize: '0.85rem' }}>Se incarca...</div>}>
       <ProductsContent />
     </Suspense>
   )
