@@ -4,33 +4,33 @@
 }
 
 .container h1 {
-  color: #2c3e50;
+  color: var(--color-primary);
   margin-bottom: 2rem;
-  font-size: 2.5rem;
+  font-size: var(--font-size-display-xl);
 }
 
 .section {
-  background: white;
+  background: var(--color-bg-primary);
   padding: 2rem;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .section h2 {
-  color: #2c3e50;
+  color: var(--color-primary);
   margin: 0 0 1rem 0;
-  font-size: 1.5rem;
+  font-size: var(--font-size-display-md);
 }
 
 .section p {
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.6;
   margin: 0 0 1rem 0;
 }
 
 .section ul {
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.8;
   padding-left: 1.5rem;
 }
@@ -40,15 +40,15 @@
 }
 
 .section a {
-  color: #2c3e50;
+  color: var(--color-accent);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   border-bottom: 2px solid transparent;
-  transition: border-color 0.3s;
+  transition: border-color var(--transition-normal);
 }
 
 .section a:hover {
-  border-bottom-color: #2c3e50;
+  border-bottom-color: var(--color-accent);
 }
 
 /* Contact Page Specific */
@@ -60,17 +60,17 @@
 }
 
 .infoItem h3 {
-  color: #2c3e50;
+  color: var(--color-primary);
   margin: 0 0 0.5rem 0;
 }
 
 .infoItem p {
-  color: #666;
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
 .infoItem a {
-  color: #2c3e50;
+  color: var(--color-accent);
 }
 
 .form {
@@ -82,41 +82,41 @@
 .form input,
 .form textarea {
   padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-text-md);
   font-family: inherit;
 }
 
 .form input:focus,
 .form textarea:focus {
   outline: none;
-  border-color: #2c3e50;
-  box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(232, 145, 58, 0.15);
 }
 
 .form button {
   padding: 0.75rem;
-  background: #2c3e50;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-text-md);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background var(--transition-normal);
 }
 
 .form button:hover {
-  background: #1a2332;
+  background: var(--color-primary-light);
 }
 
 .success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  background: #d1fae5;
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   margin-bottom: 1rem;
 }
 
@@ -128,45 +128,45 @@
 }
 
 .faqItem {
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   margin-bottom: 1rem;
   overflow: hidden;
 }
 
 .faqItem.open .question {
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
 }
 
 .question {
   width: 100%;
   padding: 1rem;
-  background: white;
+  background: var(--color-bg-primary);
   border: none;
   cursor: pointer;
   text-align: left;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #2c3e50;
-  transition: background 0.3s;
+  font-size: var(--font-size-text-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  transition: background var(--transition-normal);
 }
 
 .question:hover {
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
 }
 
 .icon {
   font-size: 1.5rem;
-  color: #2c3e50;
+  color: var(--color-primary);
 }
 
 .answer {
   padding: 1rem;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.6;
-  background: #f9f9f9;
-  border-top: 1px solid #ddd;
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
 }

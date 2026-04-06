@@ -8,7 +8,7 @@
   text-align: center;
   padding: 3rem;
   font-size: 1.1rem;
-  color: #666;
+  color: var(--color-text-tertiary);
 }
 
 .header {
@@ -21,7 +21,7 @@
 }
 
 .title {
-  color: #232f3e;
+  color: var(--color-primary);
   margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
@@ -30,17 +30,17 @@
 .backLink {
   display: inline-block;
   padding: 0.6rem 1.2rem;
-  background: #232f3e;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .backLink:hover {
-  background: #37475a;
+  background: var(--color-primary-light);
 }
 
 .toolbar {
@@ -48,10 +48,10 @@
   gap: 1rem;
   align-items: center;
   margin-bottom: 1.5rem;
-  background: white;
+  background: var(--color-bg-primary);
   padding: 1rem 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
 }
 
@@ -63,29 +63,29 @@
 .searchInput {
   width: 100%;
   padding: 0.6rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
   box-sizing: border-box;
 }
 
 .searchInput:focus {
   outline: none;
-  border-color: #232f3e;
-  box-shadow: 0 0 0 3px rgba(35, 47, 62, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
 }
 
 .totalCount {
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 0.9rem;
   white-space: nowrap;
 }
 
 .tableWrapper {
   overflow-x: auto;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 1.5rem;
 }
 
@@ -95,30 +95,30 @@
 }
 
 .table th {
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
   padding: 0.85rem 1rem;
   text-align: left;
   font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #e0e0e0;
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-border);
   font-size: 0.9rem;
   white-space: nowrap;
 }
 
 .table td {
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid #eee;
-  color: #2c3e50;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   font-size: 0.95rem;
 }
 
 .table tr:hover {
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
 }
 
 .productName {
   font-weight: 600;
-  color: #232f3e;
+  color: var(--color-primary);
 }
 
 .price {
@@ -128,24 +128,24 @@
 .stockBadge {
   display: inline-block;
   padding: 0.25rem 0.65rem;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-size: 0.85rem;
   font-weight: 600;
 }
 
 .stockOk {
   background: #d1e7dd;
-  color: #0a3622;
+  color: var(--color-success);
 }
 
 .stockLow {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--color-accent-light);
+  color: var(--color-warning);
 }
 
 .stockOut {
   background: #f8d7da;
-  color: #842029;
+  color: var(--color-error);
 }
 
 .actions {
@@ -158,39 +158,40 @@
 .deleteBtn {
   padding: 0.45rem 0.9rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .editBtn {
-  background: #3498db;
-  color: white;
+  background: var(--color-accent);
+  color: var(--color-bg-primary);
 }
 
 .editBtn:hover {
-  background: #2980b9;
+  background: var(--color-accent-hover);
 }
 
 .deleteBtn {
-  background: #e74c3c;
-  color: white;
+  background: var(--color-error);
+  color: var(--color-bg-primary);
 }
 
 .deleteBtn:hover {
-  background: #c0392b;
+  background: var(--color-error);
+  filter: brightness(0.85);
 }
 
 .emptyState {
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 1rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .pagination {
@@ -203,27 +204,27 @@
 
 .pageBtn {
   padding: 0.5rem 1.2rem;
-  background: #232f3e;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .pageBtn:hover:not(:disabled) {
-  background: #37475a;
+  background: var(--color-primary-light);
 }
 
 .pageBtn:disabled {
-  background: #bdc3c7;
+  background: var(--color-border);
   cursor: not-allowed;
 }
 
 .pageInfo {
-  color: #2c3e50;
+  color: var(--color-text-primary);
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -244,22 +245,22 @@
 }
 
 .modalContent {
-  background: white;
+  background: var(--color-bg-primary);
   padding: 2rem;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .modalContent h3 {
-  color: #232f3e;
+  color: var(--color-primary);
   margin: 0 0 1.5rem 0;
   font-size: 1.2rem;
   font-weight: 700;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--color-bg-secondary);
   padding-bottom: 0.75rem;
 }
 
@@ -271,7 +272,7 @@
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #555;
+  color: var(--color-text-secondary);
   margin-bottom: 0.35rem;
 }
 
@@ -279,8 +280,8 @@
 .formGroup textarea {
   width: 100%;
   padding: 0.65rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
   box-sizing: border-box;
   font-family: inherit;
@@ -289,8 +290,8 @@
 .formGroup input:focus,
 .formGroup textarea:focus {
   outline: none;
-  border-color: #232f3e;
-  box-shadow: 0 0 0 3px rgba(35, 47, 62, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
 }
 
 .formGroup textarea {
@@ -308,29 +309,31 @@
   flex: 1;
   padding: 0.7rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 600;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .saveBtn {
-  background: #27ae60;
-  color: white;
+  background: var(--color-success);
+  color: var(--color-bg-primary);
 }
 
 .saveBtn:hover {
-  background: #229954;
+  background: var(--color-success);
+  filter: brightness(0.9);
 }
 
 .cancelBtn {
-  background: #e0e0e0;
-  color: #333;
+  background: var(--color-border);
+  color: var(--color-text-primary);
 }
 
 .cancelBtn:hover {
-  background: #ccc;
+  background: var(--color-border);
+  filter: brightness(0.9);
 }
 
 .imagePreview {
@@ -341,15 +344,15 @@
   max-width: 200px;
   max-height: 150px;
   object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #ddd;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
 }
 
 .uploadingText {
   display: inline-block;
   margin-left: 0.5rem;
   font-size: 0.85rem;
-  color: #888;
+  color: var(--color-text-tertiary);
   font-style: italic;
 }
 

@@ -19,16 +19,16 @@
 .star {
   font-size: var(--star-size, 1.5rem);
   cursor: default;
-  transition: color 0.2s ease;
-  color: #d1d5db;
+  transition: color var(--transition-fast);
+  color: var(--color-border);
 }
 
 .star.filled {
-  color: #fbbf24;
+  color: var(--color-accent);
 }
 
 .star.empty {
-  color: #d1d5db;
+  color: var(--color-border);
 }
 
 .star.interactive {
@@ -46,6 +46,6 @@
 .ratingText {
   margin-left: 0.5rem;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-text-tertiary);
   font-weight: 500;
 }
