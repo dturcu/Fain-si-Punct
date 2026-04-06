@@ -281,12 +281,6 @@ export default function ProductDetail({ params: paramsPromise }) {
     return 'Stoc epuizat'
   }
 
-  const getStockIcon = (stock) => {
-    if (stock > 10) return '\u2713 '
-    if (stock > 0) return '! '
-    return '\u2717 '
-  }
-
   const getColorHex = (colorName) => {
     const map = {
       'Rosu': '#e74c3c', 'rosu': '#e74c3c', 'Red': '#e74c3c', 'red': '#e74c3c',
@@ -470,6 +464,12 @@ export default function ProductDetail({ params: paramsPromise }) {
     ],
   }
 
+  const CheckIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+
   return (
     <div className={styles.container}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
@@ -477,17 +477,17 @@ export default function ProductDetail({ params: paramsPromise }) {
       {/* Breadcrumbs */}
       <nav className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
-        <span className={styles.breadcrumbSep}>&gt;</span>
+        <span className={styles.breadcrumbSep}>/</span>
         <Link href="/products">Produse</Link>
         {product.category && (
           <>
-            <span className={styles.breadcrumbSep}>&gt;</span>
+            <span className={styles.breadcrumbSep}>/</span>
             <Link href={`/products?category=${encodeURIComponent(product.category)}`}>
               {product.category}
             </Link>
           </>
         )}
-        <span className={styles.breadcrumbSep}>&gt;</span>
+        <span className={styles.breadcrumbSep}>/</span>
         <span className={styles.breadcrumbCurrent}>{truncate(product.name, 40)}</span>
       </nav>
 
@@ -538,7 +538,7 @@ export default function ProductDetail({ params: paramsPromise }) {
 
           {/* Star rating + review count */}
           <div className={styles.ratingRow}>
-            <StarRating rating={product.avgRating || 0} interactive={false} size="medium" />
+            <StarRating rating={product.avgRating || 0} interactive={false} size="small" />
             <button
               type="button"
               className={styles.reviewCountLink}
@@ -551,7 +551,7 @@ export default function ProductDetail({ params: paramsPromise }) {
           {/* Price */}
           <div className={styles.priceBlock}>
             <span className={styles.price}>
-              {effectivePrice?.toFixed(2)} <span className={styles.priceCurrency}>lei</span>
+              {effectivePrice?.toFixed(2)}<span className={styles.priceCurrency}> lei</span>
             </span>
             {!hasVariants && product.totalRrp > 0 && product.totalRrp > product.price && (
               <>
@@ -565,10 +565,9 @@ export default function ProductDetail({ params: paramsPromise }) {
             )}
           </div>
 
-          {/* Badges */}
+          {/* Stock & condition — dot prefix via CSS */}
           <div className={styles.badges}>
             <span className={`${styles.stockBadge} ${getStockClass(hasVariants ? (effectiveStock ?? 0) : product.stock)}`}>
-              {getStockIcon(hasVariants ? (effectiveStock ?? 0) : product.stock)}
               {getStockLabel(hasVariants ? (effectiveStock ?? 0) : product.stock)}
             </span>
             {product.condition && (
@@ -583,7 +582,7 @@ export default function ProductDetail({ params: paramsPromise }) {
             <div className={styles.variantSection}>
               {variantColors.length > 0 && (
                 <div className={styles.variantGroup}>
-                  <label className={styles.variantLabel}>Culoare:</label>
+                  <label className={styles.variantLabel}>Culoare</label>
                   <div className={styles.colorSwatches}>
                     {variantColors.map((color) => {
                       const available = variantSizes.length > 0
@@ -598,12 +597,12 @@ export default function ProductDetail({ params: paramsPromise }) {
                           disabled={!available}
                           title={color}
                           aria-label={`Culoare: ${color}`}
+                          style={{ background: getColorHex(color) }}
                         >
                           <span
                             className={styles.colorDot}
                             style={{ background: getColorHex(color) }}
                           />
-                          <span className={styles.colorName}>{color}</span>
                         </button>
                       )
                     })}
@@ -613,7 +612,7 @@ export default function ProductDetail({ params: paramsPromise }) {
 
               {variantSizes.length > 0 && (
                 <div className={styles.variantGroup}>
-                  <label className={styles.variantLabel}>Marime:</label>
+                  <label className={styles.variantLabel}>Marime</label>
                   <div className={styles.sizeButtons}>
                     {variantSizes.map((size) => {
                       const available = variantColors.length > 0
@@ -648,7 +647,7 @@ export default function ProductDetail({ params: paramsPromise }) {
               return (
                 <>
                   <div className={styles.quantitySelector}>
-                    <label htmlFor="quantity">Cantitate:</label>
+                    <label htmlFor="quantity">Cantitate</label>
                     <div className={styles.quantityControls}>
                       <button
                         type="button"
@@ -710,30 +709,24 @@ export default function ProductDetail({ params: paramsPromise }) {
 
           {/* Inline success/error message */}
           {message && (
-            <div className={`${styles.message} ${styles[messageType]}`}>
+            <div className={`${styles.message} ${messageType === 'success' ? styles.success : styles.messageError}`}>
               {message}
             </div>
           )}
 
-          {/* Delivery info box */}
+          {/* Delivery info — clean text lines with checkmark icons */}
           <div className={styles.deliveryBox}>
-            <div className={styles.deliveryCard}>
-              <div className={styles.deliveryIconWrap}>
-                <span className={styles.checkmark}>&#10003;</span>
-              </div>
-              <span className={styles.deliveryText}>Livrare gratuita</span>
+            <div className={styles.deliveryItem}>
+              <span className={styles.deliveryIcon}><CheckIcon /></span>
+              <span>Livrare gratuita</span>
             </div>
-            <div className={styles.deliveryCard}>
-              <div className={styles.deliveryIconWrap}>
-                <span className={styles.checkmark}>&#10003;</span>
-              </div>
-              <span className={styles.deliveryText}>Retur in 30 zile</span>
+            <div className={styles.deliveryItem}>
+              <span className={styles.deliveryIcon}><CheckIcon /></span>
+              <span>Retur in 30 zile</span>
             </div>
-            <div className={styles.deliveryCard}>
-              <div className={styles.deliveryIconWrap}>
-                <span className={styles.checkmark}>&#10003;</span>
-              </div>
-              <span className={styles.deliveryText}>Plata la livrare disponibila</span>
+            <div className={styles.deliveryItem}>
+              <span className={styles.deliveryIcon}><CheckIcon /></span>
+              <span>Plata la livrare disponibila</span>
             </div>
           </div>
         </div>
@@ -756,7 +749,7 @@ export default function ProductDetail({ params: paramsPromise }) {
             <table className={styles.specsTable}>
               <tbody>
                 {specs.map((spec, i) => (
-                  <tr key={spec.label} className={i % 2 === 0 ? styles.evenRow : styles.oddRow}>
+                  <tr key={spec.label}>
                     <td className={styles.specLabel}>{spec.label}</td>
                     <td className={styles.specValue}>{spec.value}</td>
                   </tr>
@@ -791,18 +784,20 @@ export default function ProductDetail({ params: paramsPromise }) {
               {reviews.map((review) => (
                 <div key={review.id || review._id} className={styles.reviewCard}>
                   <div className={styles.reviewHeader}>
-                    <StarRating rating={review.rating} interactive={false} size="small" />
-                    {review.verified && (
-                      <span className={styles.verifiedBadge}>Achizitie verificata</span>
-                    )}
+                    <div className={styles.reviewHeaderLeft}>
+                      <StarRating rating={review.rating} interactive={false} size="small" />
+                      {review.verified && (
+                        <span className={styles.verifiedBadge}>Achizitie verificata</span>
+                      )}
+                    </div>
+                    <span className={styles.reviewDate}>
+                      {review.created_at ? formatDate(review.created_at) : ''}
+                    </span>
                   </div>
-                  <h4 className={styles.reviewTitle}>{review.title}</h4>
+                  {review.title && <h4 className={styles.reviewTitle}>{review.title}</h4>}
                   {review.comment && (
                     <p className={styles.reviewComment}>{review.comment}</p>
                   )}
-                  <span className={styles.reviewDate}>
-                    {review.created_at ? formatDate(review.created_at) : ''}
-                  </span>
                 </div>
               ))}
             </div>

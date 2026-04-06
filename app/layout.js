@@ -42,6 +42,11 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ro">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      </head>
       <body>
         <JsonLd data={{
           '@context': 'https://schema.org',
@@ -56,6 +61,10 @@ export default function RootLayout({ children }) {
         <main>{children}</main>
 
         <footer>
+          <div className="footer-brand">
+            <a href="/" className="footer-logo">Fain si <span>Punct</span></a>
+            <p className="footer-tagline">Produse alese cu grija, livrate cu drag.</p>
+          </div>
           <div className="footer-columns">
             <div className="footer-col">
               <h4>Companie</h4>
@@ -86,7 +95,7 @@ export default function RootLayout({ children }) {
             </div>
           </div>
           <div className="footer-bottom">
-            &copy; 2024 Fain si Punct. Toate drepturile rezervate.
+            <span>&copy; 2026 Fain si Punct. Toate drepturile rezervate.</span>
           </div>
         </footer>
       </body>
