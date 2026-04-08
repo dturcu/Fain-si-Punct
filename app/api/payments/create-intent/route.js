@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getOrderById } from '@/lib/supabase-queries'
 import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, getGuestSessionId } from '@/lib/auth'
 import { applyRateLimit } from '@/middleware/rate-limit'
 
 /**
@@ -16,11 +16,12 @@ export async function POST(request) {
   if (limited) return limited
 
   try {
-    // Verify authentication
-    const headersList = headers()
-    const auth = await verifyAuth(headersList)
+    // Verify authentication (user or guest)
+    const headersList = await headers()
+    const auth = verifyAuth(headersList)
+    const guestSessionId = getGuestSessionId(request)
 
-    if (!auth) {
+    if (!auth && !guestSessionId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -40,6 +41,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
+    // Ownership check: user owns order OR guest session matches
+    const isOwner = (auth && order.userId === auth.userId) ||
+      (guestSessionId && order.guestSessionId === guestSessionId)
+    if (!isOwner) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Check if order already has a processing payment
     const { data: existingPayment } = await supabaseAdmin
       .from('payments')
@@ -56,9 +64,9 @@ export async function POST(request) {
     }
 
     if (method === 'stripe') {
-      return handleStripePayment(order, auth)
+      return handleStripePayment(order)
     } else {
-      return handlePayPalPayment(order, auth)
+      return handlePayPalPayment(order)
     }
   } catch (error) {
     console.error('Error creating payment intent:', error)
@@ -69,16 +77,16 @@ export async function POST(request) {
   }
 }
 
-async function handleStripePayment(order, auth) {
+async function handleStripePayment(order) {
   try {
     const amountInCents = Math.round(order.total * 100)
 
     const result = await createPaymentIntent({
       amount: amountInCents,
-      currency: 'usd',
+      currency: 'ron',
       orderId: order.id,
       metadata: {
-        userId: auth.userId,
+        userId: auth?.userId || 'guest',
       },
     })
 
@@ -94,7 +102,7 @@ async function handleStripePayment(order, auth) {
         type: 'stripe',
         external_id: result.id,
         amount: amountInCents,
-        currency: 'USD',
+        currency: 'RON',
         status: 'pending',
         payment_method: 'card',
         metadata: { clientSecret: result.clientSecret },
@@ -131,11 +139,11 @@ async function handleStripePayment(order, auth) {
   }
 }
 
-async function handlePayPalPayment(order, auth) {
+async function handlePayPalPayment(order) {
   try {
     const result = await createPayPalOrder({
       amount: Math.round(order.total * 100),
-      currency: 'USD',
+      currency: 'RON',
       orderId: order.id,
       items: order.items,
       returnUrl: `${process.env.NEXT_PUBLIC_API_URL}/payments/paypal/return`,
@@ -154,7 +162,7 @@ async function handlePayPalPayment(order, auth) {
         type: 'paypal',
         external_id: result.id,
         amount: Math.round(order.total * 100),
-        currency: 'USD',
+        currency: 'RON',
         status: 'pending',
         payment_method: 'paypal',
       })

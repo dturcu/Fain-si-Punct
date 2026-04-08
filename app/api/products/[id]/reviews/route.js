@@ -49,7 +49,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching reviews:', error)
     return Response.json(
-      { success: false, error: 'An unexpected error occurred' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -61,11 +61,15 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
-    // Auth: userId must come from the verified token, not the request body
+    // Authenticate from token, never trust client-supplied userId
     const token = getCookieToken(request)
-    if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    if (!token) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
     const decoded = verifyToken(token)
-    if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    if (!decoded) {
+      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
     const userId = decoded.userId
 
     const { id } = await params
@@ -87,6 +91,20 @@ export async function POST(request, { params }) {
       )
     }
 
+    if (title.trim().length > 200) {
+      return Response.json(
+        { success: false, error: 'Title must be 200 characters or less' },
+        { status: 400 }
+      )
+    }
+
+    if (comment && comment.length > 5000) {
+      return Response.json(
+        { success: false, error: 'Comment must be 5000 characters or less' },
+        { status: 400 }
+      )
+    }
+
     // Validate product exists
     const { data: product, error: productError } = await supabaseAdmin
       .from('products')
@@ -101,7 +119,7 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Verify THIS user purchased the product (join via orders to scope by user)
+    // Verify THIS user purchased the product (join order_items with orders to check user ownership)
     const { data: orderItem } = await supabaseAdmin
       .from('order_items')
       .select('order_id, orders!inner(user_id)')
@@ -157,7 +175,7 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error('Error creating review:', error)
     return Response.json(
-      { success: false, error: 'An unexpected error occurred' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

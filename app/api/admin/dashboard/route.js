@@ -97,7 +97,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Dashboard error:', error)
     return Response.json(
-      { success: false, error: 'Failed to load dashboard data' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

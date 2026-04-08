@@ -2,39 +2,49 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    // Fetch all categories by paginating (Supabase defaults to 1000 rows)
-    const counts = {}
-    let total = 0
-    let offset = 0
-    const pageSize = 1000
+    // Single aggregation query via Supabase RPC — replaces the old loop
+    // that fetched all 15k products in 15 separate 1000-row pages
+    const { data, error } = await supabaseAdmin
+      .rpc('get_category_counts')
 
-    while (true) {
-      const { data, error } = await supabaseAdmin
+    if (error) {
+      // Fallback: if the RPC doesn't exist yet, use a lightweight select
+      // (only category column, no pagination loop)
+      const { data: rows, error: fallbackError } = await supabaseAdmin
         .from('products')
         .select('category')
-        .range(offset, offset + pageSize - 1)
 
-      if (error) throw error
-      if (!data || data.length === 0) break
+      if (fallbackError) throw fallbackError
 
-      for (const row of data) {
+      const counts = {}
+      for (const row of rows || []) {
         const cat = row.category || 'Uncategorized'
         counts[cat] = (counts[cat] || 0) + 1
-        total++
       }
 
-      if (data.length < pageSize) break
-      offset += pageSize
+      const categories = Object.entries(counts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+
+      return Response.json({
+        success: true,
+        data: categories,
+        total: rows?.length || 0,
+      }, {
+        headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' },
+      })
     }
 
-    const categories = Object.entries(counts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
+    const categories = (data || []).sort((a, b) => b.count - a.count)
+    const total = categories.reduce((sum, c) => sum + c.count, 0)
 
-    return Response.json({ success: true, data: categories, total })
+    return Response.json({ success: true, data: categories, total }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' },
+    })
   } catch (error) {
+    console.error('Get categories error:', error)
     return Response.json(
-      { success: false, error: 'Failed to fetch categories' },
+      { success: false, error: 'Failed to retrieve categories' },
       { status: 500 }
     )
   }

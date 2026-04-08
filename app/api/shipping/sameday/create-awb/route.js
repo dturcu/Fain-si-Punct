@@ -109,7 +109,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Create AWB error:', error)
     return Response.json(
-      { success: false, error: 'Failed to create shipping label' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

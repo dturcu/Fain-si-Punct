@@ -36,8 +36,8 @@ export async function GET(request) {
     const orderId = searchParams.get('orderId')
     const userId = searchParams.get('userId')
     const recipient = searchParams.get('recipient')
-    const limit = parseInt(searchParams.get('limit') || '50', 10)
-    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10), 1), 100)
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1)
 
     let query = supabaseAdmin.from('email_logs').select('*', { count: 'exact' })
 
@@ -70,7 +70,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Get email logs error:', error)
     return Response.json(
-      { success: false, error: 'Failed to fetch email logs' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

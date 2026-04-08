@@ -3,12 +3,12 @@ import styles from '@/styles/pages.module.css'
 export default function AboutPage() {
   return (
     <div className={styles.container}>
-      <h1>About ShopHub</h1>
+      <h1>About Fain si Punct</h1>
 
       <section className={styles.section}>
         <h2>Who We Are</h2>
         <p>
-          ShopHub is a leading ecommerce platform dedicated to bringing you the
+          Fain si Punct is a leading ecommerce platform dedicated to bringing you the
           best selection of quality products at competitive prices. Since our
           founding, we've been committed to providing an exceptional shopping
           experience.

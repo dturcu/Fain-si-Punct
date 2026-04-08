@@ -50,10 +50,6 @@ export default function Navbar() {
   const fetchCartCount = async () => {
     try {
       const response = await fetch('/api/cart')
-      if (response.status === 401) {
-        setCartCount(0)
-        return
-      }
       const data = await response.json()
       const cart = data.cart || data.data
       if (data.success && cart && cart.items) {
@@ -65,8 +61,12 @@ export default function Navbar() {
     }
   }
 
-  const handleLogout = () => {
-    document.cookie = 'token=; path=/; max-age=0'
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Ignore network errors — the redirect still clears state
+    }
     setUser(null)
     setCartCount(0)
     setDropdownOpen(false)
@@ -86,7 +86,7 @@ export default function Navbar() {
   return (
     <header className="navbar">
       <div className="nav-container">
-        <Link href="/" className="logo">ShopHub</Link>
+        <Link href="/" className="logo">Fain si <span className="logo-accent">Punct</span></Link>
 
         <form className="nav-search" onSubmit={handleSearch}>
           <input
@@ -113,6 +113,8 @@ export default function Navbar() {
                     className="nav-user-btn"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     aria-expanded={dropdownOpen}
+                    aria-haspopup="menu"
+                    aria-label={`Meniu cont pentru ${user.firstName || user.email}`}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -124,10 +126,10 @@ export default function Navbar() {
                     </svg>
                   </button>
                   {dropdownOpen && (
-                    <div className="nav-dropdown">
-                      <Link href="/account" onClick={() => setDropdownOpen(false)}>Contul meu</Link>
-                      <Link href="/account/orders" onClick={() => setDropdownOpen(false)}>Comenzile mele</Link>
-                      <button onClick={handleLogout} className="nav-dropdown-logout">Deconectare</button>
+                    <div className="nav-dropdown" role="menu">
+                      <Link href="/account" onClick={() => setDropdownOpen(false)} role="menuitem">Contul meu</Link>
+                      <Link href="/account/orders" onClick={() => setDropdownOpen(false)} role="menuitem">Comenzile mele</Link>
+                      <button onClick={handleLogout} className="nav-dropdown-logout" role="menuitem">Deconectare</button>
                     </div>
                   )}
                 </div>
@@ -144,13 +146,17 @@ export default function Navbar() {
             </>
           )}
 
-          <Link href="/cart" className="nav-cart-link">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <Link
+            href="/cart"
+            className="nav-cart-link"
+            aria-label={`Coș de cumpărături, ${cartCount} ${cartCount === 1 ? 'produs' : 'produse'}`}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="9" cy="21" r="1" />
               <circle cx="20" cy="21" r="1" />
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
             </svg>
-            <span className="nav-cart-badge">{cartCount}</span>
+            <span className="nav-cart-badge" aria-hidden="true">{cartCount}</span>
           </Link>
 
           <button
@@ -166,51 +172,54 @@ export default function Navbar() {
         </div>
       </div>
 
-      {mobileMenuOpen && (
-        <div className="mobile-menu">
-          <form className="mobile-search" onSubmit={handleSearch}>
-            <input
-              type="text"
-              placeholder="Cauta produse..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="nav-search-input"
-            />
-            <button type="submit" className="nav-search-btn" aria-label="Cauta">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </button>
-          </form>
-          <nav className="mobile-nav-links">
-            <Link href="/" onClick={() => setMobileMenuOpen(false)}>Acasa</Link>
-            <Link href="/products" onClick={() => setMobileMenuOpen(false)}>Produse</Link>
-            <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
-              Cos ({cartCount})
-            </Link>
-            {!loading && (
-              <>
-                {user ? (
-                  <>
-                    <Link href="/account" onClick={() => setMobileMenuOpen(false)}>Contul meu</Link>
-                    <Link href="/account/orders" onClick={() => setMobileMenuOpen(false)}>Comenzile mele</Link>
-                    {user.role === 'admin' && (
-                      <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>Admin</Link>
-                    )}
-                    <button onClick={handleLogout} className="mobile-logout-btn">Deconectare</button>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>Autentificare</Link>
-                    <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>Inregistrare</Link>
-                  </>
-                )}
-              </>
-            )}
-          </nav>
-        </div>
-      )}
+      {/* Mobile drawer overlay */}
+      <div
+        className={`mobile-overlay ${mobileMenuOpen ? 'active' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+        <form className="mobile-search" onSubmit={handleSearch}>
+          <input
+            type="text"
+            placeholder="Cauta produse..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="nav-search-input"
+          />
+          <button type="submit" className="nav-search-btn" aria-label="Cauta">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </form>
+        <nav className="mobile-nav-links">
+          <Link href="/" onClick={() => setMobileMenuOpen(false)}>Acasa</Link>
+          <Link href="/products" onClick={() => setMobileMenuOpen(false)}>Produse</Link>
+          <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
+            Cos ({cartCount})
+          </Link>
+          {!loading && (
+            <>
+              {user ? (
+                <>
+                  <Link href="/account" onClick={() => setMobileMenuOpen(false)}>Contul meu</Link>
+                  <Link href="/account/orders" onClick={() => setMobileMenuOpen(false)}>Comenzile mele</Link>
+                  {user.role === 'admin' && (
+                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>Admin</Link>
+                  )}
+                  <button onClick={handleLogout} className="mobile-logout-btn">Deconectare</button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>Autentificare</Link>
+                  <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>Inregistrare</Link>
+                </>
+              )}
+            </>
+          )}
+        </nav>
+      </div>
     </header>
   )
 }

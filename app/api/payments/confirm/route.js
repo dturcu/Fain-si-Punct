@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getOrderById, getUserById } from '@/lib/supabase-queries'
+import { getOrderById } from '@/lib/supabase-queries'
 import { getPaymentIntent } from '@/lib/stripe'
 import { capturePayPalOrder } from '@/lib/paypal'
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, getGuestSessionId } from '@/lib/auth'
 
 /**
  * POST /api/payments/confirm
@@ -12,11 +12,12 @@ import { verifyAuth } from '@/lib/auth'
  */
 export async function POST(request) {
   try {
-    // Verify authentication
-    const headersList = headers()
-    const auth = await verifyAuth(headersList)
+    // Verify authentication (user or guest)
+    const headersList = await headers()
+    const auth = verifyAuth(headersList)
+    const guestSessionId = getGuestSessionId(request)
 
-    if (!auth) {
+    if (!auth && !guestSessionId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -34,12 +35,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Verify the requesting user owns this order (or is admin)
-    if (order.userId !== auth.userId) {
-      const caller = await getUserById(auth.userId)
-      if (!caller || caller.role !== 'admin') {
-        return NextResponse.json({ error: 'Not authorized to confirm this payment' }, { status: 403 })
-      }
+    // Ownership check: user owns order OR guest session matches
+    const isOwner = (auth && (order.userId === auth.userId)) ||
+      (guestSessionId && order.guestSessionId === guestSessionId)
+    if (!isOwner) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (paymentMethod === 'stripe') {

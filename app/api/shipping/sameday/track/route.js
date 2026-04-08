@@ -21,7 +21,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Track AWB error:', error)
     return Response.json(
-      { success: false, error: 'Failed to retrieve tracking status' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

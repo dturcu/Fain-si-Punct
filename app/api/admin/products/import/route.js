@@ -40,31 +40,8 @@ export async function POST(request) {
       )
     }
 
-    // Validate file type
-    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain']
-    if (!allowedTypes.includes(file.type)) {
-      return Response.json(
-        { success: false, error: 'Only CSV files are accepted' },
-        { status: 400 }
-      )
-    }
-
-    // Validate file size (max 5 MB)
-    const MAX_FILE_SIZE = 5 * 1024 * 1024
-    if (file.size > MAX_FILE_SIZE) {
-      return Response.json(
-        { success: false, error: 'File too large (max 5 MB)' },
-        { status: 400 }
-      )
-    }
-
     const text = await file.text()
-    // Cap at 10 000 data rows to prevent DoS via huge files
-    const lines = text.split('\n').slice(1, 10001)
-
-    // Sanitize a single CSV cell: prevents formula injection when exported to Excel
-    const sanitizeCell = (v) =>
-      typeof v === 'string' ? v.replace(/^[=+\-@\t\r]/, "'$&").trim() : v
+    const lines = text.split('\n').slice(1) // Skip header
 
     const products = []
     let successCount = 0
@@ -75,22 +52,50 @@ export async function POST(request) {
       if (!lines[i].trim()) continue
 
       try {
-        const [name, price, category, stock, description, image, sku] = lines[i]
-          .split(',')
-          .map(sanitizeCell)
+        // Parse CSV respecting quoted fields (handles commas inside quoted values)
+        const fields = []
+        let current = ''
+        let inQuotes = false
+        for (const char of lines[i]) {
+          if (char === '"') {
+            inQuotes = !inQuotes
+          } else if (char === ',' && !inQuotes) {
+            fields.push(current.trim())
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        fields.push(current.trim())
+
+        const [name, price, category, stock, description, image, sku] = fields
 
         if (!name || !price || !category) {
-          errors.push(`Row ${i + 2}: Missing required fields`)
+          errors.push(`Row ${i + 2}: Missing required fields (name, price, category)`)
+          errorCount++
+          continue
+        }
+
+        const parsedPrice = parseFloat(price)
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          errors.push(`Row ${i + 2}: Invalid price "${price}"`)
+          errorCount++
+          continue
+        }
+
+        const parsedStock = parseInt(stock, 10)
+        if (stock !== undefined && stock !== '' && isNaN(parsedStock)) {
+          errors.push(`Row ${i + 2}: Invalid stock value "${stock}"`)
           errorCount++
           continue
         }
 
         const product = {
           name,
-          slug: name.toLowerCase().replace(/\s+/g, '-'),
-          price: parseFloat(price),
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+          price: parsedPrice,
           category,
-          stock: parseInt(stock) || 0,
+          stock: isNaN(parsedStock) ? 0 : Math.max(0, parsedStock),
           description: description || '',
           image: image || '',
           sku: sku || `SKU-${randomBytes(4).toString('hex').toUpperCase()}`,
@@ -111,7 +116,7 @@ export async function POST(request) {
             .eq('id', existingProduct.id)
 
           if (updateError) {
-            errors.push(`Row ${i + 2}: ${updateError.message}`)
+            errors.push(`Row ${i + 2}: update failed`)
             errorCount++
           } else {
             successCount++
@@ -123,14 +128,15 @@ export async function POST(request) {
             .insert([product])
 
           if (insertError) {
-            errors.push(`Row ${i + 2}: ${insertError.message}`)
+            errors.push(`Row ${i + 2}: insert failed`)
             errorCount++
           } else {
             successCount++
           }
         }
       } catch (error) {
-        errors.push(`Row ${i + 2}: ${error.message}`)
+        console.error('admin/products/import error:', error)
+        errors.push(`Row ${i + 2}: processing failed`)
         errorCount++
       }
     }
@@ -146,7 +152,7 @@ export async function POST(request) {
     })
   } catch (error) {
     return Response.json(
-      { success: false, error: 'Import failed' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

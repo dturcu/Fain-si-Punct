@@ -31,7 +31,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching review:', error)
     return Response.json(
-      { success: false, error: 'An unexpected error occurred' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -47,6 +47,7 @@ export async function PUT(request, { params }) {
     if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     const decoded = verifyToken(token)
     if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    const userId = decoded.userId
 
     const { id } = await params
     const body = await request.json()
@@ -66,8 +67,8 @@ export async function PUT(request, { params }) {
       )
     }
 
-    // Check ownership using token, not client-supplied userId
-    if (review.user_id !== decoded.userId) {
+    // Check ownership using authenticated user, not client-supplied userId
+    if (review.user_id !== userId) {
       return Response.json(
         { success: false, error: 'Unauthorized: only review owner can update' },
         { status: 403 }
@@ -115,7 +116,7 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error('Error updating review:', error)
     return Response.json(
-      { success: false, error: 'Failed to update review' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -131,6 +132,7 @@ export async function DELETE(request, { params }) {
     if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     const decoded = verifyToken(token)
     if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    const userId = decoded.userId
 
     const { id } = await params
 
@@ -148,16 +150,15 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    // Check authorization using token: owner or admin
-    const isOwner = review.user_id === decoded.userId
-    if (!isOwner) {
-      const user = await getUserById(decoded.userId)
-      if (!user || user.role !== 'admin') {
-        return Response.json(
-          { success: false, error: 'Unauthorized: only owner or admin can delete' },
-          { status: 403 }
-        )
-      }
+    // Check authorization: owner or admin (role from DB, not client)
+    const isOwner = review.user_id === userId
+    const user = isOwner ? null : await getUserById(userId)
+    const isAdmin = !isOwner && user?.role === 'admin'
+    if (!isOwner && !isAdmin) {
+      return Response.json(
+        { success: false, error: 'Unauthorized: only owner or admin can delete' },
+        { status: 403 }
+      )
     }
 
     const productId = review.product_id
@@ -186,7 +187,7 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error('Error deleting review:', error)
     return Response.json(
-      { success: false, error: 'Failed to delete review' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

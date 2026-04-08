@@ -2,8 +2,8 @@ import Link from 'next/link'
 import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
-  title: 'Cariere - ShopHub',
-  description: 'Alatura-te echipei ShopHub. Descopera oportunitatile de cariera disponibile.',
+  title: 'Cariere - Fain si Punct',
+  description: 'Alatura-te echipei Fain si Punct. Descopera oportunitatile de cariera disponibile.',
 }
 
 export default function CareersPage() {
@@ -19,9 +19,9 @@ export default function CareersPage() {
         <h1 className={styles.title}>Cariere</h1>
 
         <div className={styles.content}>
-          <h2>Alatura-te echipei ShopHub</h2>
+          <h2>Alatura-te echipei Fain si Punct</h2>
           <p>
-            La ShopHub, credem ca succesul nostru se datoreaza oamenilor care fac parte
+            La Fain si Punct, credem ca succesul nostru se datoreaza oamenilor care fac parte
             din echipa noastra. Suntem mereu in cautarea unor profesionisti pasionati,
             creativi si dedicati, care doresc sa contribuie la transformarea comertului
             online din Romania.
@@ -42,7 +42,7 @@ export default function CareersPage() {
             <li>Abonament medical privat</li>
             <li>Buget anual pentru dezvoltare profesionala si cursuri</li>
             <li>Zile libere suplimentare</li>
-            <li>Reduceri la produsele ShopHub</li>
+            <li>Reduceri la produsele Fain si Punct</li>
             <li>Team building-uri si evenimente de echipa</li>
           </ul>
 
@@ -68,8 +68,8 @@ export default function CareersPage() {
             Trimite-ne CV-ul tau actualizat si o scrisoare de intentie la adresa de
             email de mai jos. Mentoneaza in subiect pozitia pentru care aplici.
           </p>
-          <a href="mailto:cariere@shophub.ro" className={styles.emailLink}>
-            cariere@shophub.ro
+          <a href="mailto:cariere@fain-si-punct.ro" className={styles.emailLink}>
+            cariere@fain-si-punct.ro
           </a>
         </div>
       </div>

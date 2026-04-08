@@ -8,7 +8,7 @@
   text-align: center;
   padding: 3rem;
   font-size: 1.1rem;
-  color: #666;
+  color: var(--color-text-tertiary);
 }
 
 .header {
@@ -21,7 +21,7 @@
 }
 
 .title {
-  color: #232f3e;
+  color: var(--color-primary);
   margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
@@ -30,63 +30,119 @@
 .backLink {
   display: inline-block;
   padding: 0.6rem 1.2rem;
-  background: #232f3e;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .backLink:hover {
-  background: #37475a;
+  background: var(--color-primary-light);
 }
 
 .filterBar {
   display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-bg-primary);
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.searchForm {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(232, 145, 58, 0.25);
+}
+
+.searchBtn {
+  padding: 0.55rem 1.25rem;
+  background: var(--color-accent);
+  color: var(--color-primary);
+  border: 1px solid var(--color-accent-hover);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.searchBtn:hover {
+  background: var(--color-accent-hover);
+}
+
+.clearBtn {
+  padding: 0.55rem 1rem;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.clearBtn:hover {
+  background: var(--color-border);
+}
+
+.filterRow {
+  display: flex;
   gap: 1rem;
   align-items: center;
-  margin-bottom: 1.5rem;
-  background: white;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   flex-wrap: wrap;
 }
 
 .filterLabel {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-primary);
   font-size: 0.9rem;
 }
 
 .filterSelect {
   padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.95rem;
-  background: white;
+  background: var(--color-bg-primary);
 }
 
 .filterSelect:focus {
   outline: none;
-  border-color: #232f3e;
-  box-shadow: 0 0 0 3px rgba(35, 47, 62, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
 }
 
 .orderCount {
   margin-left: auto;
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 0.9rem;
 }
 
 .tableWrapper {
   overflow-x: auto;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .table {
@@ -95,30 +151,30 @@
 }
 
 .table th {
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
   padding: 0.85rem 1rem;
   text-align: left;
   font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #e0e0e0;
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-border);
   font-size: 0.9rem;
   white-space: nowrap;
 }
 
 .table td {
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid #eee;
-  color: #2c3e50;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   font-size: 0.95rem;
 }
 
 .table tr:hover {
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
 }
 
 .orderNumber {
   font-weight: 600;
-  color: #232f3e;
+  color: var(--color-primary);
 }
 
 .price {
@@ -128,15 +184,15 @@
 .status {
   display: inline-block;
   padding: 0.35rem 0.75rem;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .pending {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--color-accent-light);
+  color: var(--color-warning);
 }
 
 .processing {
@@ -151,18 +207,18 @@
 
 .delivered {
   background: #d1e7dd;
-  color: #0a3622;
+  color: var(--color-success);
 }
 
 .cancelled {
   background: #f8d7da;
-  color: #842029;
+  color: var(--color-error);
 }
 
 .paymentStatus {
   display: inline-block;
   padding: 0.35rem 0.75rem;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
@@ -170,48 +226,48 @@
 
 .payment_unpaid {
   background: #f8d7da;
-  color: #842029;
+  color: var(--color-error);
 }
 
 .payment_paid {
   background: #d1e7dd;
-  color: #0a3622;
+  color: var(--color-success);
 }
 
 .payment_processing {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--color-accent-light);
+  color: var(--color-warning);
 }
 
 .payment_failed {
-  background: #f5c6cb;
-  color: #721c24;
+  background: #f8d7da;
+  color: var(--color-error);
 }
 
 .payment_refunded {
-  background: #e2e3e5;
-  color: #41464b;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
 }
 
 .detailsBtn {
   padding: 0.45rem 1rem;
-  background: #232f3e;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 }
 
 .detailsBtn:hover {
-  background: #37475a;
+  background: var(--color-primary-light);
 }
 
 .expandedCell {
   padding: 0 !important;
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
 }
 
 .expandedContent {
@@ -223,8 +279,8 @@
 
 /* Order Items in expanded view */
 .orderItemsSection {
-  background: #f9fafb;
-  border-radius: 6px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
   padding: 1rem;
 }
 
@@ -239,9 +295,9 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
-  background: #fff;
+  background: var(--color-bg-primary);
   border-radius: 4px;
-  border: 1px solid #eee;
+  border: 1px solid var(--color-border);
 }
 
 .orderItemImg {
@@ -260,19 +316,19 @@
 
 .orderItemName {
   font-size: 0.9rem;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
 .orderItemMeta {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--color-text-tertiary);
 }
 
 /* Shipping info in expanded view */
 .shippingSection {
   background: #f0faf4;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 1rem;
 }
 
@@ -281,7 +337,7 @@
   flex-direction: column;
   gap: 0.4rem;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .shippingAddress {
@@ -293,7 +349,7 @@
 }
 
 .expandedTitle {
-  color: #232f3e;
+  color: var(--color-primary);
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 600;
@@ -313,13 +369,13 @@
 .formGroup label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .statusSelect {
   padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
   cursor: pointer;
   max-width: 250px;
@@ -327,14 +383,14 @@
 
 .statusSelect:focus {
   outline: none;
-  border-color: #232f3e;
-  box-shadow: 0 0 0 3px rgba(35, 47, 62, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
 }
 
 .trackingInput {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
   width: 100%;
   max-width: 400px;
@@ -343,17 +399,17 @@
 
 .trackingInput:focus {
   outline: none;
-  border-color: #232f3e;
-  box-shadow: 0 0 0 3px rgba(35, 47, 62, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
 }
 
 .emailSection {
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--color-border);
   padding-top: 1.5rem;
 }
 
 .noEmails {
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 0.9rem;
   margin: 0;
 }
@@ -369,9 +425,9 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 0.75rem 1rem;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   gap: 1rem;
 }
 
@@ -383,12 +439,12 @@
 .emailType {
   text-transform: capitalize;
   font-size: 0.9rem;
-  color: #2c3e50;
+  color: var(--color-text-primary);
 }
 
 .emailMeta {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--color-text-tertiary);
   margin-top: 0.2rem;
 }
 
@@ -396,38 +452,38 @@
   font-size: 0.8rem;
   margin-top: 0.3rem;
   font-weight: 600;
-  color: #666;
+  color: var(--color-text-tertiary);
 }
 
 .emailSent {
-  color: #28a745;
+  color: var(--color-success);
 }
 
 .emailFailed {
-  color: #dc3545;
+  color: var(--color-error);
 }
 
 .emailError {
   font-size: 0.8rem;
-  color: #dc3545;
+  color: var(--color-error);
   margin-top: 0.2rem;
 }
 
 .resendBtn {
   padding: 0.4rem 0.8rem;
   font-size: 0.8rem;
-  background: #3498db;
-  color: white;
+  background: var(--color-accent);
+  color: var(--color-bg-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
   font-weight: 500;
-  transition: background 0.2s, opacity 0.2s;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
 }
 
 .resendBtn:hover:not(:disabled) {
-  background: #2980b9;
+  background: var(--color-accent-hover);
 }
 
 .resendBtn:disabled {
@@ -438,18 +494,18 @@
 /* Invoice section */
 .invoiceBtn {
   padding: 0.5rem 1rem;
-  background: #2563eb;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-bg-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
-  transition: background 0.2s, opacity 0.2s;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
 }
 
 .invoiceBtn:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--color-primary-light);
 }
 
 .invoiceBtn:disabled {
@@ -460,12 +516,12 @@
 .emptyState {
   text-align: center;
   padding: 3rem;
-  color: #888;
+  color: var(--color-text-tertiary);
   font-size: 1rem;
-  background: white;
-  border-radius: 8px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
   margin-top: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 @media (max-width: 768px) {

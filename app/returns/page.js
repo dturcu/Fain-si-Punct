@@ -2,8 +2,8 @@ import Link from 'next/link'
 import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
-  title: 'Politica de retur - ShopHub',
-  description: 'Informatii despre politica de retur ShopHub - 30 de zile pentru returnarea produselor.',
+  title: 'Politica de retur - Fain si Punct',
+  description: 'Informatii despre politica de retur Fain si Punct - 30 de zile pentru returnarea produselor.',
 }
 
 export default function ReturnsPage() {
@@ -21,7 +21,7 @@ export default function ReturnsPage() {
         <div className={styles.content}>
           <h2>1. Dreptul de retur</h2>
           <p>
-            La ShopHub, satisfactia dumneavoastra este prioritatea noastra. Aveti
+            La Fain si Punct, satisfactia dumneavoastra este prioritatea noastra. Aveti
             dreptul de a returna produsele achizitionate in termen de
             <strong> 30 de zile calendaristice</strong> de la data primirii coletului,
             fara a fi necesara invocarea unui motiv. Acest termen depaseste cerinta
@@ -41,7 +41,7 @@ export default function ReturnsPage() {
           <p>Procesul de retur este simplu si poate fi initiat in cativa pasi:</p>
           <ol>
             <li>
-              Accesati contul dumneavoastra ShopHub si selectati comanda care contine
+              Accesati contul dumneavoastra Fain si Punct si selectati comanda care contine
               produsul pe care doriti sa il returnati
             </li>
             <li>
@@ -58,13 +58,13 @@ export default function ReturnsPage() {
           </ol>
           <p>
             Alternativ, puteti solicita un retur contactandu-ne prin email la
-            <strong> contact@shophub.ro</strong> sau prin formularul de contact.
+            <strong> contact@fain-si-punct.ro</strong> sau prin formularul de contact.
           </p>
 
           <h2>4. Costurile returului</h2>
           <p>
             In cazul in care produsul prezinta defecte sau a fost livrat gresit,
-            costurile de transport pentru retur sunt suportate integral de ShopHub.
+            costurile de transport pentru retur sunt suportate integral de Fain si Punct.
             In cazul retururilor din motive personale, costul transportului de retur
             este in sarcina cumparatorului.
           </p>
@@ -111,7 +111,7 @@ export default function ReturnsPage() {
           <h2>8. Contact</h2>
           <p>
             Pentru orice intrebari legate de retururi, echipa noastra de suport
-            va sta la dispozitie la <strong>contact@shophub.ro</strong> sau prin
+            va sta la dispozitie la <strong>contact@fain-si-punct.ro</strong> sau prin
             pagina de <Link href="/contact">Contact</Link>.
           </p>
         </div>

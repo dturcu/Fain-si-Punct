@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { getUserById } from '@/lib/supabase-queries'
+import { getUserById, orderRowToObj } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { sendShippingNotification } from '@/lib/email'
 
@@ -63,6 +63,25 @@ export async function PUT(request, { params }) {
     }
 
     const oldStatus = order.status
+
+    // Enforce state machine transitions — prevent nonsensical moves
+    const allowedTransitions = {
+      pending:     ['processing', 'cancelled'],
+      processing:  ['shipped', 'cancelled'],
+      shipped:     ['delivered', 'cancelled'],
+      delivered:   [], // terminal
+      cancelled:   [], // terminal
+    }
+    const allowed = allowedTransitions[oldStatus] || []
+    if (oldStatus !== status && !allowed.includes(status)) {
+      return Response.json(
+        {
+          success: false,
+          error: `Cannot transition order from '${oldStatus}' to '${status}'. Allowed: ${allowed.length ? allowed.join(', ') : 'none (terminal state)'}`,
+        },
+        { status: 422 }
+      )
+    }
 
     // Update order
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
@@ -140,37 +159,3 @@ export async function PUT(request, { params }) {
   }
 }
 
-function orderRowToObj(row, items = []) {
-  if (!row) return null
-  return {
-    _id: row.id,
-    id: row.id,
-    orderNumber: row.order_number,
-    userId: row.user_id,
-    items: items.map(item => ({
-      productId: item.product_id,
-      name: item.name,
-      price: parseFloat(item.price),
-      quantity: item.quantity,
-      image: item.image,
-    })),
-    total: parseFloat(row.total),
-    status: row.status,
-    customer: {
-      name: row.customer_name,
-      email: row.customer_email,
-      phone: row.customer_phone,
-    },
-    shippingAddress: {
-      street: row.shipping_street,
-      city: row.shipping_city,
-      state: row.shipping_state,
-      zip: row.shipping_zip,
-      country: row.shipping_country,
-    },
-    trackingNumber: row.tracking_number,
-    trackingUrl: row.tracking_url,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}

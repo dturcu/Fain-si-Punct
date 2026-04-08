@@ -121,7 +121,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Invoice creation error:', error)
     return Response.json(
-      { success: false, error: 'Failed to create invoice' },
+      { success: false, error: 'Nu s-a putut crea factura. Încearcă din nou.' },
       { status: 500 }
     )
   }

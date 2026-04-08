@@ -10,23 +10,15 @@
     }
   ],
   "redirects": [],
-  "headers": [
+  "headers": [],
+  "crons": [
     {
-      "source": "/api/:path*",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        }
-      ]
+      "path": "/api/cron/process-emails",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-guest-carts",
+      "schedule": "0 3 * * *"
     }
   ]
 }

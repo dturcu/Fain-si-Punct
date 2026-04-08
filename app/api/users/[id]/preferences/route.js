@@ -49,7 +49,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Get preferences error:', error)
     return Response.json(
-      { success: false, error: 'An unexpected error occurred' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }
@@ -121,7 +121,7 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error('Update preferences error:', error)
     return Response.json(
-      { success: false, error: 'An unexpected error occurred' },
+      { success: false, error: 'A apărut o eroare internă' },
       { status: 500 }
     )
   }

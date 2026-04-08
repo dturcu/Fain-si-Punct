@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
 import EmailPreferences from '@/components/EmailPreferences'
 
 export default function PreferencesPage() {
@@ -15,10 +14,11 @@ export default function PreferencesPage() {
     const checkAuth = async () => {
       try {
         setLoading(true)
-        const response = await axios.get('/api/auth/me')
+        const res = await fetch('/api/auth/me')
+        const data = await res.json()
 
-        if (response.data.success && response.data.data._id) {
-          setUserId(response.data.data._id)
+        if (data.success && (data.data?._id || data.user?._id)) {
+          setUserId(data.data?._id || data.user?._id)
         } else {
           setError('Not authenticated')
           router.push('/auth/login')
