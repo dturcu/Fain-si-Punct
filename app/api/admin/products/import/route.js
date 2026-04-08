@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { randomBytes } from 'crypto'
 
 export async function POST(request) {
   try {
@@ -97,7 +98,7 @@ export async function POST(request) {
           stock: isNaN(parsedStock) ? 0 : Math.max(0, parsedStock),
           description: description || '',
           image: image || '',
-          sku: sku || `SKU-${Date.now()}-${i}`,
+          sku: sku || `SKU-${randomBytes(4).toString('hex').toUpperCase()}`,
         }
 
         // Check if product with same SKU exists

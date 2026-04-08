@@ -21,16 +21,14 @@ export async function GET(request) {
       {
         healthy: true,
         timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: process.env.NODE_ENV,
       },
       { status: 200 }
     )
   } catch (error) {
+    console.error('Health check error:', error)
     return NextResponse.json(
       {
         healthy: false,
-        error: error.message,
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

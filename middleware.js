@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server'
 
 /**
+ * Edge-compatible JWT payload reader.
+ * Does NOT verify the signature — signature verification happens in API route handlers.
+ * This is used only for routing decisions (redirect non-admin users away from /admin pages).
+ */
+function getTokenPayload(token) {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    // atob is available in Edge Runtime
+    const payload = JSON.parse(atob(parts[1]))
+    return payload
+  } catch {
+    return null
+  }
+}
+
+/**
  * In-memory rate limiter using a sliding window per IP.
  * Note: in a multi-instance/serverless deployment (Vercel) each instance has
  * its own map, so this won't coordinate across instances. For production scale,
@@ -37,7 +54,21 @@ const LIMITS = {
 export function middleware(request) {
   const { pathname } = request.nextUrl
 
-  // Find the most specific matching limit
+  // Admin route guard — check JWT claims before serving admin pages.
+  // API routes still perform full signature verification.
+  if (pathname.startsWith('/admin')) {
+    const cookie = request.cookies.get('token')
+    if (!cookie?.value) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+    const payload = getTokenPayload(cookie.value)
+    if (!payload || payload.role !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+    return NextResponse.next()
+  }
+
+  // Rate limiting for API routes
   const matchedPath = Object.keys(LIMITS).find((p) => pathname.startsWith(p))
   if (!matchedPath) return NextResponse.next()
 
@@ -68,6 +99,7 @@ export function middleware(request) {
 
 export const config = {
   matcher: [
+    '/admin/:path*',
     '/api/auth/:path*',
     '/api/checkout',
     '/api/payments/:path*',

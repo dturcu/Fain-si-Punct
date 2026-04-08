@@ -1,5 +1,3 @@
-import redis from 'redis'
-
 /**
  * Simple in-memory rate limiter for development
  * For production, use Redis-based rate limiting
@@ -176,6 +174,47 @@ export function rateLimitEndpoint(endpointType = 'api') {
       return ['127.0.0.1', '::1'].includes(ip)
     },
   })
+}
+
+/**
+ * Apply rate limiting directly inside a Next.js App Router route handler.
+ * Returns a 429 Response if the client is over the limit, otherwise null.
+ *
+ * Usage:
+ *   const limited = applyRateLimit(request, 'auth')
+ *   if (limited) return limited
+ *
+ * @param {Request} request
+ * @param {string} endpointType - Key from rateLimitConfigs
+ * @returns {Response|null}
+ */
+export function applyRateLimit(request, endpointType = 'api') {
+  const config = rateLimitConfigs[endpointType] || rateLimitConfigs.api
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+
+  // Skip for localhost during development
+  if (ip === '127.0.0.1' || ip === '::1') return null
+
+  const key = `${endpointType}:${ip}`
+  const allowed = limiter.isAllowed(key, config.max, config.windowMs)
+
+  if (!allowed) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Too many requests' }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(Math.ceil(config.windowMs / 1000)),
+        },
+      }
+    )
+  }
+
+  return null
 }
 
 export default limiter

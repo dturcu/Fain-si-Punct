@@ -78,6 +78,11 @@ export async function POST(request) {
       return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
     }
 
+    const user = await getUserById(decoded.userId)
+    if (!user || user.role !== 'admin') {
+      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const body = await request.json()
     // Always use the authenticated user's ID, never trust the client-supplied userId
     body.userId = decoded.userId

@@ -5,12 +5,16 @@ import { getOrderById } from '@/lib/supabase-queries'
 import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
 import { verifyAuth, getGuestSessionId } from '@/lib/auth'
+import { applyRateLimit } from '@/middleware/rate-limit'
 
 /**
  * POST /api/payments/create-intent
  * Create a payment intent for either Stripe or PayPal
  */
 export async function POST(request) {
+  const limited = applyRateLimit(request, 'payment')
+  if (limited) return limited
+
   try {
     // Verify authentication (user or guest)
     const headersList = await headers()
