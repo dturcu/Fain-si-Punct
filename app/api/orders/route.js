@@ -1,11 +1,29 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
+import { randomBytes } from 'crypto'
 
 function generateOrderNumber() {
-  return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+  return 'ORD-' + randomBytes(6).toString('hex').toUpperCase()
 }
 
 export async function GET(request) {
   try {
+    const token = getCookieToken(request)
+    if (!token) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
+
+    const user = await getUserById(decoded.userId)
+    if (!user || user.role !== 'admin') {
+      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
     const status = searchParams.get('status')
@@ -38,7 +56,7 @@ export async function GET(request) {
     return Response.json({ success: true, data: ordersWithItems })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to retrieve orders' },
       { status: 500 }
     )
   }
@@ -46,6 +64,21 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const token = getCookieToken(request)
+    if (!token) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    }
+
+    const user = await getUserById(decoded.userId)
+    if (!user || user.role !== 'admin') {
+      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const body = await request.json()
 
     const { data: order, error } = await supabaseAdmin
@@ -65,7 +98,7 @@ export async function POST(request) {
     )
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to create order' },
       { status: 400 }
     )
   }

@@ -1,8 +1,12 @@
 import bcrypt from 'bcryptjs'
 import { createToken } from '@/lib/auth'
 import { getUserByEmail } from '@/lib/supabase-queries'
+import { applyRateLimit } from '@/middleware/rate-limit'
 
 export async function POST(request) {
+  const limited = applyRateLimit(request, 'auth')
+  if (limited) return limited
+
   try {
     const { email, password } = await request.json()
 
@@ -45,13 +49,13 @@ export async function POST(request) {
       {
         status: 200,
         headers: {
-          'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
+          'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
         },
       }
     )
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }

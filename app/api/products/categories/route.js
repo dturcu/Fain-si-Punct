@@ -34,7 +34,7 @@ export async function GET() {
     return Response.json({ success: true, data: categories, total })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to fetch categories' },
       { status: 500 }
     )
   }

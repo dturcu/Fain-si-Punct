@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getUserById } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { randomBytes } from 'crypto'
 
 export async function POST(request) {
   try {
@@ -39,8 +40,31 @@ export async function POST(request) {
       )
     }
 
+    // Validate file type
+    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain']
+    if (!allowedTypes.includes(file.type)) {
+      return Response.json(
+        { success: false, error: 'Only CSV files are accepted' },
+        { status: 400 }
+      )
+    }
+
+    // Validate file size (max 5 MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      return Response.json(
+        { success: false, error: 'File too large (max 5 MB)' },
+        { status: 400 }
+      )
+    }
+
     const text = await file.text()
-    const lines = text.split('\n').slice(1) // Skip header
+    // Cap at 10 000 data rows to prevent DoS via huge files
+    const lines = text.split('\n').slice(1, 10001)
+
+    // Sanitize a single CSV cell: prevents formula injection when exported to Excel
+    const sanitizeCell = (v) =>
+      typeof v === 'string' ? v.replace(/^[=+\-@\t\r]/, "'$&").trim() : v
 
     const products = []
     let successCount = 0
@@ -53,7 +77,7 @@ export async function POST(request) {
       try {
         const [name, price, category, stock, description, image, sku] = lines[i]
           .split(',')
-          .map((field) => field.trim())
+          .map(sanitizeCell)
 
         if (!name || !price || !category) {
           errors.push(`Row ${i + 2}: Missing required fields`)
@@ -69,7 +93,7 @@ export async function POST(request) {
           stock: parseInt(stock) || 0,
           description: description || '',
           image: image || '',
-          sku: sku || `SKU-${Date.now()}-${Math.random()}`,
+          sku: sku || `SKU-${randomBytes(4).toString('hex').toUpperCase()}`,
         }
 
         // Check if product with same SKU exists
@@ -122,7 +146,7 @@ export async function POST(request) {
     })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Import failed' },
       { status: 500 }
     )
   }

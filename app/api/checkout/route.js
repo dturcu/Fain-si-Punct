@@ -3,12 +3,17 @@ import { getCartByUserId, clearCart, getUserById, createOrder } from '@/lib/supa
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
+import { applyRateLimit } from '@/middleware/rate-limit'
+import { randomBytes } from 'crypto'
 
 function generateOrderNumber() {
-  return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+  return 'ORD-' + randomBytes(6).toString('hex').toUpperCase()
 }
 
 export async function POST(request) {
+  const limited = applyRateLimit(request, 'checkout')
+  if (limited) return limited
+
   try {
     const token = getCookieToken(request)
     if (!token) {
@@ -78,11 +83,13 @@ export async function POST(request) {
       )
     }
 
-    // Check stock availability before deducting
+    // Check stock availability and capture current prices before deducting
+    const currentPrices = {}
+    const currentStocks = {}
     for (const item of cart.items) {
       const { data: product } = await supabaseAdmin
         .from('products')
-        .select('stock, name')
+        .select('stock, name, price')
         .eq('id', item.productId)
         .single()
 
@@ -93,27 +100,42 @@ export async function POST(request) {
           { status: 400 }
         )
       }
+      currentPrices[item.productId] = product.price
+      currentStocks[item.productId] = product.stock
     }
 
-    // Update product stock for each item
+    // Atomically deduct stock using optimistic locking: only update if stock unchanged since read.
+    // If another concurrent checkout modified stock first, data will be null and we abort.
+    const deducted = []
     for (const item of cart.items) {
-      const { data: product } = await supabaseAdmin
+      const originalStock = currentStocks[item.productId]
+      const { data: updated } = await supabaseAdmin
         .from('products')
-        .select('stock')
+        .update({ stock: originalStock - item.quantity })
         .eq('id', item.productId)
+        .eq('stock', originalStock) // only update if stock hasn't changed (optimistic lock)
+        .select('id')
         .single()
 
-      if (product) {
-        await supabaseAdmin
-          .from('products')
-          .update({ stock: product.stock - item.quantity })
-          .eq('id', item.productId)
+      if (!updated) {
+        // Another concurrent request beat us — restore already-deducted items and abort
+        for (const prev of deducted) {
+          await supabaseAdmin
+            .from('products')
+            .update({ stock: currentStocks[prev.productId] })
+            .eq('id', prev.productId)
+        }
+        return Response.json(
+          { success: false, error: 'Stocul s-a modificat. Te rugam sa verifici cosul si sa incerci din nou.' },
+          { status: 409 }
+        )
       }
+      deducted.push(item)
     }
 
-    // Calculate subtotal from cart items and apply shipping
+    // Calculate subtotal using current prices from DB, not stale cart prices
     const subtotal = cart.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
+      (sum, item) => sum + (currentPrices[item.productId] ?? item.price) * item.quantity,
       0
     )
     const shippingCost = subtotal >= 200 ? 0 : 15.99
@@ -183,7 +205,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Checkout error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'A apărut o eroare la procesarea comenzii. Te rugăm să încerci din nou.' },
       { status: 500 }
     )
   }

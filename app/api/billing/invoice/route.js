@@ -121,7 +121,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Invoice creation error:', error)
     return Response.json(
-      { success: false, error: error.message || 'Failed to create invoice' },
+      { success: false, error: 'Failed to create invoice' },
       { status: 500 }
     )
   }

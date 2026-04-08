@@ -1,4 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
 
 export async function GET(request) {
   try {
@@ -55,14 +57,24 @@ export async function GET(request) {
       },
     })
   } catch (error) {
+    console.error('Products GET error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to fetch products' },
       { status: 500 }
     )
   }
 }
 
 export async function POST(request) {
+  const token = getCookieToken(request)
+  if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  const decoded = verifyToken(token)
+  if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+  const caller = await getUserById(decoded.userId)
+  if (!caller || caller.role !== 'admin') {
+    return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
+  }
+
   try {
     const body = await request.json()
 
@@ -80,7 +92,7 @@ export async function POST(request) {
     )
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to create product' },
       { status: 400 }
     )
   }

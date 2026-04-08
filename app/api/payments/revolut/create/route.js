@@ -106,7 +106,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Revolut create order error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to create payment' },
       { status: 500 }
     )
   }

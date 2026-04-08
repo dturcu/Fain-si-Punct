@@ -52,8 +52,9 @@ export async function GET(request, { params }) {
 
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
+    console.error('Order GET error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to retrieve order' },
       { status: 500 }
     )
   }
@@ -115,8 +116,9 @@ export async function PUT(request, { params }) {
 
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
+    console.error('Order PUT error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to update order' },
       { status: 400 }
     )
   }

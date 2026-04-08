@@ -32,6 +32,6 @@ export async function GET(request) {
 
     return Response.json({ success: true, data: result })
   } catch (error) {
-    return Response.json({ success: false, error: error.message }, { status: 500 })
+    return Response.json({ success: false, error: 'Failed to retrieve orders' }, { status: 500 })
   }
 }

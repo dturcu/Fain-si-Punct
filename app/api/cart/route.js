@@ -28,7 +28,7 @@ export async function GET(request) {
     })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }
@@ -53,6 +53,13 @@ export async function POST(request) {
     }
 
     const { productId, quantity } = await request.json()
+
+    if (!quantity || !Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+      return Response.json(
+        { success: false, error: 'Quantity must be a whole number between 1 and 10' },
+        { status: 400 }
+      )
+    }
 
     // Get product
     const { data: product, error: productError } = await supabaseAdmin
@@ -80,7 +87,7 @@ export async function POST(request) {
     return Response.json({ success: true, data: cart })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }

@@ -86,7 +86,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Resend email error:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to resend email' },
       { status: 500 }
     )
   }

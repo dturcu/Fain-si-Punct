@@ -60,7 +60,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Revolut webhook error:', error)
     return Response.json(
-      { error: error.message },
+      { error: 'Webhook processing failed' },
       { status: 500 }
     )
   }

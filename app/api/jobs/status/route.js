@@ -49,7 +49,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Error fetching queue status:', error)
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }
@@ -125,7 +125,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Error processing job action:', error)
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }

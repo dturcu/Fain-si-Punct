@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getOrderById } from '@/lib/supabase-queries'
+import { getOrderById, getUserById } from '@/lib/supabase-queries'
 import { getPaymentIntent } from '@/lib/stripe'
 import { capturePayPalOrder } from '@/lib/paypal'
 import { verifyAuth } from '@/lib/auth'
@@ -32,6 +32,14 @@ export async function POST(request) {
     const order = await getOrderById(orderId)
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Verify the requesting user owns this order (or is admin)
+    if (order.userId !== auth.userId) {
+      const caller = await getUserById(auth.userId)
+      if (!caller || caller.role !== 'admin') {
+        return NextResponse.json({ error: 'Not authorized to confirm this payment' }, { status: 403 })
+      }
     }
 
     if (paymentMethod === 'stripe') {

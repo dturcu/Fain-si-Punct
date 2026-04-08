@@ -1,5 +1,17 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { rowToProduct, productToRow } from '../route'
+import { verifyToken, getCookieToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
+
+async function requireAdmin(request) {
+  const token = getCookieToken(request)
+  if (!token) return { error: 'Unauthorized', status: 401 }
+  const decoded = verifyToken(token)
+  if (!decoded) return { error: 'Invalid token', status: 401 }
+  const user = await getUserById(decoded.userId)
+  if (!user || user.role !== 'admin') return { error: 'Admin access required', status: 403 }
+  return { decoded, user }
+}
 
 export async function GET(request, { params }) {
   try {
@@ -25,13 +37,16 @@ export async function GET(request, { params }) {
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }
 }
 
 export async function PUT(request, { params }) {
+  const auth = await requireAdmin(request)
+  if (auth.error) return Response.json({ success: false, error: auth.error }, { status: auth.status })
+
   try {
     const { id } = await params
     const body = await request.json()
@@ -53,13 +68,16 @@ export async function PUT(request, { params }) {
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to update product' },
       { status: 400 }
     )
   }
 }
 
 export async function DELETE(request, { params }) {
+  const auth = await requireAdmin(request)
+  if (auth.error) return Response.json({ success: false, error: auth.error }, { status: auth.status })
+
   try {
     const { id } = await params
 
@@ -80,7 +98,7 @@ export async function DELETE(request, { params }) {
     return Response.json({ success: true, data: rowToProduct(product) })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to delete product' },
       { status: 500 }
     )
   }

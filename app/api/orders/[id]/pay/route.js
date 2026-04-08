@@ -42,6 +42,23 @@ export async function POST(request, { params }) {
       )
     }
 
+    // Only allow marking as paid for cash-on-delivery orders.
+    // Card/PayPal/Revolut payments must be verified through the payment provider webhook.
+    if (order.payment_method !== 'ramburs') {
+      return Response.json(
+        { success: false, error: 'Payment status is managed automatically for this payment method' },
+        { status: 403 }
+      )
+    }
+
+    // Prevent double-marking
+    if (order.payment_status === 'paid') {
+      return Response.json(
+        { success: false, error: 'Order is already paid' },
+        { status: 409 }
+      )
+    }
+
     // Update payment status and order status
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('orders')
@@ -72,7 +89,7 @@ export async function POST(request, { params }) {
     })
   } catch (error) {
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to update payment status' },
       { status: 500 }
     )
   }

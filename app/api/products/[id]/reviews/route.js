@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getProductReviews, updateProductRatingStats, userHasReviewed } from '@/lib/reviews-supabase'
+import { verifyToken, getCookieToken } from '@/lib/auth'
 
 /**
  * GET /api/products/[id]/reviews
@@ -48,7 +49,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching reviews:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }
@@ -60,16 +61,16 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
+    // Auth: userId must come from the verified token, not the request body
+    const token = getCookieToken(request)
+    if (!token) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const decoded = verifyToken(token)
+    if (!decoded) return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
+    const userId = decoded.userId
+
     const { id } = await params
     const body = await request.json()
-    const { rating, title, comment, userId } = body
-
-    if (!userId) {
-      return Response.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      )
-    }
+    const { rating, title, comment } = body
 
     // Validate inputs
     if (!rating || rating < 1 || rating > 5) {
@@ -100,14 +101,16 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Verify user purchased the product
-    const { data: order } = await supabaseAdmin
+    // Verify THIS user purchased the product (join via orders to scope by user)
+    const { data: orderItem } = await supabaseAdmin
       .from('order_items')
-      .select('order_id')
+      .select('order_id, orders!inner(user_id)')
       .eq('product_id', id)
+      .eq('orders.user_id', userId)
+      .limit(1)
       .single()
 
-    if (!order) {
+    if (!orderItem) {
       return Response.json(
         { success: false, error: 'You must purchase this product to review it' },
         { status: 403 }
@@ -129,7 +132,7 @@ export async function POST(request, { params }) {
       .insert({
         product_id: id,
         user_id: userId,
-        order_id: order.order_id,
+        order_id: orderItem.order_id,
         rating: parseInt(rating),
         title: title.trim(),
         comment: comment ? comment.trim() : '',
@@ -154,7 +157,7 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error('Error creating review:', error)
     return Response.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     )
   }
