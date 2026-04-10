@@ -10,6 +10,8 @@
     "lint": "next lint",
     "seed": "node scripts/seed.js",
     "import": "node scripts/import-from-excel.js",
+    "import:dry-run": "node scripts/import-from-excel.js --dry-run",
+    "import:replace": "node scripts/import-from-excel.js --replace",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

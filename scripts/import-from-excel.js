@@ -68,14 +68,20 @@ async function importFromExcel(filePath) {
     }
     console.log('✅ Connected to Supabase')
 
-    // Clear existing products
-    console.log('🗑️  Clearing existing products...')
-    const { error: deleteError } = await supabase.from('products').delete().gte('created_at', '1970-01-01')
-    if (deleteError) {
-      console.error('❌ Error clearing products:', deleteError)
-      process.exit(1)
+    // Only clear existing products when --replace is explicitly passed (and not dry-run)
+    if (replace && !dryRun) {
+      console.log('🗑️  Clearing existing products (--replace mode)...')
+      const { error: deleteError } = await supabase.from('products').delete().gte('created_at', '1970-01-01')
+      if (deleteError) {
+        console.error('❌ Error clearing products:', deleteError)
+        process.exit(1)
+      }
+      console.log('✅ Cleared existing products')
+    } else if (replace && dryRun) {
+      console.log('[DRY RUN] Would clear all existing products (--replace mode)')
+    } else {
+      console.log('🔄 Upsert mode — existing products will be updated, new ones inserted')
     }
-    console.log('✅ Cleared existing products')
 
     // Transform Excel rows to product documents
     const products = rows.map((row, index) => {
@@ -131,7 +137,7 @@ async function importFromExcel(filePath) {
           condition: row['Condition'] || 'New',
           grade: row['Grade'],
           weight: parseFloat(row['Unit Weight (kg)']) || null,
-          currency: row['Currency'] || 'USD',
+          currency: row['Currency'] || 'RON',
           total_rrp: parsePrice(row['Total RRP']) || 0,
           tags: buildTags(row),
           // Initialize rating fields with defaults
@@ -178,56 +184,85 @@ async function importFromExcel(filePath) {
 
     console.log(`✅ Processed ${products_final.length} valid products (deduplicated)`)
 
-    // Insert products in batches
-    const batchSize = 1000
-    let inserted = 0
+    // Dry-run: skip all database writes
+    if (dryRun) {
+      console.log(`\n[DRY RUN] Would ${replace ? 'insert' : 'upsert'} ${products_final.length} products`)
+      console.log('[DRY RUN] No database writes performed')
+    } else {
+      // Write products in batches
+      const batchSize = 1000
+      let written = 0
 
-    for (let i = 0; i < products_final.length; i += batchSize) {
-      const batch = products_final.slice(i, i + batchSize)
+      for (let i = 0; i < products_final.length; i += batchSize) {
+        const batch = products_final.slice(i, i + batchSize)
 
-      try {
-        const { data, error: insertError } = await supabase
-          .from('products')
-          .insert(batch)
-          .select()
-
-        if (insertError) {
-          console.error(`❌ Error inserting batch at ${i}:`, insertError)
-          // Try individual inserts as fallback
-          for (const product of batch) {
-            try {
-              const { error: singleError } = await supabase
-                .from('products')
-                .insert([product])
-
-              if (!singleError) {
-                inserted++
-              }
-            } catch (err) {
-              console.error(`Error inserting product ${product.sku}:`, err.message)
-            }
+        try {
+          let result
+          if (replace) {
+            // --replace mode: fresh insert (table was already cleared)
+            result = await supabase
+              .from('products')
+              .insert(batch)
+              .select()
+          } else {
+            // Default mode: upsert on SKU conflict
+            result = await supabase
+              .from('products')
+              .upsert(batch, { onConflict: 'sku' })
+              .select()
           }
-        } else {
-          inserted += batch.length
-        }
 
-        console.log(`📦 Inserted ${inserted}/${products_final.length} products`)
-      } catch (error) {
-        console.error(`❌ Error inserting batch:`, error.message)
+          const { data, error: writeError } = result
+
+          if (writeError) {
+            console.error(`❌ Error writing batch at ${i}:`, writeError)
+            // Try individual writes as fallback
+            for (const product of batch) {
+              try {
+                let singleResult
+                if (replace) {
+                  singleResult = await supabase.from('products').insert([product])
+                } else {
+                  singleResult = await supabase.from('products').upsert([product], { onConflict: 'sku' })
+                }
+                if (!singleResult.error) {
+                  written++
+                }
+              } catch (err) {
+                console.error(`Error writing product ${product.sku}:`, err.message)
+              }
+            }
+          } else {
+            written += batch.length
+          }
+
+          console.log(`📦 Written ${written}/${products_final.length} products`)
+        } catch (error) {
+          console.error(`❌ Error writing batch:`, error.message)
+        }
+      }
+
+      console.log(`\n✅ Import completed successfully!`)
+      console.log(`📊 Total products ${replace ? 'inserted' : 'upserted'}: ${written}`)
+    }
+
+    // Show statistics — use local data in dry-run, query DB otherwise
+    let statsData
+    if (dryRun) {
+      statsData = products_final
+    } else {
+      const { data: categoryData, error: catError } = await supabase
+        .from('products')
+        .select('category, price, stock, brand')
+      if (!catError && categoryData) {
+        statsData = categoryData
       }
     }
 
-    console.log(`\n✅ Import completed successfully!`)
-    console.log(`📊 Total products imported: ${inserted}`)
-
-    // Show statistics - category stats
-    const { data: categoryData, error: catError } = await supabase
-      .from('products')
-      .select('category, price, stock')
-
-    if (!catError && categoryData) {
+    if (statsData) {
+      // Category stats
       const categoryStats = {}
-      categoryData.forEach((product) => {
+      statsData.forEach((product) => {
         if (!categoryStats[product.category]) {
           categoryStats[product.category] = { count: 0, totalPrice: 0, totalStock: 0 }
         }
@@ -242,18 +277,12 @@ async function importFromExcel(filePath) {
         .forEach(([category, stats]) => {
           const avgPrice = (stats.totalPrice / stats.count).toFixed(2)
           const avgStock = (stats.totalStock / stats.count).toFixed(0)
-          console.log(`  ${category}: ${stats.count} products | Avg Price: $${avgPrice} | Avg Stock: ${avgStock}`)
+          console.log(`  ${category}: ${stats.count} products | Avg Price: lei ${avgPrice} | Avg Stock: ${avgStock}`)
         })
-    }
 
-    // Show top brands
-    const { data: brandData, error: brandError } = await supabase
-      .from('products')
-      .select('brand')
-
-    if (!brandError && brandData) {
+      // Brand stats
       const brandStats = {}
-      brandData.forEach((product) => {
+      statsData.forEach((product) => {
         const brand = product.brand || 'Unknown'
         brandStats[brand] = (brandStats[brand] || 0) + 1
       })
@@ -266,13 +295,11 @@ async function importFromExcel(filePath) {
       topBrands.forEach(([brand, count]) => {
         console.log(`  ${brand}: ${count} products`)
       })
-    }
 
-    // Overall statistics
-    if (categoryData) {
-      const totalProducts = categoryData.length
-      const totalStock = categoryData.reduce((sum, p) => sum + (p.stock || 0), 0)
-      const prices = categoryData.map(p => p.price || 0).filter(p => p > 0)
+      // Overall statistics
+      const totalProducts = statsData.length
+      const totalStock = statsData.reduce((sum, p) => sum + (p.stock || 0), 0)
+      const prices = statsData.map(p => p.price || 0).filter(p => p > 0)
       const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0
       const minPrice = prices.length > 0 ? Math.min(...prices) : 0
       const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
@@ -280,8 +307,8 @@ async function importFromExcel(filePath) {
       console.log('\n📊 Overall statistics:')
       console.log(`  Total Products: ${totalProducts}`)
       console.log(`  Total Stock: ${totalStock}`)
-      console.log(`  Avg Price: $${avgPrice.toFixed(2)}`)
-      console.log(`  Price Range: $${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`)
+      console.log(`  Avg Price: lei ${avgPrice.toFixed(2)}`)
+      console.log(`  Price Range: lei ${minPrice.toFixed(2)} - lei ${maxPrice.toFixed(2)}`)
     }
 
     process.exit(0)
@@ -314,8 +341,18 @@ function buildTags(row) {
   return Array.from(tags)
 }
 
-// Get file path from command line arguments
-const filePath = process.argv[2] || './products.xlsx'
+// Parse CLI flags
+const args = process.argv.slice(2)
+const dryRun = args.includes('--dry-run')
+const replace = args.includes('--replace')
+const filePath = args.find(a => !a.startsWith('--')) || './products.xlsx'
+
+if (replace) {
+  console.log('⚠️  WARNING: --replace will delete ALL existing products before import')
+}
+if (dryRun) {
+  console.log('ℹ️  DRY RUN mode — no database writes will be performed')
+}
 
 console.log(`🚀 Starting Excel import...`)
 console.log(`📁 File path: ${path.resolve(filePath)}`)
