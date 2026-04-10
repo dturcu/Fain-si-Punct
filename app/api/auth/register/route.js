@@ -1,12 +1,8 @@
 import bcrypt from 'bcryptjs'
 import { createToken, getGuestSessionId } from '@/lib/auth'
 import { getUserByEmail, createUser, migrateGuestToUser } from '@/lib/supabase-queries'
-import { applyRateLimit } from '@/middleware/rate-limit'
 
 export async function POST(request) {
-  const limited = applyRateLimit(request, 'auth')
-  if (limited) return limited
-
   try {
     const { email, password, firstName, lastName } = await request.json()
 
@@ -56,7 +52,6 @@ export async function POST(request) {
     return Response.json(
       {
         success: true,
-        token,
         user: userResponse,
       },
       {

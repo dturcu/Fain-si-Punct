@@ -301,7 +301,9 @@ export default function OrderDetailPage() {
           {(payMethod === 'card' || payMethod === 'revolut') && (
             <>
               <Script
-                src="https://sandbox-merchant.revolut.com/embed.js"
+                src={process.env.NEXT_PUBLIC_REVOLUT_ENVIRONMENT === 'production'
+                  ? 'https://merchant.revolut.com/embed.js'
+                  : 'https://sandbox-merchant.revolut.com/embed.js'}
                 strategy="afterInteractive"
                 onLoad={() => {
                   if (revolutToken && !revolutInitialized.current) {

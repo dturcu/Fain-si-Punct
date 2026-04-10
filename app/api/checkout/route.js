@@ -4,8 +4,6 @@ import { getSessionContext } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
 import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
-import { applyRateLimit } from '@/middleware/rate-limit'
-
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
@@ -13,9 +11,6 @@ function generateOrderNumber() {
 }
 
 export async function POST(request) {
-  const limited = applyRateLimit(request, 'checkout')
-  if (limited) return limited
-
   try {
     const session = getSessionContext(request)
 

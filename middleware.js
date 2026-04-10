@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { Redis } from '@upstash/redis'
 
 /**
  * Edge-compatible JWT payload reader.
@@ -18,40 +19,44 @@ function getTokenPayload(token) {
 }
 
 /**
- * In-memory rate limiter using a sliding window per IP.
- * Note: in a multi-instance/serverless deployment (Vercel) each instance has
- * its own map, so this won't coordinate across instances. For production scale,
- * replace the store with an Upstash Redis call (already available in this project).
- * Even without coordination, this provides meaningful protection per-instance.
+ * Upstash Redis rate limiter.
+ * Coordinates across all serverless instances via a shared Redis store.
+ * Falls back to allowing requests if Redis is unavailable (fail-open).
  */
-const store = new Map()
-
-function isRateLimited(ip, limit, windowMs) {
-  const now = Date.now()
-  const windowStart = now - windowMs
-  const key = ip || 'unknown'
-
-  const timestamps = (store.get(key) || []).filter((t) => t > windowStart)
-  if (timestamps.length >= limit) return true
-
-  timestamps.push(now)
-  store.set(key, timestamps)
-
-  // Prevent unbounded memory growth — evict after 2× the window
-  setTimeout(() => store.delete(key), windowMs * 2)
-  return false
+let redis
+try {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  }
+} catch (e) {
+  // Fall back to no rate limiting if Redis is unavailable
 }
 
-// Route-specific limits: [maxRequests, windowMs]
+async function checkRateLimit(ip, route, limit, windowSec) {
+  if (!redis) return true // No rate limiting without Redis
+  try {
+    const key = `rate:${route}:${ip}`
+    const current = await redis.incr(key)
+    if (current === 1) await redis.expire(key, windowSec)
+    return current <= limit
+  } catch {
+    return true // Fail open if Redis errors
+  }
+}
+
+// Route-specific limits: [maxRequests, windowSeconds]
 const LIMITS = {
-  '/api/auth/login':    [10,  15 * 60 * 1000],  // 10 per 15 min
-  '/api/auth/register': [5,   60 * 60 * 1000],  // 5 per hour
-  '/api/checkout':      [10,  60 * 60 * 1000],  // 10 per hour
-  '/api/payments':      [20,  60 * 60 * 1000],  // 20 per hour
-  '/api/reviews':       [30,  60 * 60 * 1000],  // 30 per hour
+  '/api/auth/login':    [10,  15 * 60],     // 10 per 15 min
+  '/api/auth/register': [5,   60 * 60],     // 5 per hour
+  '/api/checkout':      [10,  60 * 60],     // 10 per hour
+  '/api/payments':      [20,  60 * 60],     // 20 per hour
+  '/api/reviews':       [30,  60 * 60],     // 30 per hour
 }
 
-export function middleware(request) {
+export async function middleware(request) {
   const { pathname } = request.nextUrl
 
   // Admin route guard — check JWT claims before serving admin pages.
@@ -72,7 +77,7 @@ export function middleware(request) {
   const matchedPath = Object.keys(LIMITS).find((p) => pathname.startsWith(p))
   if (!matchedPath) return NextResponse.next()
 
-  const [limit, windowMs] = LIMITS[matchedPath]
+  const [limit, windowSec] = LIMITS[matchedPath]
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
@@ -81,14 +86,15 @@ export function middleware(request) {
   // Skip rate limiting for localhost in development
   if (ip === '127.0.0.1' || ip === '::1') return NextResponse.next()
 
-  if (isRateLimited(ip, limit, windowMs)) {
+  const allowed = await checkRateLimit(ip, matchedPath, limit, windowSec)
+  if (!allowed) {
     return new NextResponse(
       JSON.stringify({ error: 'Too many requests, please try again later.' }),
       {
         status: 429,
         headers: {
           'Content-Type': 'application/json',
-          'Retry-After': String(Math.ceil(windowMs / 1000)),
+          'Retry-After': String(windowSec),
         },
       }
     )

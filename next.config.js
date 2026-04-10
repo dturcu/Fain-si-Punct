@@ -31,7 +31,7 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value: 'camera=(), microphone=(), geolocation=(), usb=(), bluetooth=()',
           },
           {
             key: 'X-DNS-Prefetch-Control',
@@ -45,12 +45,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https:",
-              "font-src 'self'",
-              "connect-src 'self' https://api.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://*.supabase.co",
-              "frame-src https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com",
+              "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://sandbox-merchant.revolut.com https://merchant.revolut.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "connect-src 'self' https://api.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://*.supabase.co https://sandbox-merchant.revolut.com https://merchant.revolut.com",
+              "frame-src https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://sandbox-merchant.revolut.com https://merchant.revolut.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
