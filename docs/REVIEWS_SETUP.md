@@ -13,57 +13,52 @@ The Reviews & Ratings system enables customers to submit reviews and ratings for
 
 ## Database Schema
 
-### Review Model
+### Reviews Table (Supabase PostgreSQL)
 
-Located at `/models/Review.js`
+Defined in `supabase/schema.sql`.
 
-```javascript
-{
-  productId: ObjectId,          // Reference to Product
-  userId: ObjectId,             // Reference to User (reviewer)
-  orderId: ObjectId,            // Reference to Order (proof of purchase)
-  rating: Number (1-5),         // Star rating
-  title: String,                // Review title (required, max 200 chars)
-  comment: String,              // Review body (optional, max 5000 chars)
-  verified: Boolean,            // Purchased product flag
-  helpful: Number,              // Count of helpful votes
-  helpfulVotes: Array,          // Tracking individual votes
-  createdAt: Date,              // Created timestamp
-  updatedAt: Date               // Updated timestamp
-}
+```sql
+reviews (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id      UUID REFERENCES products(id),
+  user_id         UUID REFERENCES users(id),
+  order_id        UUID REFERENCES orders(id),
+  rating          INTEGER CHECK (rating BETWEEN 1 AND 5),
+  title           TEXT NOT NULL,           -- max 200 chars
+  comment         TEXT,                    -- max 5000 chars
+  verified        BOOLEAN DEFAULT FALSE,
+  helpful         INTEGER DEFAULT 0,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+)
 ```
 
 **Indexes:**
-- Unique compound index: `(productId, userId)` - One review per user per product
-- Standard indexes: `productId`, `rating`, `createdAt`, `helpful`
+- Unique compound index: `(product_id, user_id)` -- one review per user per product
+- Standard indexes: `product_id`, `rating`, `created_at`, `helpful`
 
-### Product Model Updates
+### Product Review Aggregation
 
-The Product model now includes aggregated review statistics:
+Products table includes aggregated review fields:
 
-```javascript
-{
-  avgRating: Number,            // Average rating (0-5)
-  reviewCount: Number,          // Total review count
-  ratingDistribution: {         // Histogram of ratings
-    5: Number,
-    4: Number,
-    3: Number,
-    2: Number,
-    1: Number
-  }
-}
+```sql
+products (
+  ...
+  avg_rating           NUMERIC(3,2) DEFAULT 0,
+  review_count         INTEGER DEFAULT 0,
+  rating_distribution  JSONB DEFAULT '{"1":0,"2":0,"3":0,"4":0,"5":0}'
+)
 ```
 
-### Order Model Updates
+### Orders Table
 
-The Order model now tracks the user who placed the order:
+Orders track the user for purchase verification:
 
-```javascript
-{
-  userId: ObjectId,             // Reference to User
+```sql
+orders (
   ...
-}
+  user_id  UUID REFERENCES users(id)
+)
 ```
 
 ## API Endpoints
@@ -86,7 +81,7 @@ Query Parameters:
   "success": true,
   "data": [
     {
-      "_id": "...",
+      "id": "a1b2c3d4-...",
       "rating": 5,
       "title": "Great product!",
       "comment": "...",
@@ -309,7 +304,7 @@ Verifies if a user has purchased a specific product.
 #### getPurchasedProducts(userId)
 Gets all product IDs purchased by a user.
 
-**Returns:** Array of product ObjectIds
+**Returns:** Array of product UUIDs
 
 #### getUserOrders(userId, options)
 Gets all orders for a user with pagination.

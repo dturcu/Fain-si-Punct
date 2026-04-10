@@ -1,50 +1,7 @@
 /**
  * Input sanitization middleware for security
- * Prevents NoSQL injection, XSS, and other input-based attacks
+ * Prevents XSS and validates common input formats
  */
-
-/**
- * Sanitize strings to prevent NoSQL injection
- * Remove dangerous MongoDB operators
- */
-export function sanitizeNoSQL(obj) {
-  if (typeof obj !== 'object' || obj === null) {
-    return obj
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(sanitizeNoSQL)
-  }
-
-  const sanitized = {}
-
-  for (const [key, value] of Object.entries(obj)) {
-    // Block keys that start with $ (MongoDB operators)
-    if (key.startsWith('$')) {
-      console.warn(`Blocked NoSQL injection attempt: key "${key}"`)
-      continue
-    }
-
-    // Block dots in keys (nested property injection)
-    if (key.includes('.')) {
-      console.warn(`Blocked NoSQL injection attempt: key "${key}" contains dot`)
-      continue
-    }
-
-    if (typeof value === 'string') {
-      // Remove dangerous characters
-      sanitized[key] = value
-        .replace(/[\$]/g, '') // Remove $ character
-        .trim()
-    } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = sanitizeNoSQL(value)
-    } else {
-      sanitized[key] = value
-    }
-  }
-
-  return sanitized
-}
 
 /**
  * Sanitize strings to prevent XSS attacks
@@ -106,17 +63,31 @@ export function validateZipCode(zip) {
 }
 
 /**
- * Validate MongoDB ObjectId format
+ * Validate UUID format
  */
-export function validateObjectId(id) {
-  return /^[0-9a-fA-F]{24}$/.test(id)
+export function validateUUID(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 }
 
 /**
- * Sanitize JSON payload
+ * Sanitize a payload object (trim strings, apply XSS protection)
  */
 export function sanitizePayload(payload, schema = {}) {
-  const sanitized = sanitizeNoSQL(payload)
+  if (typeof payload !== 'object' || payload === null) {
+    return payload
+  }
+
+  const sanitized = {}
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (typeof value === 'string') {
+      sanitized[key] = value.trim()
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      sanitized[key] = sanitizePayload(value)
+    } else {
+      sanitized[key] = value
+    }
+  }
 
   // Validate against schema if provided
   if (Object.keys(schema).length > 0) {
@@ -183,12 +154,7 @@ export async function sanitizationMiddleware(request) {
 
       if (contentType?.includes('application/json')) {
         const body = await request.json()
-
-        // Sanitize the body
-        const sanitized = sanitizeNoSQL(body)
-
-        // Return modified request (Note: In Next.js, we can't easily modify request)
-        // Instead, call the handler with sanitized data
+        const sanitized = sanitizePayload(body)
         return sanitized
       }
     }

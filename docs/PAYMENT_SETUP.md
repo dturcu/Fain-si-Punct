@@ -64,8 +64,10 @@ NEXT_PUBLIC_PAYPAL_CLIENT_ID=YOUR_CLIENT_ID
 # API URL
 NEXT_PUBLIC_API_URL=http://localhost:3000  # Update in production
 
-# Database
-MONGODB_URI=mongodb://localhost:27017/ecommerce
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # JWT
 JWT_SECRET=your-jwt-secret-key-change-in-production
@@ -228,38 +230,28 @@ NEXT_PUBLIC_PAYPAL_CLIENT_ID=Live_ClientID
 
 ## Database Setup
 
-### Payment Model Indexes
+### Payments Table (Supabase PostgreSQL)
 
-The Payment model includes the following indexes for optimal query performance:
+The `payments` table is defined in `supabase/schema.sql` with appropriate indexes.
 
-```javascript
-// Created automatically:
-- { orderId: 1, type: 1 }
-- { externalId: 1 }
-- { status: 1, type: 1 }
-- { createdAt: 1 }
-```
-
-### MongoDB Collections
-
-**payments** collection structure:
-```javascript
-{
-  _id: ObjectId,
-  orderId: ObjectId,           // Reference to Order
-  type: 'stripe' | 'paypal',
-  externalId: String,          // Stripe PI ID or PayPal Order ID
-  amount: Number,              // In cents
-  currency: String,            // USD, EUR, etc.
-  status: 'pending' | 'processing' | 'succeeded' | 'failed',
-  paymentMethod: String,       // 'card' or 'paypal'
-  metadata: Object,            // Additional data
-  webhookVerified: Boolean,    // Safety flag
-  errorMessage: String,        // Error details if failed
-  retryCount: Number,          // Number of retry attempts
-  createdAt: Date,
-  updatedAt: Date
-}
+**Table structure:**
+```sql
+payments (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id        UUID REFERENCES orders(id),
+  type            TEXT NOT NULL,          -- 'stripe', 'paypal', 'revolut', 'ramburs'
+  external_id     TEXT,                   -- Stripe PI ID, PayPal Order ID, etc.
+  amount          INTEGER NOT NULL,       -- In smallest currency unit (bani for RON)
+  currency        TEXT DEFAULT 'RON',
+  status          TEXT DEFAULT 'pending', -- pending, processing, succeeded, failed
+  payment_method  TEXT,                   -- 'card', 'paypal', 'revolut', 'ramburs'
+  metadata        JSONB,                  -- Additional provider data
+  webhook_verified BOOLEAN DEFAULT FALSE,
+  error_message   TEXT,
+  retry_count     INTEGER DEFAULT 0,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+)
 ```
 
 ---
@@ -273,7 +265,7 @@ Create a payment intent for Stripe or PayPal.
 **Request:**
 ```json
 {
-  "orderId": "507f1f77bcf86cd799439011",
+  "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "method": "stripe" | "paypal"
 }
 ```
@@ -303,7 +295,7 @@ Confirm a payment after client-side processing.
 **Request:**
 ```json
 {
-  "orderId": "507f1f77bcf86cd799439011",
+  "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "paymentMethod": "stripe" | "paypal",
   "paymentIntentId": "pi_xxx",     // For Stripe
   "paypalOrderId": "3SZ70Z4Z..."   // For PayPal
@@ -314,7 +306,7 @@ Confirm a payment after client-side processing.
 ```json
 {
   "success": true,
-  "orderId": "507f1f77bcf86cd799439011",
+  "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "paymentStatus": "paid",
   "message": "Payment confirmed successfully"
 }
@@ -376,34 +368,18 @@ PayPal uses IPN (Instant Payment Notification). Note that PayPal webhooks requir
 
 ### Local Testing Setup
 
-1. **Start MongoDB:**
-   ```bash
-   mongod
-   ```
-
-2. **Install dependencies:**
+1. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. **Create test .env.local:**
+2. **Create test .env.local:**
    ```bash
-   STRIPE_PUBLIC_KEY=pk_test_...
-   STRIPE_SECRET_KEY=sk_test_...
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   NEXT_PUBLIC_STRIPE_PUBLIC_KEY=pk_test_...
-
-   PAYPAL_MODE=sandbox
-   PAYPAL_CLIENT_ID=Sandbox_...
-   PAYPAL_CLIENT_SECRET=Sandbox_...
-   NEXT_PUBLIC_PAYPAL_CLIENT_ID=Sandbox_...
-
-   NEXT_PUBLIC_API_URL=http://localhost:3000
-   MONGODB_URI=mongodb://localhost:27017/ecommerce
-   JWT_SECRET=test-secret
+   cp .env.example .env.local
+   # Fill in Supabase, Stripe, and PayPal test credentials
    ```
 
-4. **Run development server:**
+3. **Run development server:**
    ```bash
    npm run dev
    ```
