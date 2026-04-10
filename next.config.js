@@ -11,6 +11,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'cdn.shopify.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: 'jobalots-production-bucket.s3.eu-west-2.amazonaws.com' },
     ],
   },
   async headers() {
@@ -48,7 +49,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://sandbox-merchant.revolut.com https://merchant.revolut.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://jobalots-production-bucket.s3.eu-west-2.amazonaws.com",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://api.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://*.supabase.co https://sandbox-merchant.revolut.com https://merchant.revolut.com",
               "frame-src https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://sandbox-merchant.revolut.com https://merchant.revolut.com",
