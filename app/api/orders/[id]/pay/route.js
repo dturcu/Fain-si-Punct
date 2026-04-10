@@ -89,11 +89,7 @@ export async function POST(request, { params }) {
     console.error('orders/[id]/pay error:', error)
 
     return Response.json(
-<<<<<<< HEAD
-      { success: false, error: 'Failed to update payment status' },
-=======
       { success: false, error: 'A apărut o eroare internă' },
->>>>>>> origin/claude/setup-ecommerce-repo-F2HVM
       { status: 500 }
     )
   }
