@@ -195,8 +195,8 @@ export default function Home() {
               </svg>
             </div>
             <div>
-              <strong>Retur gratuit 30 zile</strong>
-              <span>Fara griji</span>
+              <strong>Retururi in 14 zile</strong>
+              <span>Conform legislatiei</span>
             </div>
           </div>
           <div className={styles.benefitItem}>
@@ -206,8 +206,8 @@ export default function Home() {
               </svg>
             </div>
             <div>
-              <strong>Suport 24/7</strong>
-              <span>Suntem aici pentru tine</span>
+              <strong>Suport prin email</strong>
+              <span>Raspundem prompt</span>
             </div>
           </div>
         </div>

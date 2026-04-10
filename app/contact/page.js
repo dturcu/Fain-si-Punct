@@ -29,50 +29,48 @@ export default function ContactPage() {
 
   return (
     <div className={styles.container}>
-      <h1>Contact Us</h1>
+      <h1>Contact</h1>
 
       <section className={styles.section}>
         <div className={styles.contactInfo}>
           <div className={styles.infoItem}>
             <h3>Email</h3>
             <p>
-              <a href="mailto:support@fain-si-punct.com">support@fain-si-punct.com</a>
+              <a href="mailto:contact@fain-si-punct.ro">contact@fain-si-punct.ro</a>
             </p>
           </div>
 
           <div className={styles.infoItem}>
-            <h3>Phone</h3>
-            <p>1-800-FAIN</p>
+            <h3>Telefon</h3>
+            <p>+40 XXX XXX XXX</p>
           </div>
 
           <div className={styles.infoItem}>
-            <h3>Address</h3>
+            <h3>Adresa</h3>
             <p>
-              Fain si Punct Inc.
+              Fain si Punct SRL
               <br />
-              123 Commerce Street
-              <br />
-              New York, NY 10001
+              Iasi, Romania
             </p>
           </div>
 
           <div className={styles.infoItem}>
-            <h3>Hours</h3>
+            <h3>Program</h3>
             <p>
-              Monday - Friday: 9AM - 6PM EST
+              Luni - Vineri: 9:00 - 18:00 EET
               <br />
-              Saturday - Sunday: 10AM - 4PM EST
+              Sambata - Duminica: Inchis
             </p>
           </div>
         </div>
       </section>
 
       <section className={styles.section}>
-        <h2>Send us a Message</h2>
+        <h2>Trimite-ne un mesaj</h2>
 
         {submitted && (
           <div className={styles.success}>
-            Thank you for your message! We'll get back to you soon.
+            Multumim pentru mesaj! Vom reveni cu un raspuns in cel mai scurt timp.
           </div>
         )}
 
@@ -80,7 +78,7 @@ export default function ContactPage() {
           <input
             type="text"
             name="name"
-            placeholder="Your Name"
+            placeholder="Numele tau"
             required
             value={formData.name}
             onChange={handleChange}
@@ -88,7 +86,7 @@ export default function ContactPage() {
           <input
             type="email"
             name="email"
-            placeholder="Your Email"
+            placeholder="Email-ul tau"
             required
             value={formData.email}
             onChange={handleChange}
@@ -96,20 +94,20 @@ export default function ContactPage() {
           <input
             type="text"
             name="subject"
-            placeholder="Subject"
+            placeholder="Subiect"
             required
             value={formData.subject}
             onChange={handleChange}
           />
           <textarea
             name="message"
-            placeholder="Your Message"
+            placeholder="Mesajul tau"
             rows="6"
             required
             value={formData.message}
             onChange={handleChange}
           ></textarea>
-          <button type="submit">Send Message</button>
+          <button type="submit">Trimite mesajul</button>
         </form>
       </section>
     </div>
