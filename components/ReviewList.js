@@ -66,7 +66,6 @@ export default function ReviewList({ productId, userId, onReviewDeleted }) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify({
           userId,
@@ -93,7 +92,6 @@ export default function ReviewList({ productId, userId, onReviewDeleted }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify({
           userId,

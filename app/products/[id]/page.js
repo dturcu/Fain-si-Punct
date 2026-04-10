@@ -141,8 +141,6 @@ export default function ProductDetail({ params: paramsPromise }) {
       setMessage('')
       setMessageType('')
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-
       // Require variant selection if product has variants
       if (hasVariants && !selectedVariant) {
         setMessageType('error')
@@ -154,7 +152,6 @@ export default function ProductDetail({ params: paramsPromise }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           productId: product.id,
@@ -203,13 +200,10 @@ export default function ProductDetail({ params: paramsPromise }) {
         return
       }
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-
       const response = await fetch(`/api/cart`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           productId: product.id,
