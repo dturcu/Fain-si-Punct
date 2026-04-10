@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS orders (
   -- Payment
   payment_id UUID,
   payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'processing', 'paid', 'failed', 'refunded', 'pending_collection')),
-  payment_method TEXT CHECK (payment_method IN ('stripe', 'paypal')),
+  payment_method TEXT CHECK (payment_method IN ('card', 'revolut', 'paypal', 'ramburs')),
   paid_at TIMESTAMPTZ,
   -- Shipping tracking
   tracking_number TEXT,

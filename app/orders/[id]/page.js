@@ -317,30 +317,34 @@ export default function OrderDetailPage() {
             </>
           )}
 
-          {/* Fallback / manual pay button */}
-          <button
-            className={styles.payBtn}
-            onClick={handleSimulatePayment}
-            disabled={paying}
-          >
-            {paying ? (
-              <>
-                <span className={styles.paySpinner} />
-                Se proceseaza plata...
-              </>
-            ) : (
-              `Plateste ${formatPrice(order.total)} cu ${paymentMethodLabels[payMethod] || payMethod}`
-            )}
-          </button>
-          {(payMethod === 'card' || payMethod === 'revolut') ? (
+          {/* Revolut widget note for card/revolut */}
+          {(payMethod === 'card' || payMethod === 'revolut') && (
             <p className={styles.payNote}>
               Platile sunt procesate securizat prin Revolut Business.
-              Butonul de mai sus confirma plata manual daca widgetul Revolut nu se incarca.
             </p>
-          ) : (
-            <p className={styles.payNote}>
-              Plata este simulata in scopuri demonstrative.
-            </p>
+          )}
+
+          {/* Manual pay button — only for cash-on-delivery (ramburs) orders */}
+          {payMethod === 'ramburs' && (
+            <>
+              <button
+                className={styles.payBtn}
+                onClick={handleSimulatePayment}
+                disabled={paying}
+              >
+                {paying ? (
+                  <>
+                    <span className={styles.paySpinner} />
+                    Se proceseaza plata...
+                  </>
+                ) : (
+                  `Confirma plata ${formatPrice(order.total)} - Ramburs`
+                )}
+              </button>
+              <p className={styles.payNote}>
+                Plata se va colecta la livrare.
+              </p>
+            </>
           )}
         </div>
       )}
@@ -474,7 +478,7 @@ function getStatusLabel(status) {
 }
 
 function getPaymentLabel(status) {
-  const labels = { unpaid: 'Neplatita', processing: 'Se proceseaza', paid: 'Platita', failed: 'Esuata', refunded: 'Rambursata' }
+  const labels = { unpaid: 'Neplatita', pending_collection: 'Se colecteaza la livrare', processing: 'Se proceseaza', paid: 'Platita', failed: 'Esuata', refunded: 'Rambursata' }
   return labels[status] || status
 }
 

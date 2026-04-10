@@ -1,11 +1,9 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { getCartByUserId, clearCart, getUserById, createOrder, getCartByGuestSession, clearGuestCart } from '@/lib/supabase-queries'
+import { getCartByUserId, getUserById, getCartByGuestSession, getOrderById } from '@/lib/supabase-queries'
 import { getSessionContext } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
 import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
-import { applyRateLimit } from '@/middleware/rate-limit'
-
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
@@ -13,9 +11,6 @@ function generateOrderNumber() {
 }
 
 export async function POST(request) {
-  const limited = applyRateLimit(request, 'checkout')
-  if (limited) return limited
-
   try {
     const session = getSessionContext(request)
 
@@ -91,78 +86,30 @@ export async function POST(request) {
       }
     }
 
-    // Decrement stock using optimistic locking and re-validate prices
+    // Re-validate prices from DB before passing to RPC
     for (const item of cart.items) {
-      const { data: product } = await supabaseAdmin
-        .from('products')
-        .select('stock, name, price')
-        .eq('id', item.productId)
-        .single()
-
-      if (!product) {
-        return Response.json(
-          { success: false, error: `Produsul ${item.name || item.productId} nu mai este disponibil` },
-          { status: 400 }
-        )
-      }
-
-      // If variant, check variant stock and use variant price
       if (item.variantId) {
         const { data: variant } = await supabaseAdmin
           .from('product_variants')
-          .select('id, stock, price_override')
+          .select('price_override, product_id')
           .eq('id', item.variantId)
           .single()
-
-        if (!variant || variant.stock < item.quantity) {
-          return Response.json(
-            { success: false, error: `Varianta selectata pentru ${product.name} nu mai este disponibila in cantitatea solicitata` },
-            { status: 400 }
-          )
-        }
-
-        // Use variant price if set, otherwise product price
-        item.price = variant.price_override != null ? parseFloat(variant.price_override) : parseFloat(product.price)
-
-        // Optimistic lock on variant stock
-        const { data: updatedVariant } = await supabaseAdmin
-          .from('product_variants')
-          .update({ stock: variant.stock - item.quantity })
-          .eq('id', item.variantId)
-          .eq('stock', variant.stock)
-          .select('id')
-
-        if (!updatedVariant || updatedVariant.length === 0) {
-          return Response.json(
-            { success: false, error: `Varianta selectata pentru ${product.name} nu mai este disponibila in cantitatea solicitata` },
-            { status: 400 }
-          )
+        const { data: product } = await supabaseAdmin
+          .from('products')
+          .select('price')
+          .eq('id', item.productId)
+          .single()
+        if (variant && product) {
+          item.price = variant.price_override != null ? parseFloat(variant.price_override) : parseFloat(product.price)
         }
       } else {
-        // No variant — use product-level stock
-        if (product.stock < item.quantity) {
-          return Response.json(
-            { success: false, error: `Produsul ${product.name} nu mai este disponibil in cantitatea solicitata` },
-            { status: 400 }
-          )
-        }
-
-        // Price re-validation: always use the current DB price
-        item.price = parseFloat(product.price)
-
-        // Only update if stock hasn't changed since we read it (optimistic locking)
-        const { data: updated } = await supabaseAdmin
+        const { data: product } = await supabaseAdmin
           .from('products')
-          .update({ stock: product.stock - item.quantity })
+          .select('price')
           .eq('id', item.productId)
-          .eq('stock', product.stock)
-          .select('id')
-
-        if (!updated || updated.length === 0) {
-          return Response.json(
-            { success: false, error: `Produsul ${product.name} nu mai este disponibil in cantitatea solicitata` },
-            { status: 400 }
-          )
+          .single()
+        if (product) {
+          item.price = parseFloat(product.price)
         }
       }
     }
@@ -175,18 +122,41 @@ export async function POST(request) {
     const shippingCost = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
     const orderTotal = subtotal + shippingCost
 
-    // Create order
+    // Atomic checkout: stock decrement + order creation + cart clearing
     const orderNumber = generateOrderNumber()
-    const order = await createOrder(
-      session.userId,
-      cart.items,
-      orderTotal,
-      customer,
-      shippingAddress,
-      orderNumber,
-      paymentMethod || 'card',
-      session.userId ? null : session.guestSessionId
-    )
+    const rpcItems = cart.items.map(item => ({
+      productId: item.productId,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image,
+      variantId: item.variantId || null,
+      variantLabel: item.variantLabel || null,
+    }))
+
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('process_checkout', {
+      p_user_id: session.userId || null,
+      p_guest_session_id: session.userId ? null : session.guestSessionId,
+      p_items: rpcItems,
+      p_customer: customer,
+      p_shipping_address: shippingAddress,
+      p_payment_method: paymentMethod || 'ramburs',
+      p_order_number: orderNumber,
+      p_total: orderTotal,
+    })
+
+    if (rpcError) {
+      // Surface stock/product errors from the DB function
+      const msg = rpcError.message || 'Checkout failed'
+      const isStockError = msg.includes('Insufficient stock') || msg.includes('not found')
+      return Response.json(
+        { success: false, error: isStockError ? msg : 'A aparut o eroare la finalizarea comenzii' },
+        { status: isStockError ? 400 : 500 }
+      )
+    }
+
+    const orderId = rpcResult.order_id
+    const order = await getOrderById(orderId)
 
     // Queue order confirmation email
     const shouldSendEmail = session.userId
@@ -230,13 +200,6 @@ export async function POST(request) {
       } catch (emailError) {
         console.error('Failed to queue order confirmation email:', emailError)
       }
-    }
-
-    // Clear cart
-    if (session.userId) {
-      await clearCart(session.userId)
-    } else {
-      await clearGuestCart(session.guestSessionId)
     }
 
     return Response.json(
