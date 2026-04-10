@@ -1,4 +1,5 @@
 import '@/styles/globals.css'
+import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import JsonLd from '@/components/JsonLd'
 
@@ -62,7 +63,7 @@ export default function RootLayout({ children }) {
 
         <footer>
           <div className="footer-brand">
-            <a href="/" className="footer-logo">Fain si <span>Punct</span></a>
+            <Link href="/" className="footer-logo">Fain si <span>Punct</span></Link>
             <p className="footer-tagline">Produse alese cu grija, livrate cu drag.</p>
           </div>
           <div className="footer-columns">

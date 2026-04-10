@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
 import styles from '@/styles/checkout.module.css'
 
@@ -183,7 +184,7 @@ export default function CheckoutPage() {
     <div className={styles.container}>
       {/* Breadcrumbs */}
       <nav className={styles.breadcrumbs}>
-        <a href="/">Acasa</a>
+        <Link href="/">Acasa</Link>
         <span className={styles.breadcrumbSep}>&gt;</span>
         <a href="/cart">Cos</a>
         <span className={styles.breadcrumbSep}>&gt;</span>

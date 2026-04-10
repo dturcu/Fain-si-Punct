@@ -82,10 +82,10 @@ export default function FAQPage() {
       </div>
 
       <section className={styles.section}>
-        <h2>Didn't Find Your Answer?</h2>
+        <h2>Nu ai gasit raspunsul?</h2>
         <p>
-          If you have additional questions, please{' '}
-          <a href="/contact">contact our support team</a>.
+          Daca ai intrebari suplimentare, te rugam sa{' '}
+          <a href="/contact">contactezi echipa noastra</a>.
         </p>
       </section>
     </div>
