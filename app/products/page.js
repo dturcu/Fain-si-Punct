@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from '@/styles/products.module.css'
 
 const SORT_OPTIONS = [
@@ -512,7 +513,7 @@ function ProductsContent() {
                         </span>
                       )}
                       {product.image ? (
-                        <img src={product.image} alt={product.name} loading="lazy" />
+                        <Image src={product.image} alt={product.name} width={400} height={400} unoptimized />
                       ) : (
                         <div className={styles.placeholder}>
                           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.2">

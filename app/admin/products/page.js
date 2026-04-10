@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from '@/styles/admin-products.module.css'
 
 export default function AdminProducts() {
@@ -313,7 +314,7 @@ export default function AdminProducts() {
               <label>Imagine produs</label>
               {editData.image && (
                 <div className={styles.imagePreview}>
-                  <img src={editData.image} alt="Preview" />
+                  <Image src={editData.image} alt="Preview" width={400} height={400} unoptimized />
                 </div>
               )}
               <input

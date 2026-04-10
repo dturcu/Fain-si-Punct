@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, use } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import StarRating from '@/components/StarRating'
 import styles from '@/styles/product-detail.module.css'
 
@@ -499,7 +500,7 @@ export default function ProductDetail({ params: paramsPromise }) {
             onKeyDown={(e) => e.key === 'Enter' && allImages.length > 0 && openLightbox()}
           >
             {allImages.length > 0 ? (
-              <img src={allImages[selectedImage]} alt={product.name} />
+              <Image src={allImages[selectedImage]} alt={product.name} width={600} height={600} unoptimized />
             ) : (
               <div className={styles.placeholder}>Imagine indisponibila</div>
             )}
@@ -510,12 +511,15 @@ export default function ProductDetail({ params: paramsPromise }) {
           {allImages.length > 1 && (
             <div className={styles.thumbnails}>
               {allImages.map((img, i) => (
-                <img
+                <Image
                   key={i}
                   src={img}
                   alt={`${product.name} ${i + 1}`}
+                  width={80}
+                  height={80}
                   className={`${styles.thumbnail} ${selectedImage === i ? styles.activeThumbnail : ''}`}
                   onClick={() => setSelectedImage(i)}
+                  unoptimized
                 />
               ))}
             </div>
@@ -811,9 +815,9 @@ export default function ProductDetail({ params: paramsPromise }) {
                 >
                   <div className={styles.relatedImageWrap}>
                     {rp.images && rp.images.length > 0 ? (
-                      <img src={rp.images[0]} alt={rp.name} />
+                      <Image src={rp.images[0]} alt={rp.name} width={400} height={400} unoptimized />
                     ) : rp.image ? (
-                      <img src={rp.image} alt={rp.name} />
+                      <Image src={rp.image} alt={rp.name} width={400} height={400} unoptimized />
                     ) : (
                       <div className={styles.relatedPlaceholder}>Fara imagine</div>
                     )}
@@ -885,9 +889,11 @@ export default function ProductDetail({ params: paramsPromise }) {
             onTouchEnd={handleTouchEnd}
             style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in' }}
           >
-            <img
+            <Image
               src={allImages[selectedImage]}
               alt={product.name}
+              width={1200}
+              height={1200}
               className={styles.lightboxImage}
               style={{
                 transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
@@ -902,6 +908,7 @@ export default function ProductDetail({ params: paramsPromise }) {
                   setPan({ x: 0, y: 0 })
                 }
               }}
+              unoptimized
             />
           </div>
 

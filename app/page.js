@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styles from '@/styles/home.module.css'
 
@@ -263,10 +264,13 @@ export default function Home() {
                     {hasDiscount && (
                       <span className={styles.discountBadge}>-{discountPercent}%</span>
                     )}
-                    <img
+                    <Image
                       src={product.image || (product.images && product.images[0]) || '/placeholder.png'}
                       alt={product.name}
+                      width={400}
+                      height={400}
                       className={styles.productImage}
+                      unoptimized
                     />
                   </div>
                   <div className={styles.productInfo}>

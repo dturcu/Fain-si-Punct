@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styles from '@/styles/cart.module.css'
 import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
@@ -268,10 +269,13 @@ export default function CartPage() {
                     href={`/products/${item.productId}`}
                     className={styles.imageLink}
                   >
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.name}
+                      width={100}
+                      height={100}
                       className={styles.productImage}
+                      unoptimized
                     />
                   </Link>
                   <div className={styles.productDetails}>

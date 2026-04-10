@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from '@/styles/admin-orders.module.css'
 
 const STATUS_LABELS = {
@@ -330,7 +331,7 @@ export default function AdminOrders() {
                               {order.items.map((item, idx) => (
                                 <div key={idx} className={styles.orderItem}>
                                   {item.image && (
-                                    <img src={item.image} alt={item.name} className={styles.orderItemImg} />
+                                    <Image src={item.image} alt={item.name} width={80} height={80} className={styles.orderItemImg} unoptimized />
                                   )}
                                   <div className={styles.orderItemInfo}>
                                     <span className={styles.orderItemName}>{item.name}</span>

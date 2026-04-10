@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import styles from '@/styles/order-detail.module.css'
@@ -427,7 +428,7 @@ export default function OrderDetailPage() {
             {order.items.map((item, i) => (
               <div key={i} className={styles.tableRow}>
                 <div className={styles.itemName}>
-                  {item.image && <img src={item.image} alt={item.name} className={styles.itemImg} />}
+                  {item.image && <Image src={item.image} alt={item.name} width={80} height={80} className={styles.itemImg} unoptimized />}
                   <div>
                     <span>{item.name}</span>
                     {item.variantLabel && (
