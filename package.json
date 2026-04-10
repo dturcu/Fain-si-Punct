@@ -1,8 +1,8 @@
 {
   "type": "module",
-  "name": "ecommerce-platform",
+  "name": "fain-si-punct",
   "version": "2.0.0",
-  "description": "Scalable ecommerce platform with Supabase + Vercel",
+  "description": "Fain si Punct - Romanian ecommerce platform",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

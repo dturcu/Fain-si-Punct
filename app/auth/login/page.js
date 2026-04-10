@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.logo}>
-          Shop<span>Hub</span>
+          Fain <span>si Punct</span>
         </div>
         <h1 className={styles.title}>Autentificare</h1>
 

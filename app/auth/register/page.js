@@ -53,7 +53,7 @@ export default function RegisterPage() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.logo}>
-          Shop<span>Hub</span>
+          Fain <span>si Punct</span>
         </div>
         <h1 className={styles.title}>Creeaza un cont</h1>
 
