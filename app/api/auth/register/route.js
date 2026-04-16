@@ -2,6 +2,18 @@ import bcrypt from 'bcryptjs'
 import { createToken, getGuestSessionId } from '@/lib/auth'
 import { getUserByEmail, createUser, migrateGuestToUser } from '@/lib/supabase-queries'
 import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
+
+/**
+ * Password complexity: min 8 chars, at least one letter AND one digit.
+ * Rationale: discourages trivial passwords without blocking legitimate
+ * international characters (we accept the full Romanian alphabet).
+ */
+function isStrongPassword(pw) {
+  if (typeof pw !== 'string' || pw.length < 8) return false
+  return /[A-Za-zÀ-ÿ]/.test(pw) && /\d/.test(pw)
+}
 
 export async function POST(request) {
   const { ip, userAgent } = getRequestMeta(request)
@@ -9,18 +21,16 @@ export async function POST(request) {
     const { email, password, firstName, lastName } = await request.json()
 
     if (!email || !password) {
-      return Response.json(
-        { success: false, error: 'Email and password required' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.EMAIL_AND_PASSWORD_REQUIRED)
+    }
+
+    if (!isStrongPassword(password)) {
+      return apiError(ERROR_CODES.WEAK_PASSWORD)
     }
 
     const existingUser = await getUserByEmail(email)
     if (existingUser) {
-      return Response.json(
-        { success: false, error: 'Email already exists' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.EMAIL_EXISTS)
     }
 
     const salt = await bcrypt.genSalt(10)
@@ -37,14 +47,12 @@ export async function POST(request) {
         await migrateGuestToUser(guestSessionId, user.id)
       } catch (migrationError) {
         console.error('Guest migration error:', migrationError)
-        // Don't fail registration if migration fails
       }
     }
 
     const userResponse = { ...user }
     delete userResponse.password
 
-    // Clear guest session cookie + set auth token cookie
     const cookies = [
       `token=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`,
     ]
@@ -53,22 +61,13 @@ export async function POST(request) {
     }
 
     return Response.json(
-      {
-        success: true,
-        user: userResponse,
-      },
+      { success: true, user: userResponse },
       {
         status: 201,
-        headers: {
-          'Set-Cookie': cookies,
-        },
+        headers: { 'Set-Cookie': cookies },
       }
     )
   } catch (error) {
-    console.error('Register error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'auth/register')
   }
 }

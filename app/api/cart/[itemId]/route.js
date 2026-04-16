@@ -1,6 +1,8 @@
 import { updateCartItemQuantity, removeFromCart, getCartByUserId, updateGuestCartItemQuantity, removeFromGuestCart, getCartByGuestSession } from '@/lib/supabase-queries'
 import { getSessionContext } from '@/lib/auth'
 import { MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 
 function getCartAndHelpers(session) {
   if (session.userId) {
@@ -17,94 +19,56 @@ function getCartAndHelpers(session) {
   }
 }
 
+async function verifyOwnership(session, itemId) {
+  if (!session.userId && !session.guestSessionId) {
+    return { error: apiError(ERROR_CODES.UNAUTHORIZED) }
+  }
+  const { getCart } = getCartAndHelpers(session)
+  const userCart = await getCart()
+  const belongs = userCart.items?.some(
+    (item) => item._id === itemId || String(item._id) === String(itemId)
+  )
+  if (!userCart.id || !belongs) {
+    return { error: apiError(ERROR_CODES.CART_ITEM_NOT_FOUND) }
+  }
+  return { helpers: getCartAndHelpers(session) }
+}
+
 export async function PUT(request, { params }) {
   try {
     const session = getSessionContext(request)
-
-    if (!session.userId && !session.guestSessionId) {
-      return Response.json(
-        { success: false, error: 'No cart session' },
-        { status: 400 }
-      )
-    }
-
     const { itemId } = await params
-    const { getCart, updateQty } = getCartAndHelpers(session)
 
-    // Verify the cart item belongs to this session's cart
-    const userCart = await getCart()
-    const itemBelongsToUser = userCart.items?.some(
-      (item) => item._id === itemId || String(item._id) === String(itemId)
-    )
-    if (!userCart.id || !itemBelongsToUser) {
-      return Response.json(
-        { success: false, error: 'Cart item not found' },
-        { status: 403 }
-      )
-    }
+    const ownership = await verifyOwnership(session, itemId)
+    if (ownership.error) return ownership.error
 
     const { quantity } = await request.json()
 
     if (!Number.isInteger(quantity) || quantity < 1) {
-      return Response.json(
-        { success: false, error: 'Cantitatea trebuie să fie un număr întreg pozitiv' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.VALIDATION_FAILED, { details: 'quantity must be a positive integer' })
     }
-
     if (quantity > MAX_QUANTITY_PER_ITEM) {
-      return Response.json(
-        { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.QUANTITY_EXCEEDS_MAX)
     }
 
-    const cart = await updateQty(itemId, quantity)
-
+    const cart = await ownership.helpers.updateQty(itemId, quantity)
     return Response.json({ success: true, data: cart })
   } catch (error) {
-    console.error('Cart item error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'cart/[itemId] PUT')
   }
 }
 
 export async function DELETE(request, { params }) {
   try {
     const session = getSessionContext(request)
-
-    if (!session.userId && !session.guestSessionId) {
-      return Response.json(
-        { success: false, error: 'No cart session' },
-        { status: 400 }
-      )
-    }
-
     const { itemId } = await params
-    const { getCart, removeItem } = getCartAndHelpers(session)
 
-    // Verify the cart item belongs to this session's cart
-    const userCart = await getCart()
-    const itemBelongsToUser = userCart.items?.some(
-      (item) => item._id === itemId || String(item._id) === String(itemId)
-    )
-    if (!userCart.id || !itemBelongsToUser) {
-      return Response.json(
-        { success: false, error: 'Cart item not found' },
-        { status: 403 }
-      )
-    }
+    const ownership = await verifyOwnership(session, itemId)
+    if (ownership.error) return ownership.error
 
-    const cart = await removeItem(itemId)
-
+    const cart = await ownership.helpers.removeItem(itemId)
     return Response.json({ success: true, data: cart })
   } catch (error) {
-    console.error('Cart item error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'cart/[itemId] DELETE')
   }
 }

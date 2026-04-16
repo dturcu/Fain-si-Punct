@@ -5,6 +5,8 @@ import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
 import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
 import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
@@ -16,53 +18,34 @@ export async function POST(request) {
     const session = getSessionContext(request)
 
     if (!session.userId && !session.guestSessionId) {
-      return Response.json(
-        { success: false, error: 'No session found' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.UNAUTHORIZED)
     }
 
     const { shippingAddress, customer, paymentMethod } = await request.json()
 
     // Validate customer fields
     if (!customer?.name || !customer.name.trim()) {
-      return Response.json(
-        { success: false, error: 'Numele clientului este obligatoriu' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.MISSING_FIELD, { details: 'customer.name is required' })
     }
     if (!customer?.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
-      return Response.json(
-        { success: false, error: 'Adresa de email nu este valida' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.INVALID_EMAIL)
     }
     if (!customer?.phone) {
-      return Response.json(
-        { success: false, error: 'Numarul de telefon este obligatoriu' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.INVALID_PHONE)
     }
 
     // Validate shipping address fields
     const requiredAddressFields = ['street', 'city', 'state', 'zip']
     for (const field of requiredAddressFields) {
       if (!shippingAddress?.[field] || !shippingAddress[field].trim()) {
-        const fieldLabels = { street: 'Strada', city: 'Orasul', state: 'Judetul', zip: 'Codul postal' }
-        return Response.json(
-          { success: false, error: `${fieldLabels[field]} este obligatoriu/obligatorie` },
-          { status: 400 }
-        )
+        return apiError(ERROR_CODES.MISSING_FIELD, { details: `shippingAddress.${field} is required` })
       }
     }
 
     // Validate payment method
     const validPaymentMethods = ['card', 'revolut', 'paypal', 'ramburs']
     if (!paymentMethod || !validPaymentMethods.includes(paymentMethod)) {
-      return Response.json(
-        { success: false, error: 'Metoda de plata selectata nu este valida' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.INVALID_PAYMENT_METHOD)
     }
 
     // Get cart (authenticated or guest)
@@ -71,19 +54,13 @@ export async function POST(request) {
       : await getCartByGuestSession(session.guestSessionId)
 
     if (!cart || !cart.items || cart.items.length === 0) {
-      return Response.json(
-        { success: false, error: 'Cart is empty' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.CART_EMPTY)
     }
 
     // Enforce per-item quantity cap at checkout too
     for (const item of cart.items) {
       if (item.quantity > MAX_QUANTITY_PER_ITEM) {
-        return Response.json(
-          { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
-          { status: 400 }
-        )
+        return apiError(ERROR_CODES.QUANTITY_EXCEEDS_MAX)
       }
     }
 
@@ -147,13 +124,11 @@ export async function POST(request) {
     })
 
     if (rpcError) {
-      // Surface stock/product errors from the DB function
-      const msg = rpcError.message || 'Checkout failed'
-      const isStockError = msg.includes('Insufficient stock') || msg.includes('not found')
-      return Response.json(
-        { success: false, error: isStockError ? msg : 'A aparut o eroare la finalizarea comenzii' },
-        { status: isStockError ? 400 : 500 }
-      )
+      const msg = rpcError.message || ''
+      if (msg.includes('Insufficient stock')) return apiError(ERROR_CODES.INSUFFICIENT_STOCK)
+      if (msg.includes('not found')) return apiError(ERROR_CODES.PRODUCT_NOT_FOUND)
+      console.error('[checkout] RPC error:', rpcError)
+      return apiError(ERROR_CODES.CHECKOUT_FAILED)
     }
 
     const orderId = rpcResult.order_id
@@ -223,10 +198,6 @@ export async function POST(request) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Checkout error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare la finalizarea comenzii' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'checkout', ERROR_CODES.CHECKOUT_FAILED)
   }
 }

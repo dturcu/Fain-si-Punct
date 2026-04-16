@@ -1,57 +1,46 @@
 import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 
 /**
  * POST /api/auth/reset-password
- * Validates token and sets new password.
+ * Validates the reset token and sets a new password.
  */
 export async function POST(request) {
+  const { ip, userAgent } = getRequestMeta(request)
   try {
     const { token, password } = await request.json()
 
     if (!token) {
-      return Response.json(
-        { success: false, error: 'Token-ul de resetare lipseste' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.INVALID_TOKEN)
     }
 
-    if (!password || password.length < 6) {
-      return Response.json(
-        { success: false, error: 'Parola trebuie sa aiba minim 6 caractere' },
-        { status: 400 }
-      )
+    // Min 8 chars + letter + digit (matches register endpoint)
+    if (typeof password !== 'string' || password.length < 8 || !/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password)) {
+      return apiError(ERROR_CODES.WEAK_PASSWORD)
     }
 
     // Find user with this token
     const { data: user } = await supabaseAdmin
       .from('users')
-      .select('id, reset_token_expires')
+      .select('id, email, reset_token_expires')
       .eq('reset_token', token)
       .single()
 
     if (!user) {
-      return Response.json(
-        { success: false, error: 'Token-ul de resetare este invalid sau a expirat' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.INVALID_TOKEN)
     }
 
-    // Check expiry
     if (new Date(user.reset_token_expires) < new Date()) {
-      // Clear expired token
       await supabaseAdmin
         .from('users')
         .update({ reset_token: null, reset_token_expires: null })
         .eq('id', user.id)
-
-      return Response.json(
-        { success: false, error: 'Token-ul de resetare a expirat. Te rugam sa soliciti unul nou.' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.INVALID_TOKEN)
     }
 
-    // Hash new password and clear token
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
@@ -64,15 +53,13 @@ export async function POST(request) {
       })
       .eq('id', user.id)
 
+    logAuditEvent('password_reset', { userId: user.id, email: user.email, ip, userAgent })
+
     return Response.json({
       success: true,
       message: 'Parola a fost resetata cu succes. Te poti autentifica cu noua parola.',
     })
   } catch (error) {
-    console.error('Reset password error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'auth/reset-password')
   }
 }
