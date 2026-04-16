@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs'
 import { createToken, getGuestSessionId } from '@/lib/auth'
 import { getUserByEmail, migrateGuestToUser } from '@/lib/supabase-queries'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 export async function POST(request) {
+  const { ip, userAgent } = getRequestMeta(request)
   try {
     const { email, password } = await request.json()
 
@@ -15,6 +17,7 @@ export async function POST(request) {
 
     const user = await getUserByEmail(email)
     if (!user) {
+      logAuditEvent('login_failed', { email, ip, userAgent, metadata: { reason: 'no_such_user' } })
       return Response.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
@@ -25,12 +28,14 @@ export async function POST(request) {
     // For now, store hashed password in 'password' field
     const isPasswordValid = await bcrypt.compare(password, user.password || '')
     if (!isPasswordValid) {
+      logAuditEvent('login_failed', { userId: user.id, email, ip, userAgent, metadata: { reason: 'bad_password' } })
       return Response.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
+    logAuditEvent('login_success', { userId: user.id, email: user.email, ip, userAgent })
     const token = createToken(user.id, user.email, user.role)
 
     // Migrate guest cart/orders to the logged-in user
