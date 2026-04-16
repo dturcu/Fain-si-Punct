@@ -59,9 +59,9 @@ export async function POST(request) {
     }
 
     if (method === 'stripe') {
-      return handleStripePayment(order)
+      return handleStripePayment(order, auth)
     } else {
-      return handlePayPalPayment(order)
+      return handlePayPalPayment(order, auth)
     }
   } catch (error) {
     console.error('Error creating payment intent:', error)
@@ -72,7 +72,7 @@ export async function POST(request) {
   }
 }
 
-async function handleStripePayment(order) {
+async function handleStripePayment(order, auth) {
   try {
     const amountInCents = Math.round(order.total * 100)
 
@@ -83,6 +83,7 @@ async function handleStripePayment(order) {
       metadata: {
         userId: auth?.userId || 'guest',
       },
+      idempotencyKey: `pi_order_${order.id}`,
     })
 
     if (!result.success) {
@@ -134,7 +135,7 @@ async function handleStripePayment(order) {
   }
 }
 
-async function handlePayPalPayment(order) {
+async function handlePayPalPayment(order, _auth) {
   try {
     const result = await createPayPalOrder({
       amount: Math.round(order.total * 100),
