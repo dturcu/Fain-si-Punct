@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
 import JsonLd from '@/components/JsonLd'
+import CookieConsent from '@/components/CookieConsent'
 
 // Self-hosted via next/font — eliminates render-blocking Google Fonts
 // CSS request, FOUT, and CLS.
@@ -21,7 +22,7 @@ export const metadata = {
     default: 'Fain si Punct - Magazin Online',
     template: '%s | Fain si Punct',
   },
-  description: 'Descopera peste 14.000 produse la cele mai bune preturi. Livrare gratuita, retur in 30 zile, plata la livrare.',
+  description: 'Descopera peste 14.000 produse la cele mai bune preturi. Livrare rapida, retur in 14 zile, plata la livrare.',
   openGraph: {
     type: 'website',
     locale: 'ro_RO',
@@ -102,8 +103,14 @@ export default function RootLayout({ children }) {
           </div>
           <div className="footer-bottom">
             <span>&copy; 2026 Fain si Punct. Toate drepturile rezervate.</span>
+            <span className="footer-anpc">
+              <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener noreferrer">ANPC-SAL</a>
+              {' · '}
+              <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">SOL UE</a>
+            </span>
           </div>
         </footer>
+        <CookieConsent />
       </body>
     </html>
   )

@@ -40,6 +40,31 @@ export async function POST(request) {
       )
     }
 
+    // Bounded input — even admin-authenticated. Prevents DoS and limits
+    // xlsx/CSV parser exposure. 10 MB is plenty for ~15k-row manifests.
+    const MAX_IMPORT_BYTES = 10 * 1024 * 1024
+    if (typeof file.size === 'number' && file.size > MAX_IMPORT_BYTES) {
+      return Response.json(
+        { success: false, error: 'File too large (max 10 MB)' },
+        { status: 413 }
+      )
+    }
+
+    // Mime-type allowlist: CSV variants and Excel workbooks.
+    const allowedTypes = new Set([
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain', // some browsers send this for .csv
+      '', // formData files sometimes have empty type
+    ])
+    if (file.type && !allowedTypes.has(file.type)) {
+      return Response.json(
+        { success: false, error: `Unsupported file type: ${file.type}` },
+        { status: 415 }
+      )
+    }
+
     const text = await file.text()
     const lines = text.split('\n').slice(1) // Skip header
 
