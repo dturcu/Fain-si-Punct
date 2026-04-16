@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from '@/styles/products.module.css'
 
 const SORT_OPTIONS = [
@@ -463,7 +464,12 @@ function ProductsContent() {
                   <Link href={`/products/${product.id}`} className={styles.cardLink}>
                     <div className={styles.cardImageWrap}>
                       {product.image ? (
-                        <img src={product.image} alt={product.name} loading="lazy" />
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          sizes="(max-width: 600px) 50vw, (max-width: 1100px) 33vw, 25vw"
+                        />
                       ) : (
                         <div className={styles.placeholder}>
                           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1">

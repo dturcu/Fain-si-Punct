@@ -162,6 +162,23 @@
   box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15);
 }
 
+.fieldError {
+  display: block;
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.checkoutError {
+  padding: 0.85rem 1rem;
+  background: #fdf2f2;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  color: #c0392b;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+
 /* Row */
 .row {
   display: grid;
@@ -425,6 +442,28 @@
 
 .empty button:hover {
   background: #1a2332;
+}
+
+/* Guest Banner */
+.guestBanner {
+  background: #f0f8ff;
+  border: 1px solid #b8d4e8;
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.guestBannerLink {
+  color: #0066c0;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 0.25rem;
+}
+
+.guestBannerLink:hover {
+  text-decoration: underline;
 }
 
 /* Responsive */

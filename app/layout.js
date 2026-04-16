@@ -1,20 +1,51 @@
 import '@/styles/globals.css'
 import Navbar from '@/components/Navbar'
+import Providers from '@/components/Providers'
 
 export const metadata = {
-  title: 'ShopHub - Magazin Online',
-  description: 'Descopera peste 14.000 produse la cele mai bune preturi',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://fainsi-punct.ro'),
+  title: {
+    default: 'Fain si Punct - Magazin Online',
+    template: '%s | Fain si Punct',
+  },
+  description: 'Descopera mii de produse la cele mai bune preturi. Livrare rapida in Romania.',
+  openGraph: {
+    type: 'website',
+    locale: 'ro_RO',
+    siteName: 'Fain si Punct',
+    title: 'Fain si Punct - Magazin Online',
+    description: 'Descopera mii de produse la cele mai bune preturi. Livrare rapida in Romania.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Fain si Punct - Magazin Online',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Fain si Punct - Magazin Online',
+    description: 'Descopera mii de produse la cele mai bune preturi. Livrare rapida in Romania.',
+    images: ['/og-image.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="ro">
       <body>
-        <Navbar />
+        <Providers>
+          <Navbar />
 
-        <main>{children}</main>
+          <main>{children}</main>
 
-        <footer>
+          <footer>
           <div className="footer-columns">
             <div className="footer-col">
               <h4>Companie</h4>
@@ -48,6 +79,7 @@ export default function RootLayout({ children }) {
             &copy; 2024 ShopHub. Toate drepturile rezervate.
           </div>
         </footer>
+        </Providers>
       </body>
     </html>
   )

@@ -11,6 +11,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingItems, setUpdatingItems] = useState({})
+  const [isGuest, setIsGuest] = useState(false)
 
   useEffect(() => {
     fetchCart()
@@ -21,13 +22,19 @@ export default function CartPage() {
       const response = await fetch('/api/cart')
 
       if (response.status === 401) {
-        router.push('/auth/login')
+        // Guest mode: load from localStorage
+        setIsGuest(true)
+        const raw = localStorage.getItem('guestCart')
+        const items = raw ? JSON.parse(raw) : []
+        setCart({ items })
+        setLoading(false)
         return
       }
 
       const data = await response.json()
 
       if (data.success) {
+        setIsGuest(false)
         setCart(data.data)
       } else {
         setError(data.error)
@@ -39,8 +46,23 @@ export default function CartPage() {
     }
   }
 
+  // Guest cart helpers
+  const saveGuestCart = (items) => {
+    localStorage.setItem('guestCart', JSON.stringify(items))
+    window.dispatchEvent(new Event('cart-updated'))
+  }
+
   const handleQuantityChange = async (itemId, newQuantity) => {
     if (newQuantity < 1) return
+
+    if (isGuest) {
+      const items = cart.items.map((item) =>
+        item.productId === itemId ? { ...item, quantity: newQuantity } : item
+      )
+      setCart({ items })
+      saveGuestCart(items)
+      return
+    }
 
     setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
 
@@ -69,6 +91,13 @@ export default function CartPage() {
   }
 
   const handleRemoveItem = async (itemId) => {
+    if (isGuest) {
+      const items = cart.items.filter((item) => item.productId !== itemId)
+      setCart({ items })
+      saveGuestCart(items)
+      return
+    }
+
     setUpdatingItems((prev) => ({ ...prev, [itemId]: true }))
 
     try {
@@ -115,6 +144,9 @@ export default function CartPage() {
     if (!cart || !cart.items) return 0
     return cart.items.reduce((sum, item) => sum + item.quantity, 0)
   }
+
+  // For guest cart: item ID is productId; for authenticated cart: item ID is _id
+  const getItemId = (item) => (isGuest ? item.productId : item._id)
 
   if (loading) {
     return (
@@ -228,92 +260,95 @@ export default function CartPage() {
               <span className={styles.colRemove}></span>
             </div>
 
-            {cart.items.map((item) => (
-              <div
-                key={item._id}
-                className={`${styles.cartItem} ${updatingItems[item._id] ? styles.cartItemUpdating : ''}`}
-              >
-                <div className={styles.productInfo}>
-                  <Link
-                    href={`/products/${item.productId}`}
-                    className={styles.imageLink}
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className={styles.productImage}
-                    />
-                  </Link>
-                  <div className={styles.productDetails}>
+            {cart.items.map((item) => {
+              const itemId = getItemId(item)
+              return (
+                <div
+                  key={itemId}
+                  className={`${styles.cartItem} ${updatingItems[itemId] ? styles.cartItemUpdating : ''}`}
+                >
+                  <div className={styles.productInfo}>
                     <Link
                       href={`/products/${item.productId}`}
-                      className={styles.productName}
+                      className={styles.imageLink}
                     >
-                      {item.name}
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className={styles.productImage}
+                      />
                     </Link>
-                    <span className={styles.mobilePrice}>
-                      {item.price.toFixed(2)} lei
-                    </span>
+                    <div className={styles.productDetails}>
+                      <Link
+                        href={`/products/${item.productId}`}
+                        className={styles.productName}
+                      >
+                        {item.name}
+                      </Link>
+                      <span className={styles.mobilePrice}>
+                        {item.price.toFixed(2)} lei
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className={styles.priceCell}>
-                  {item.price.toFixed(2)} lei
-                </div>
+                  <div className={styles.priceCell}>
+                    {item.price.toFixed(2)} lei
+                  </div>
 
-                <div className={styles.quantityCell}>
-                  <div className={styles.quantityControl}>
-                    <button
-                      className={styles.qtyBtn}
-                      onClick={() =>
-                        handleQuantityChange(item._id, item.quantity - 1)
-                      }
-                      disabled={item.quantity <= 1 || updatingItems[item._id]}
-                      aria-label="Scade cantitatea"
-                    >
-                      &minus;
-                    </button>
-                    <input
-                      type="number"
-                      className={styles.qtyInput}
-                      value={item.quantity}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value)
-                        if (!isNaN(val) && val >= 1) {
-                          handleQuantityChange(item._id, val)
+                  <div className={styles.quantityCell}>
+                    <div className={styles.quantityControl}>
+                      <button
+                        className={styles.qtyBtn}
+                        onClick={() =>
+                          handleQuantityChange(itemId, item.quantity - 1)
                         }
-                      }}
-                      min="1"
-                      disabled={updatingItems[item._id]}
-                    />
+                        disabled={item.quantity <= 1 || updatingItems[itemId]}
+                        aria-label="Scade cantitatea"
+                      >
+                        &minus;
+                      </button>
+                      <input
+                        type="number"
+                        className={styles.qtyInput}
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value)
+                          if (!isNaN(val) && val >= 1) {
+                            handleQuantityChange(itemId, val)
+                          }
+                        }}
+                        min="1"
+                        disabled={updatingItems[itemId]}
+                      />
+                      <button
+                        className={styles.qtyBtn}
+                        onClick={() =>
+                          handleQuantityChange(itemId, item.quantity + 1)
+                        }
+                        disabled={updatingItems[itemId]}
+                        aria-label="Creste cantitatea"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.subtotalCell}>
+                    {(item.price * item.quantity).toFixed(2)} lei
+                  </div>
+
+                  <div className={styles.removeCell}>
                     <button
-                      className={styles.qtyBtn}
-                      onClick={() =>
-                        handleQuantityChange(item._id, item.quantity + 1)
-                      }
-                      disabled={updatingItems[item._id]}
-                      aria-label="Creste cantitatea"
+                      className={styles.removeBtn}
+                      onClick={() => handleRemoveItem(itemId)}
+                      disabled={updatingItems[itemId]}
                     >
-                      +
+                      Sterge
                     </button>
                   </div>
                 </div>
-
-                <div className={styles.subtotalCell}>
-                  {(item.price * item.quantity).toFixed(2)} lei
-                </div>
-
-                <div className={styles.removeCell}>
-                  <button
-                    className={styles.removeBtn}
-                    onClick={() => handleRemoveItem(item._id)}
-                    disabled={updatingItems[item._id]}
-                  >
-                    Sterge
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -354,6 +389,20 @@ export default function CartPage() {
             <button className={styles.checkoutBtn} onClick={handleCheckout}>
               Finalizeaza comanda
             </button>
+
+            {/* Payment trust strip — shown before user reaches checkout */}
+            <div className={styles.paymentTrust}>
+              <span className={styles.paymentTrustLabel}>Platesti cu:</span>
+              <div className={styles.paymentLogos}>
+                <span className={styles.paymentBadge}>Card</span>
+                <span className={styles.paymentBadge}>PayPal</span>
+                <span className={styles.paymentBadge}>Revolut</span>
+                <span className={styles.paymentBadge}>Ramburs</span>
+              </div>
+              <div className={styles.paymentSecurity}>
+                &#128274; Plata securizata
+              </div>
+            </div>
 
             <Link href="/products" className={styles.continueShopping}>
               Continua cumparaturile

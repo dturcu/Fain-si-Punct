@@ -162,6 +162,22 @@
   color: #c45500;
 }
 
+.forgotPasswordRow {
+  text-align: right;
+  margin-bottom: 0.75rem;
+}
+
+.forgotPasswordLink {
+  font-size: 0.82rem;
+  color: #0066c0;
+  text-decoration: none;
+}
+
+.forgotPasswordLink:hover {
+  text-decoration: underline;
+  color: #c45500;
+}
+
 @media (max-width: 480px) {
   .card {
     padding: 1.5rem 1.25rem;

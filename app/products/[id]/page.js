@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, use } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import StarRating from '@/components/StarRating'
 import styles from '@/styles/product-detail.module.css'
 
@@ -230,13 +231,16 @@ export default function ProductDetail({ params: paramsPromise }) {
 
   const getStockLabel = (stock) => {
     if (stock > 10) return 'In stoc'
-    if (stock > 0) return `Ultimele ${stock} bucati`
+    if (stock >= 6) return `Ultimele ${stock} bucati disponibile`
+    if (stock >= 2) return `Doar ${stock} mai disponibile!`
+    if (stock === 1) return 'Ultimul exemplar!'
     return 'Stoc epuizat'
   }
 
   const getStockClass = (stock) => {
     if (stock > 10) return styles.inStock
-    if (stock > 0) return styles.lowStock
+    if (stock >= 2) return styles.stockUrgent
+    if (stock === 1) return styles.stockCritical
     return styles.outOfStock
   }
 
@@ -260,8 +264,48 @@ export default function ProductDetail({ params: paramsPromise }) {
   if (product.weight) specs.push({ label: 'Greutate', value: `${product.weight} kg` })
   if (product.sku) specs.push({ label: 'SKU', value: product.sku })
 
+  // JSON-LD Product schema for search engine rich snippets
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description || '',
+    image: product.images?.length > 0 ? product.images : product.image ? [product.image] : [],
+    sku: product.sku || '',
+    brand: product.brand
+      ? { '@type': 'Brand', name: product.brand }
+      : undefined,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'RON',
+      price: product.price,
+      availability:
+        product.stock > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+      url: typeof window !== 'undefined' ? window.location.href : '',
+    },
+    ...(product.avgRating && product.reviewCount > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: product.avgRating,
+            reviewCount: product.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+  }
+
   return (
     <div className={styles.container}>
+      {/* JSON-LD structured data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+
       {/* Breadcrumbs */}
       <nav className={styles.breadcrumbs}>
         <Link href="/">Acasa</Link>
@@ -285,7 +329,14 @@ export default function ProductDetail({ params: paramsPromise }) {
         <div className={styles.imageSection}>
           <div className={styles.mainImage}>
             {allImages.length > 0 ? (
-              <img src={allImages[selectedImage]} alt={product.name} />
+              <Image
+                src={allImages[selectedImage]}
+                alt={product.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 55vw"
+                priority={true}
+                style={{ objectFit: 'contain' }}
+              />
             ) : (
               <div className={styles.placeholder}>Imagine indisponibila</div>
             )}
@@ -293,10 +344,12 @@ export default function ProductDetail({ params: paramsPromise }) {
           {allImages.length > 1 && (
             <div className={styles.thumbnails}>
               {allImages.map((img, i) => (
-                <img
+                <Image
                   key={i}
                   src={img}
                   alt={`${product.name} ${i + 1}`}
+                  width={68}
+                  height={68}
                   className={`${styles.thumbnail} ${selectedImage === i ? styles.activeThumbnail : ''}`}
                   onClick={() => setSelectedImage(i)}
                 />
@@ -411,11 +464,15 @@ export default function ProductDetail({ params: paramsPromise }) {
           <div className={styles.deliveryBox}>
             <div className={styles.deliveryItem}>
               <span className={styles.checkmark}>&#10003;</span>
-              Livrare gratuita
+              Livrare gratuita peste 200 lei
             </div>
             <div className={styles.deliveryItem}>
               <span className={styles.checkmark}>&#10003;</span>
-              Retur in 30 zile
+              Livrare estimata: 2-5 zile lucratoare
+            </div>
+            <div className={styles.deliveryItem}>
+              <span className={styles.checkmark}>&#10003;</span>
+              <Link href="/returns" className={styles.deliveryLink}>Retur gratuit in 30 zile</Link>
             </div>
             <div className={styles.deliveryItem}>
               <span className={styles.checkmark}>&#10003;</span>
@@ -506,11 +563,23 @@ export default function ProductDetail({ params: paramsPromise }) {
                   href={`/products/${rp.id}`}
                   className={styles.relatedCard}
                 >
-                  <div className={styles.relatedImageWrap}>
+                  <div className={styles.relatedImageWrap} style={{ position: 'relative' }}>
                     {rp.images && rp.images.length > 0 ? (
-                      <img src={rp.images[0]} alt={rp.name} />
+                      <Image
+                        src={rp.images[0]}
+                        alt={rp.name}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        style={{ objectFit: 'contain' }}
+                      />
                     ) : rp.image ? (
-                      <img src={rp.image} alt={rp.name} />
+                      <Image
+                        src={rp.image}
+                        alt={rp.name}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        style={{ objectFit: 'contain' }}
+                      />
                     ) : (
                       <div className={styles.relatedPlaceholder}>Fara imagine</div>
                     )}

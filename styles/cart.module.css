@@ -369,6 +369,44 @@
   background: #1e8449;
 }
 
+/* ===== Payment Trust Strip ===== */
+.paymentTrust {
+  margin-top: 1rem;
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.paymentTrustLabel {
+  display: block;
+  font-size: 0.78rem;
+  color: #777;
+  margin-bottom: 0.4rem;
+}
+
+.paymentLogos {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.paymentBadge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #555;
+  background: #f9f9f9;
+}
+
+.paymentSecurity {
+  font-size: 0.78rem;
+  color: #27ae60;
+  font-weight: 500;
+}
+
 /* ===== Continue Shopping Link ===== */
 .continueShopping {
   display: block;

@@ -213,6 +213,18 @@
   color: #721c24;
 }
 
+.stockUrgent {
+  background: #fff3cd;
+  color: #7d4e00;
+  font-weight: 700;
+}
+
+.stockCritical {
+  background: #f8d7da;
+  color: #721c24;
+  font-weight: 700;
+}
+
 .conditionBadge {
   display: inline-block;
   padding: 0.3rem 0.75rem;
@@ -385,6 +397,16 @@
   font-weight: 700;
   font-size: 1rem;
   color: #27ae60;
+}
+
+.deliveryLink {
+  color: #1a73e8;
+  text-decoration: none;
+  font-size: inherit;
+}
+
+.deliveryLink:hover {
+  text-decoration: underline;
 }
 
 /* ===== Below-fold sections ===== */
@@ -657,7 +679,8 @@
 
 @media (max-width: 600px) {
   .container {
-    padding: 0.75rem 1rem 2rem;
+    /* Extra bottom padding accounts for the sticky CTA bar (~90px) */
+    padding: 0.75rem 1rem 5.5rem;
   }
 
   .title {
@@ -670,6 +693,16 @@
 
   .buttonRow {
     flex-direction: column;
+    /* Sticky CTA on mobile — keeps Add to Cart always reachable while scrolling */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: #fff;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    gap: 0.5rem;
   }
 
   .relatedGrid {

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import styles from '@/styles/checkout.module.css'
 
-const PAYMENT_METHODS = [
+const ALL_PAYMENT_METHODS = [
   {
     id: 'card',
     label: 'Card bancar',
@@ -32,6 +32,9 @@ const PAYMENT_METHODS = [
   },
 ]
 
+// Guests can only use these payment methods
+const GUEST_ALLOWED_PAYMENT_IDS = ['card', 'ramburs']
+
 const SHIPPING_THRESHOLD = 200
 const SHIPPING_COST = 15.99
 
@@ -43,6 +46,8 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [errors, setErrors] = useState({})
   const [attempted, setAttempted] = useState(false)
+  const [checkoutError, setCheckoutError] = useState('')
+  const [isGuest, setIsGuest] = useState(true)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -64,7 +69,17 @@ export default function CheckoutPage() {
       const response = await fetch('/api/cart')
 
       if (response.status === 401) {
-        router.push('/auth/login')
+        // Not authenticated — guest mode: try localStorage cart
+        setIsGuest(true)
+        const raw = typeof window !== 'undefined' ? localStorage.getItem('guestCart') : null
+        const guestItems = raw ? JSON.parse(raw) : []
+        if (!guestItems || guestItems.length === 0) {
+          router.push('/products')
+          return
+        }
+        const total = guestItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        setCart({ items: guestItems, total })
+        setLoading(false)
         return
       }
 
@@ -74,6 +89,7 @@ export default function CheckoutPage() {
           router.push('/cart')
           return
         }
+        setIsGuest(false)
         setCart(data.data)
       }
     } catch (err) {
@@ -110,6 +126,11 @@ export default function CheckoutPage() {
     return newErrors
   }
 
+  // Filter payment methods based on auth state
+  const availablePaymentMethods = isGuest
+    ? ALL_PAYMENT_METHODS.filter((m) => GUEST_ALLOWED_PAYMENT_IDS.includes(m.id))
+    : ALL_PAYMENT_METHODS
+
   const shippingCost =
     cart && cart.total >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
   const orderTotal = cart ? cart.total + shippingCost : 0
@@ -125,24 +146,30 @@ export default function CheckoutPage() {
     setSubmitting(true)
 
     try {
+      const body = {
+        customer: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          phone: formData.phone,
+        },
+        shippingAddress: {
+          street: formData.street,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          country: formData.country,
+        },
+        paymentMethod,
+      }
+
+      if (isGuest) {
+        body.guestItems = cart.items
+      }
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer: {
-            name: `${formData.firstName} ${formData.lastName}`,
-            email: formData.email,
-            phone: formData.phone,
-          },
-          shippingAddress: {
-            street: formData.street,
-            city: formData.city,
-            state: formData.state,
-            zip: formData.zip,
-            country: formData.country,
-          },
-          paymentMethod,
-        }),
+        body: JSON.stringify(body),
       })
 
       const data = await response.json()
@@ -150,16 +177,22 @@ export default function CheckoutPage() {
       if (data.success) {
         const order = data.data
 
+        // Clear guest cart after successful order
+        if (isGuest && typeof window !== 'undefined') {
+          localStorage.removeItem('guestCart')
+          window.dispatchEvent(new Event('cart-updated'))
+        }
+
         if (paymentMethod === 'ramburs') {
           router.push(`/orders/${order.id}?status=confirmed`)
         } else {
           router.push(`/orders/${order.id}?pay=${paymentMethod}`)
         }
       } else {
-        alert(`Eroare: ${data.error}`)
+        setCheckoutError(data.error || 'A aparut o eroare. Te rugam sa incerci din nou.')
       }
     } catch (err) {
-      alert(`Eroare: ${err.message}`)
+      setCheckoutError('Eroare de retea. Verifica conexiunea si incearca din nou.')
     } finally {
       setSubmitting(false)
     }
@@ -218,6 +251,22 @@ export default function CheckoutPage() {
           <form onSubmit={handleSubmit} noValidate>
             <h2>Informatii livrare</h2>
 
+            {/* Guest / auth banner */}
+            {isGuest && (
+              <div className={styles.guestBanner}>
+                Continui ca oaspete. Ai cont?
+                <a href="/auth/login?redirect=/checkout" className={styles.guestBannerLink}>
+                  Autentifica-te
+                </a>
+              </div>
+            )}
+
+            {checkoutError && (
+              <div className={styles.checkoutError} role="alert">
+                {checkoutError}
+              </div>
+            )}
+
             <div className={styles.row}>
               <div className={styles.field}>
                 <label htmlFor="firstName">Prenume</label>
@@ -226,10 +275,14 @@ export default function CheckoutPage() {
                   type="text"
                   name="firstName"
                   placeholder="Prenume"
+                  autoComplete="given-name"
                   className={inputClass('firstName')}
                   value={formData.firstName}
                   onChange={handleChange}
                 />
+                {attempted && errors.firstName && (
+                  <span className={styles.fieldError}>Prenumele este obligatoriu</span>
+                )}
               </div>
               <div className={styles.field}>
                 <label htmlFor="lastName">Nume</label>
@@ -238,10 +291,14 @@ export default function CheckoutPage() {
                   type="text"
                   name="lastName"
                   placeholder="Nume"
+                  autoComplete="family-name"
                   className={inputClass('lastName')}
                   value={formData.lastName}
                   onChange={handleChange}
                 />
+                {attempted && errors.lastName && (
+                  <span className={styles.fieldError}>Numele este obligatoriu</span>
+                )}
               </div>
             </div>
 
@@ -252,10 +309,14 @@ export default function CheckoutPage() {
                 type="email"
                 name="email"
                 placeholder="exemplu@email.com"
+                autoComplete="email"
                 className={inputClass('email')}
                 value={formData.email}
                 onChange={handleChange}
               />
+              {attempted && errors.email && (
+                <span className={styles.fieldError}>Introdu o adresa de email valida</span>
+              )}
             </div>
 
             <div className={styles.field}>
@@ -265,10 +326,14 @@ export default function CheckoutPage() {
                 type="tel"
                 name="phone"
                 placeholder="07XX XXX XXX"
+                autoComplete="tel"
                 className={inputClass('phone')}
                 value={formData.phone}
                 onChange={handleChange}
               />
+              {attempted && errors.phone && (
+                <span className={styles.fieldError}>Numarul de telefon este obligatoriu</span>
+              )}
             </div>
 
             <div className={styles.field}>
@@ -278,10 +343,14 @@ export default function CheckoutPage() {
                 type="text"
                 name="street"
                 placeholder="Strada, numar, bloc, apartament"
+                autoComplete="address-line1"
                 className={inputClass('street')}
                 value={formData.street}
                 onChange={handleChange}
               />
+              {attempted && errors.street && (
+                <span className={styles.fieldError}>Adresa este obligatorie</span>
+              )}
             </div>
 
             <div className={styles.row}>
@@ -292,10 +361,14 @@ export default function CheckoutPage() {
                   type="text"
                   name="city"
                   placeholder="Oras"
+                  autoComplete="address-level2"
                   className={inputClass('city')}
                   value={formData.city}
                   onChange={handleChange}
                 />
+                {attempted && errors.city && (
+                  <span className={styles.fieldError}>Orasul este obligatoriu</span>
+                )}
               </div>
               <div className={styles.field}>
                 <label htmlFor="state">Judet</label>
@@ -304,10 +377,14 @@ export default function CheckoutPage() {
                   type="text"
                   name="state"
                   placeholder="Judet"
+                  autoComplete="address-level1"
                   className={inputClass('state')}
                   value={formData.state}
                   onChange={handleChange}
                 />
+                {attempted && errors.state && (
+                  <span className={styles.fieldError}>Judetul este obligatoriu</span>
+                )}
               </div>
             </div>
 
@@ -319,10 +396,14 @@ export default function CheckoutPage() {
                   type="text"
                   name="zip"
                   placeholder="XXXXXX"
+                  autoComplete="postal-code"
                   className={inputClass('zip')}
                   value={formData.zip}
                   onChange={handleChange}
                 />
+                {attempted && errors.zip && (
+                  <span className={styles.fieldError}>Codul postal este obligatoriu</span>
+                )}
               </div>
               <div className={styles.field}>
                 <label htmlFor="country">Tara</label>
@@ -331,17 +412,21 @@ export default function CheckoutPage() {
                   type="text"
                   name="country"
                   placeholder="Tara"
+                  autoComplete="country-name"
                   className={inputClass('country')}
                   value={formData.country}
                   onChange={handleChange}
                 />
+                {attempted && errors.country && (
+                  <span className={styles.fieldError}>Tara este obligatorie</span>
+                )}
               </div>
             </div>
 
             <h2 className={styles.paymentTitle}>Metoda de plata</h2>
 
             <div className={styles.paymentMethods}>
-              {PAYMENT_METHODS.map((method) => (
+              {availablePaymentMethods.map((method) => (
                 <label
                   key={method.id}
                   className={`${styles.paymentOption} ${
@@ -403,7 +488,7 @@ export default function CheckoutPage() {
 
           <div className={styles.itemsList}>
             {cart.items.map((item, i) => (
-              <div key={item._id || i} className={styles.summaryItem}>
+              <div key={item._id || item.productId || i} className={styles.summaryItem}>
                 <div className={styles.summaryItemLeft}>
                   <Image
                     src={item.image}

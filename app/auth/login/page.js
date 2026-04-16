@@ -95,6 +95,12 @@ export default function LoginPage() {
             </div>
           </div>
 
+          <div className={styles.forgotPasswordRow}>
+            <Link href="/auth/reset-password" className={styles.forgotPasswordLink}>
+              Ai uitat parola?
+            </Link>
+          </div>
+
           <button
             type="submit"
             className={styles.submitButton}

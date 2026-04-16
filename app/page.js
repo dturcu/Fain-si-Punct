@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from '@/styles/home.module.css'
+import Testimonials from '@/components/Testimonials'
 
 function StarRating({ rating, count }) {
   const stars = []
@@ -215,7 +217,7 @@ export default function Home() {
           {displayCategories.map((cat) => (
             <Link
               key={cat.name}
-              href={`/products?category=${encodeURIComponent(cat.name)}`}
+              href={`/produse/${encodeURIComponent(cat.name)}`}
               className={styles.categoryCard}
             >
               <span className={styles.categoryIcon}>{getCategoryIcon(cat.name)}</span>
@@ -243,10 +245,13 @@ export default function Home() {
                 className={styles.productCard}
               >
                 <div className={styles.productImageWrap}>
-                  <img
+                  <Image
                     src={product.image || (product.images && product.images[0]) || '/placeholder.png'}
                     alt={product.name}
+                    fill
+                    sizes="(max-width: 480px) 50vw, (max-width: 1024px) 25vw, 300px"
                     className={styles.productImage}
+                    priority={products.indexOf(product) < 4}
                   />
                 </div>
                 <div className={styles.productInfo}>
@@ -264,6 +269,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* Testimonials */}
+      <Testimonials />
 
       {/* Bottom CTA */}
       <section className={styles.bottomCta}>
