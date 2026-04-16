@@ -1,5 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { updateProductRatingStats } from '@/lib/reviews-supabase'
+import { getCookieToken, verifyToken } from '@/lib/auth'
+import { getUserById } from '@/lib/supabase-queries'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 /**
  * GET /api/reviews/[id]
@@ -128,15 +131,26 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params
-    const body = await request.json()
-    const { userId, isAdmin } = body
 
-    if (!userId) {
+    // Verify authentication from token — never trust client-provided isAdmin
+    const token = getCookieToken(request)
+    if (!token) {
       return Response.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       )
     }
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return Response.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      )
+    }
+
+    // Resolve admin status from the database, not from the request body
+    const requestingUser = await getUserById(decoded.userId)
+    const isAdmin = requestingUser?.role === 'admin'
 
     // Find review
     const { data: review, error: fetchError } = await supabaseAdmin
@@ -152,8 +166,8 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    // Check authorization
-    const isOwner = review.user_id === userId
+    // Check authorization against verified identity
+    const isOwner = review.user_id === decoded.userId
     if (!isOwner && !isAdmin) {
       return Response.json(
         { success: false, error: 'Unauthorized: only owner or admin can delete' },
@@ -176,6 +190,8 @@ export async function DELETE(request, { params }) {
       .eq('id', id)
 
     if (deleteError) throw deleteError
+
+    logAuditEvent('review_deleted', { userId: decoded.userId, metadata: { reviewId: id, isAdmin }, ...getRequestMeta(request) })
 
     // Update product rating stats
     await updateProductRatingStats(productId)

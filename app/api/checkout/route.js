@@ -8,27 +8,17 @@ function generateOrderNumber() {
   return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
 }
 
+// Payment methods allowed for guest users
+const GUEST_ALLOWED_PAYMENT_METHODS = ['card', 'ramburs']
+
 export async function POST(request) {
   try {
     const token = getCookieToken(request)
-    if (!token) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const body = await request.json()
+    const { shippingAddress, customer, paymentMethod, guestItems } = body
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
-      )
-    }
+    // --- Validate common fields ---
 
-    const { shippingAddress, customer, paymentMethod } = await request.json()
-
-    // Validate customer fields
     if (!customer?.name || !customer.name.trim()) {
       return Response.json(
         { success: false, error: 'Numele clientului este obligatoriu' },
@@ -48,7 +38,6 @@ export async function POST(request) {
       )
     }
 
-    // Validate shipping address fields
     const requiredAddressFields = ['street', 'city', 'state', 'zip']
     for (const field of requiredAddressFields) {
       if (!shippingAddress?.[field] || !shippingAddress[field].trim()) {
@@ -60,26 +49,95 @@ export async function POST(request) {
       }
     }
 
-    // Validate payment method
-    const validPaymentMethods = ['card', 'revolut', 'paypal', 'ramburs']
-    if (!paymentMethod || !validPaymentMethods.includes(paymentMethod)) {
-      return Response.json(
-        { success: false, error: 'Metoda de plata selectata nu este valida' },
-        { status: 400 }
-      )
+    // --- Determine guest vs authenticated mode ---
+
+    let isGuest = false
+    let userId = null
+    let cartItems = null
+
+    if (token) {
+      // Authenticated flow
+      const decoded = verifyToken(token)
+      if (!decoded) {
+        return Response.json(
+          { success: false, error: 'Invalid token' },
+          { status: 401 }
+        )
+      }
+      userId = decoded.userId
+
+      // Validate payment method (all methods allowed for auth users)
+      const validPaymentMethods = ['card', 'revolut', 'paypal', 'ramburs']
+      if (!paymentMethod || !validPaymentMethods.includes(paymentMethod)) {
+        return Response.json(
+          { success: false, error: 'Metoda de plata selectata nu este valida' },
+          { status: 400 }
+        )
+      }
+
+      const cart = await getCartByUserId(userId)
+      if (!cart || !cart.items || cart.items.length === 0) {
+        return Response.json(
+          { success: false, error: 'Cart is empty' },
+          { status: 400 }
+        )
+      }
+      cartItems = cart.items
+    } else {
+      // Guest flow
+      isGuest = true
+
+      if (!GUEST_ALLOWED_PAYMENT_METHODS.includes(paymentMethod)) {
+        return Response.json(
+          { success: false, error: 'Metoda de plata selectata nu este disponibila pentru comenzile fara cont' },
+          { status: 400 }
+        )
+      }
+
+      if (!guestItems || !Array.isArray(guestItems) || guestItems.length === 0) {
+        return Response.json(
+          { success: false, error: 'Cosul este gol' },
+          { status: 400 }
+        )
+      }
+
+      // Validate each guest item against the DB (price integrity + existence)
+      const validatedItems = []
+      for (const item of guestItems) {
+        if (!item.productId || !item.quantity || item.quantity < 1) {
+          return Response.json(
+            { success: false, error: 'Date produs invalide in cos' },
+            { status: 400 }
+          )
+        }
+
+        const { data: product, error } = await supabaseAdmin
+          .from('products')
+          .select('id, name, price, stock')
+          .eq('id', item.productId)
+          .single()
+
+        if (error || !product) {
+          return Response.json(
+            { success: false, error: `Produsul nu mai este disponibil` },
+            { status: 400 }
+          )
+        }
+
+        // Use DB price (ignore client-side price to prevent tampering)
+        validatedItems.push({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: item.quantity,
+          image: item.image || '',
+        })
+      }
+      cartItems = validatedItems
     }
 
-    // Get user's cart
-    const cart = await getCartByUserId(decoded.userId)
-    if (!cart || !cart.items || cart.items.length === 0) {
-      return Response.json(
-        { success: false, error: 'Cart is empty' },
-        { status: 400 }
-      )
-    }
-
-    // Check stock availability before deducting
-    for (const item of cart.items) {
+    // --- Stock check ---
+    for (const item of cartItems) {
       const { data: product } = await supabaseAdmin
         .from('products')
         .select('stock, name')
@@ -95,8 +153,8 @@ export async function POST(request) {
       }
     }
 
-    // Update product stock for each item
-    for (const item of cart.items) {
+    // --- Deduct stock ---
+    for (const item of cartItems) {
       const { data: product } = await supabaseAdmin
         .from('products')
         .select('stock')
@@ -111,19 +169,19 @@ export async function POST(request) {
       }
     }
 
-    // Calculate subtotal from cart items and apply shipping
-    const subtotal = cart.items.reduce(
+    // --- Calculate totals ---
+    const subtotal = cartItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     )
     const shippingCost = subtotal >= 200 ? 0 : 15.99
     const orderTotal = subtotal + shippingCost
 
-    // Create order
+    // --- Create order ---
     const orderNumber = generateOrderNumber()
     const order = await createOrder(
-      decoded.userId,
-      cart.items,
+      userId, // null for guest orders
+      cartItems,
       orderTotal,
       customer,
       shippingAddress,
@@ -131,11 +189,17 @@ export async function POST(request) {
       paymentMethod || 'card'
     )
 
-    // Get user for email preferences
-    const user = await getUserById(decoded.userId)
+    // --- Queue confirmation email ---
+    // For authenticated users, check email preferences; for guests, always send
+    let shouldSendEmail = true
+    if (!isGuest) {
+      const user = await getUserById(userId)
+      if (user?.emailPreferences?.orderConfirmation === false) {
+        shouldSendEmail = false
+      }
+    }
 
-    // Queue order confirmation email if user hasn't opted out
-    if (user?.emailPreferences?.orderConfirmation !== false) {
+    if (shouldSendEmail) {
       try {
         const emailHtml = orderConfirmation(order)
         const subject = `Order Confirmation - ${order.orderNumber}`
@@ -146,14 +210,13 @@ export async function POST(request) {
           subject,
           html: emailHtml,
           orderId: order.id,
-          userId: decoded.userId,
+          userId: userId,
           metadata: {
             orderNumber: order.orderNumber,
             customerName: customer.name,
           },
         })
 
-        // Update order with email job tracking
         await supabaseAdmin
           .from('order_email_jobs')
           .insert({
@@ -173,8 +236,10 @@ export async function POST(request) {
       }
     }
 
-    // Clear cart
-    await clearCart(decoded.userId)
+    // --- Clear server-side cart for authenticated users ---
+    if (!isGuest) {
+      await clearCart(userId)
+    }
 
     return Response.json(
       { success: true, data: order },

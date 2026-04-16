@@ -2,8 +2,13 @@ import bcrypt from 'bcryptjs'
 import { createToken } from '@/lib/auth'
 import { getUserByEmail, createUser } from '@/lib/supabase-queries'
 import { userRowToObj } from '@/lib/supabase-queries'
+import { applyRateLimit, LIMITS } from '@/lib/rate-limiter'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 export async function POST(request) {
+  const rateLimited = applyRateLimit(request, LIMITS.auth)
+  if (rateLimited) return rateLimited
+
   try {
     const { email, password, firstName, lastName } = await request.json()
 
@@ -26,6 +31,7 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(password, salt)
 
     const user = await createUser(email, hashedPassword, firstName, lastName)
+    logAuditEvent('register', { userId: user.id, email, ...getRequestMeta(request) })
     const token = createToken(user.id, user.email, user.role)
 
     const userResponse = { ...user }
@@ -40,7 +46,7 @@ export async function POST(request) {
       {
         status: 201,
         headers: {
-          'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
+          'Set-Cookie': `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`,
         },
       }
     )

@@ -1,8 +1,13 @@
 import bcrypt from 'bcryptjs'
 import { createToken } from '@/lib/auth'
 import { getUserByEmail } from '@/lib/supabase-queries'
+import { applyRateLimit, LIMITS } from '@/lib/rate-limiter'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 export async function POST(request) {
+  const rateLimited = applyRateLimit(request, LIMITS.auth)
+  if (rateLimited) return rateLimited
+
   try {
     const { email, password } = await request.json()
 
@@ -15,6 +20,7 @@ export async function POST(request) {
 
     const user = await getUserByEmail(email)
     if (!user) {
+      logAuditEvent('login_failed', { email, ...getRequestMeta(request) })
       return Response.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
@@ -25,6 +31,7 @@ export async function POST(request) {
     // For now, store hashed password in 'password' field
     const isPasswordValid = await bcrypt.compare(password, user.password || '')
     if (!isPasswordValid) {
+      logAuditEvent('login_failed', { email, ...getRequestMeta(request) })
       return Response.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
@@ -32,6 +39,7 @@ export async function POST(request) {
     }
 
     const token = createToken(user.id, user.email, user.role)
+    logAuditEvent('login_success', { userId: user.id, email, ...getRequestMeta(request) })
 
     const userResponse = { ...user }
     delete userResponse.password
@@ -45,7 +53,7 @@ export async function POST(request) {
       {
         status: 200,
         headers: {
-          'Set-Cookie': `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
+          'Set-Cookie': `token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`,
         },
       }
     )

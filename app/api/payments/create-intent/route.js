@@ -5,6 +5,7 @@ import { getOrderById } from '@/lib/supabase-queries'
 import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
 import { verifyAuth } from '@/lib/auth'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 /**
  * POST /api/payments/create-intent
@@ -30,10 +31,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
     }
 
-    // Verify order exists
+    // Verify order exists and belongs to the authenticated user
     const order = await getOrderById(orderId)
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Enforce ownership — prevent one user from paying another's order
+    if (order.userId !== auth.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Check if order already has a processing payment
@@ -51,6 +57,8 @@ export async function POST(request) {
       )
     }
 
+    logAuditEvent('payment_attempt', { userId: auth.userId, metadata: { orderId, method }, ...getRequestMeta(request) })
+
     if (method === 'stripe') {
       return handleStripePayment(order, auth)
     } else {
@@ -67,7 +75,19 @@ export async function POST(request) {
 
 async function handleStripePayment(order, auth) {
   try {
-    const amountInCents = Math.round(order.total * 100)
+    // Re-fetch the authoritative total from the database to prevent client-side price manipulation
+    const { data: freshOrder, error: freshError } = await supabaseAdmin
+      .from('orders')
+      .select('total')
+      .eq('id', order.id)
+      .eq('user_id', auth.userId)
+      .single()
+
+    if (freshError || !freshOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    const amountInCents = Math.round(parseFloat(freshOrder.total) * 100)
 
     const result = await createPaymentIntent({
       amount: amountInCents,
@@ -129,8 +149,20 @@ async function handleStripePayment(order, auth) {
 
 async function handlePayPalPayment(order, auth) {
   try {
+    // Re-fetch authoritative total from DB
+    const { data: freshOrder, error: freshError } = await supabaseAdmin
+      .from('orders')
+      .select('total')
+      .eq('id', order.id)
+      .eq('user_id', auth.userId)
+      .single()
+
+    if (freshError || !freshOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
     const result = await createPayPalOrder({
-      amount: Math.round(order.total * 100),
+      amount: Math.round(parseFloat(freshOrder.total) * 100),
       currency: 'USD',
       orderId: order.id,
       items: order.items,
@@ -149,7 +181,7 @@ async function handlePayPalPayment(order, auth) {
         order_id: order.id,
         type: 'paypal',
         external_id: result.id,
-        amount: Math.round(order.total * 100),
+        amount: Math.round(parseFloat(freshOrder.total) * 100),
         currency: 'USD',
         status: 'pending',
         payment_method: 'paypal',
