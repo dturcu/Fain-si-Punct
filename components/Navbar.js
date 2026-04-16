@@ -29,8 +29,18 @@ export default function Navbar() {
         setDropdownOpen(false)
       }
     }
+    const handleKey = (e) => {
+      if (e.key === 'Escape') {
+        setDropdownOpen(false)
+        setMobileMenuOpen(false)
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [])
 
   const checkAuth = async () => {

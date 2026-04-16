@@ -20,8 +20,10 @@ function getTokenPayload(token) {
 
 /**
  * Upstash Redis rate limiter.
- * Coordinates across all serverless instances via a shared Redis store.
- * Falls back to allowing requests if Redis is unavailable (fail-open).
+ * Per-route failMode decides whether Redis unavailability is tolerated:
+ *   'closed' (auth/payment) — reject with 503 when Redis is down.
+ *     Prevents brute-force against login if the rate limiter goes away.
+ *   'open'   (reviews, low-risk) — allow on Redis failure.
  */
 let redis
 try {
@@ -31,29 +33,33 @@ try {
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
     })
   }
-} catch (e) {
-  // Fall back to no rate limiting if Redis is unavailable
+} catch {
+  // Redis client init failed — handled per-route via failMode
 }
 
-async function checkRateLimit(ip, route, limit, windowSec) {
-  if (!redis) return true // No rate limiting without Redis
+async function checkRateLimit(ip, route, limit, windowSec, failMode) {
+  if (!redis) {
+    return failMode === 'closed' ? { allowed: false, unavailable: true } : { allowed: true }
+  }
   try {
     const key = `rate:${route}:${ip}`
     const current = await redis.incr(key)
     if (current === 1) await redis.expire(key, windowSec)
-    return current <= limit
+    return { allowed: current <= limit }
   } catch {
-    return true // Fail open if Redis errors
+    return failMode === 'closed' ? { allowed: false, unavailable: true } : { allowed: true }
   }
 }
 
-// Route-specific limits: [maxRequests, windowSeconds]
+// Route-specific limits: [maxRequests, windowSeconds, failMode]
+// failMode 'closed' = reject when Redis is unavailable.
+// failMode 'open'   = allow when Redis is unavailable.
 const LIMITS = {
-  '/api/auth/login':    [10,  15 * 60],     // 10 per 15 min
-  '/api/auth/register': [5,   60 * 60],     // 5 per hour
-  '/api/checkout':      [10,  60 * 60],     // 10 per hour
-  '/api/payments':      [20,  60 * 60],     // 20 per hour
-  '/api/reviews':       [30,  60 * 60],     // 30 per hour
+  '/api/auth/login':    [10,  15 * 60, 'closed'], // brute-force surface
+  '/api/auth/register': [5,   60 * 60, 'closed'],
+  '/api/checkout':      [10,  60 * 60, 'closed'], // payment-adjacent
+  '/api/payments':      [20,  60 * 60, 'closed'], // payment surface
+  '/api/reviews':       [30,  60 * 60, 'open'],   // spam is recoverable
 }
 
 export async function middleware(request) {
@@ -77,7 +83,7 @@ export async function middleware(request) {
   const matchedPath = Object.keys(LIMITS).find((p) => pathname.startsWith(p))
   if (!matchedPath) return NextResponse.next()
 
-  const [limit, windowSec] = LIMITS[matchedPath]
+  const [limit, windowSec, failMode] = LIMITS[matchedPath]
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
@@ -86,15 +92,19 @@ export async function middleware(request) {
   // Skip rate limiting for localhost in development
   if (ip === '127.0.0.1' || ip === '::1') return NextResponse.next()
 
-  const allowed = await checkRateLimit(ip, matchedPath, limit, windowSec)
+  const { allowed, unavailable } = await checkRateLimit(ip, matchedPath, limit, windowSec, failMode)
   if (!allowed) {
+    const status = unavailable ? 503 : 429
+    const message = unavailable
+      ? 'Service temporarily unavailable. Please retry in a moment.'
+      : 'Too many requests, please try again later.'
     return new NextResponse(
-      JSON.stringify({ error: 'Too many requests, please try again later.' }),
+      JSON.stringify({ success: false, error: message }),
       {
-        status: 429,
+        status,
         headers: {
           'Content-Type': 'application/json',
-          'Retry-After': String(windowSec),
+          'Retry-After': String(unavailable ? 30 : windowSec),
         },
       }
     )

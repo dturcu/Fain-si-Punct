@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getUserById, orderRowToObj } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { sendShippingNotification } from '@/lib/email'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 export async function PUT(request, { params }) {
   try {
@@ -96,6 +97,21 @@ export async function PUT(request, { params }) {
       .single()
 
     if (updateError) throw updateError
+
+    const { ip, userAgent } = getRequestMeta(request)
+    logAuditEvent('admin_action', {
+      userId: decoded.userId,
+      email: user.email,
+      ip,
+      userAgent,
+      metadata: {
+        action: 'order_status_change',
+        orderId: id,
+        from: oldStatus,
+        to: status,
+        ...(trackingNumber ? { trackingNumber } : {}),
+      },
+    })
 
     // Send shipping notification if status changed to shipped
     if (oldStatus !== 'shipped' && status === 'shipped' && trackingNumber && trackingUrl) {

@@ -96,10 +96,15 @@ export default function CheckoutPage() {
     if (!formData.lastName.trim()) newErrors.lastName = true
     if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = true
-    if (!formData.phone.trim()) newErrors.phone = true
+    // Romanian phone format: +40 or 0 prefix, 9-10 digits total.
+    // Accepts common separators (space, dash) that we strip client-side.
+    const phoneDigits = formData.phone.replace(/[\s-]/g, '')
+    if (!phoneDigits || !/^(\+40|0)[1-9]\d{8}$/.test(phoneDigits)) {
+      newErrors.phone = true
+    }
     if (!formData.street.trim()) newErrors.street = true
     if (!formData.city.trim()) newErrors.city = true
-    if (!formData.state.trim()) newErrors.state = true
+    if (!formData.state.trim()) newErrors.state = true // backend field is `state`; UI labels it "Județ"
     if (!formData.zip.trim()) newErrors.zip = true
     if (!formData.country.trim()) newErrors.country = true
     return newErrors
@@ -294,7 +299,7 @@ export default function CheckoutPage() {
                 />
               </div>
               <div className={styles.field}>
-                <label htmlFor="state">Judet</label>
+                <label htmlFor="state">Județ</label>
                 <input
                   id="state"
                   type="text"

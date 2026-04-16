@@ -1,7 +1,17 @@
 import '@/styles/globals.css'
 import Link from 'next/link'
+import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
 import JsonLd from '@/components/JsonLd'
+
+// Self-hosted via next/font — eliminates render-blocking Google Fonts
+// CSS request, FOUT, and CLS.
+const inter = Inter({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('NEXT_PUBLIC_SITE_URL must be set in production') })() : 'http://localhost:3099')
 
@@ -42,12 +52,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ro">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="ro" className={inter.variable}>
       <body>
         <JsonLd data={{
           '@context': 'https://schema.org',

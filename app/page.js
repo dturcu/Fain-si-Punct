@@ -1,11 +1,13 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import styles from '@/styles/home.module.css'
 import Testimonials from '@/components/Testimonials'
+import HomeSearch from '@/components/HomeSearch'
+import { getHomeCategories, getFeaturedProducts } from '@/lib/home-data'
+
+// Revalidate home page every 5 minutes — categories and featured products
+// change infrequently relative to page views.
+export const revalidate = 300
 
 function StarRating({ rating, count }) {
   const stars = []
@@ -20,7 +22,7 @@ function StarRating({ rating, count }) {
     }
   }
   return (
-    <span className={styles.starRating}>
+    <span className={styles.starRating} aria-label={`${rating.toFixed(1)} din 5 stele`}>
       {stars}
       {count !== undefined && <span className={styles.reviewCount}>({count})</span>}
     </span>
@@ -59,68 +61,11 @@ function getCategoryIcon(name) {
   return icons[name] || '🛍️'
 }
 
-export default function Home() {
-  const router = useRouter()
-  const [categories, setCategories] = useState([])
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [totalProducts, setTotalProducts] = useState(0)
-  const [searchQuery, setSearchQuery] = useState('')
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const [catRes, prodRes] = await Promise.all([
-          fetch('/api/products/categories'),
-          fetch('/api/products?limit=8&sort=-avgRating'),
-        ])
-        const catData = await catRes.json()
-        const prodData = await prodRes.json()
-
-        if (catData.success) {
-          setCategories(catData.data)
-          setTotalProducts(catData.total || catData.data.reduce((sum, c) => sum + c.count, 0))
-        }
-        if (prodData.success) {
-          setProducts(prodData.data || [])
-        }
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner} />
-        <p>Se incarca...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className={styles.errorContainer}>
-        <p>Eroare la incarcarea datelor. Incearca din nou.</p>
-        <button onClick={() => router.refresh()} className={styles.retryBtn}>
-          Reincearca
-        </button>
-      </div>
-    )
-  }
+export default async function Home() {
+  const [{ categories, total: totalProducts }, products] = await Promise.all([
+    getHomeCategories(),
+    getFeaturedProducts(8),
+  ])
 
   const displayCategories = categories.slice(0, 12)
   const hasMoreCategories = categories.length > 12
@@ -137,22 +82,7 @@ export default function Home() {
             <p className={styles.heroSubtitle}>
               Peste {totalProducts.toLocaleString('ro-RO')} produse din {categories.length} categorii te asteapta
             </p>
-            <form className={styles.heroSearch} onSubmit={handleSearch}>
-              <input
-                type="text"
-                className={styles.heroSearchInput}
-                placeholder="Cauta produse, categorii, marci..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button type="submit" className={styles.heroSearchBtn}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                Cauta
-              </button>
-            </form>
+            <HomeSearch />
             <Link href="/products" className={styles.heroCta}>
               Exploreaza produsele &rarr;
             </Link>
@@ -165,7 +95,7 @@ export default function Home() {
         <div className={styles.benefitsGrid}>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="1" y="3" width="15" height="13" rx="2" />
                 <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
                 <circle cx="5.5" cy="18.5" r="2.5" />
@@ -179,7 +109,7 @@ export default function Home() {
           </div>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="1" y="4" width="22" height="16" rx="2" />
                 <line x1="1" y1="10" x2="23" y2="10" />
               </svg>
@@ -191,7 +121,7 @@ export default function Home() {
           </div>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="1 4 1 10 7 10" />
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
               </svg>
@@ -203,7 +133,7 @@ export default function Home() {
           </div>
           <div className={styles.benefitItem}>
             <div className={styles.benefitIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </div>
@@ -232,7 +162,7 @@ export default function Home() {
               href={`/products?category=${encodeURIComponent(cat.name)}`}
               className={styles.categoryCard}
             >
-              <span className={styles.categoryIcon}>{getCategoryIcon(cat.name)}</span>
+              <span className={styles.categoryIcon} aria-hidden="true">{getCategoryIcon(cat.name)}</span>
               <span className={styles.categoryName}>{cat.name}</span>
               <span className={styles.categoryCount}>{cat.count} produse</span>
             </Link>
@@ -250,7 +180,7 @@ export default function Home() {
             </Link>
           </div>
           <div className={styles.productGrid}>
-            {products.map((product) => {
+            {products.map((product, idx) => {
               const hasDiscount = product.totalRrp > product.price
               const discountPercent = hasDiscount
                 ? Math.round((1 - product.price / product.totalRrp) * 100)
@@ -271,7 +201,8 @@ export default function Home() {
                       width={400}
                       height={400}
                       className={styles.productImage}
-                      unoptimized
+                      sizes="(max-width: 600px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      priority={idx < 4}
                     />
                   </div>
                   <div className={styles.productInfo}>
