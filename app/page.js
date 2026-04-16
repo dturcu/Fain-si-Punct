@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styles from '@/styles/home.module.css'
+import Testimonials from '@/components/Testimonials'
 
 function StarRating({ rating, count }) {
   const stars = []
@@ -289,6 +290,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* Testimonials */}
+      <Testimonials />
 
       {/* Bottom CTA — Full Bleed */}
       <div className={styles.bottomCtaFullBleed}>
