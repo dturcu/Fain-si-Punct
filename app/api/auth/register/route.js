@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs'
 import { createToken, getGuestSessionId } from '@/lib/auth'
 import { getUserByEmail, createUser, migrateGuestToUser } from '@/lib/supabase-queries'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 export async function POST(request) {
+  const { ip, userAgent } = getRequestMeta(request)
   try {
     const { email, password, firstName, lastName } = await request.json()
 
@@ -25,6 +27,7 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(password, salt)
 
     const user = await createUser(email, hashedPassword, firstName, lastName)
+    logAuditEvent('register', { userId: user.id, email: user.email, ip, userAgent })
     const token = createToken(user.id, user.email, user.role)
 
     // Migrate guest cart/orders to the new user account
