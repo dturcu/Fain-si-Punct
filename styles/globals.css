@@ -29,6 +29,13 @@
   --font-size-display-lg: 2rem;
   --font-size-display-md: 1.5rem;
   --font-size-display-sm: 1.25rem;
+  /* Semantic heading sizes — use these in component CSS instead of hardcoding. */
+  --font-size-h1: var(--font-size-display-xl);
+  --font-size-h2: var(--font-size-display-lg);
+  --font-size-h3: var(--font-size-display-md);
+  --font-size-h4: var(--font-size-display-sm);
+  --font-size-h5: 1.125rem;
+  --font-size-h6: 1rem;
   --font-size-text-lg: 1.125rem;
   --font-size-text-md: 1rem;
   --font-size-text-sm: 0.875rem;
@@ -607,6 +614,68 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* ===== BUTTONS ===== */
+
+/*
+ * Three-variant button system. Use these in component CSS via @extend
+ * or by referencing .btn / .btn-primary / .btn-secondary / .btn-tertiary
+ * classNames directly. Eliminates one-off button styling in every page
+ * module. See audit/04-ux-ui-mobile-cro.md for rationale.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px; /* WCAG touch target */
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-family);
+  font-size: var(--font-size-text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+  text-decoration: none;
+  user-select: none;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent, #fff);
+  border-color: var(--color-accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-hover, var(--color-accent));
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background: var(--color-primary, #1a1a2e);
+  color: var(--color-on-primary, #fff);
+  border-color: var(--color-primary, #1a1a2e);
+}
+.btn-secondary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-tertiary {
+  background: transparent;
+  color: var(--color-primary, #1a1a2e);
+  border-color: var(--color-border, #d1d5db);
+}
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--color-surface-alt, #f3f4f6);
 }
 
 /* ===== ANIMATIONS ===== */
