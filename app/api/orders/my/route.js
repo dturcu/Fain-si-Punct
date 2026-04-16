@@ -1,17 +1,14 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyToken, getCookieToken } from '@/lib/auth'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 
 export async function GET(request) {
   try {
     const token = getCookieToken(request)
-    if (!token) {
-      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
+    if (!token) return apiError(ERROR_CODES.UNAUTHORIZED)
     const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
-    }
+    if (!decoded) return apiError(ERROR_CODES.INVALID_TOKEN)
 
     const { data: orders, error } = await supabaseAdmin
       .from('orders')
@@ -29,7 +26,7 @@ export async function GET(request) {
       paymentStatus: row.payment_status,
       paymentMethod: row.payment_method,
       createdAt: row.created_at,
-      items: (items || []).map(item => ({
+      items: (items || []).map((item) => ({
         productId: item.product_id,
         name: item.name,
         price: parseFloat(item.price),
@@ -40,8 +37,6 @@ export async function GET(request) {
 
     return Response.json({ success: true, data: result })
   } catch (error) {
-    console.error('orders/my error:', error)
-
-    return Response.json({ success: false, error: 'A apărut o eroare internă' }, { status: 500 })
+    return handleApiError(error, 'orders/my')
   }
 }

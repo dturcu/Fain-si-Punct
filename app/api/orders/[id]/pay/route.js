@@ -1,5 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyToken, getCookieToken, getGuestSessionId } from '@/lib/auth'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 
 export async function POST(request, { params }) {
   try {
@@ -8,15 +11,11 @@ export async function POST(request, { params }) {
     const guestSessionId = getGuestSessionId(request)
 
     if (!decoded && !guestSessionId) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return apiError(ERROR_CODES.UNAUTHORIZED)
     }
 
     const { id } = await params
 
-    // Get order and verify ownership
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .select('*')
@@ -24,55 +23,44 @@ export async function POST(request, { params }) {
       .single()
 
     if (orderError || !order) {
-      return Response.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      )
+      return apiError(ERROR_CODES.ORDER_NOT_FOUND)
     }
 
     const isOwner = (decoded && order.user_id === decoded.userId) ||
       (guestSessionId && order.guest_session_id === guestSessionId)
     if (!isOwner) {
-      return Response.json(
-        { success: false, error: 'Not authorized' },
-        { status: 403 }
-      )
+      return apiError(ERROR_CODES.FORBIDDEN)
     }
 
     // Only allow marking as paid for cash-on-delivery orders.
-    // Card/PayPal/Revolut payments must be verified through the payment provider webhook.
+    // Card/PayPal/Revolut payments must be verified through the provider webhook.
     if (order.payment_method !== 'ramburs') {
-      return Response.json(
-        { success: false, error: 'Payment status is managed automatically for this payment method' },
-        { status: 403 }
-      )
+      return apiError(ERROR_CODES.FORBIDDEN, {
+        details: 'payment status is managed by the provider for this method',
+      })
     }
 
     // Prevent double-marking
     if (order.payment_status === 'paid') {
-      return Response.json(
-        { success: false, error: 'Order is already paid' },
-        { status: 409 }
-      )
+      return apiError(ERROR_CODES.PAYMENT_IN_PROGRESS, { details: 'order is already paid' })
     }
 
-    // Update payment status and order status
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('orders')
-      .update({
-        payment_status: 'paid',
-        status: 'processing',
-      })
+      .update({ payment_status: 'paid', status: 'processing' })
       .eq('id', id)
       .select()
       .single()
 
     if (updateError) throw updateError
 
-    const { data: items } = await supabaseAdmin
-      .from('order_items')
-      .select('*')
-      .eq('order_id', id)
+    const { ip, userAgent } = getRequestMeta(request)
+    logAuditEvent('payment_success', {
+      userId: decoded?.userId || null,
+      ip,
+      userAgent,
+      metadata: { orderId: id, orderNumber: updatedOrder.order_number, method: 'ramburs' },
+    })
 
     return Response.json({
       success: true,
@@ -85,12 +73,6 @@ export async function POST(request, { params }) {
       },
     })
   } catch (error) {
-    
-    console.error('orders/[id]/pay error:', error)
-
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'orders/[id]/pay')
   }
 }

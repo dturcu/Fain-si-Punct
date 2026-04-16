@@ -1,7 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { getUserById } from '@/lib/supabase-queries'
+import { getUserById, orderRowToObj } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken, getGuestSessionId } from '@/lib/auth'
-import { orderRowToObj } from '../route'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 
 export async function GET(request, { params }) {
   try {
@@ -10,10 +11,7 @@ export async function GET(request, { params }) {
     const guestSessionId = getGuestSessionId(request)
 
     if (!decoded && !guestSessionId) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return apiError(ERROR_CODES.UNAUTHORIZED)
     }
 
     const { id } = await params
@@ -25,10 +23,7 @@ export async function GET(request, { params }) {
       .single()
 
     if (error || !order) {
-      return Response.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      )
+      return apiError(ERROR_CODES.ORDER_NOT_FOUND)
     }
 
     // Verify access: owner (user or guest session) or admin
@@ -42,10 +37,7 @@ export async function GET(request, { params }) {
     }
 
     if (!hasAccess) {
-      return Response.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
-      )
+      return apiError(ERROR_CODES.FORBIDDEN)
     }
 
     const { data: items } = await supabaseAdmin
@@ -55,41 +47,20 @@ export async function GET(request, { params }) {
 
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
-
-    console.error('orders/[id] error:', error)
-
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'orders/[id] GET')
   }
 }
 
 export async function PUT(request, { params }) {
   try {
     const token = getCookieToken(request)
-    if (!token) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
+    if (!token) return apiError(ERROR_CODES.UNAUTHORIZED)
     const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
-      )
-    }
+    if (!decoded) return apiError(ERROR_CODES.INVALID_TOKEN)
 
-    // Verify user is admin
     const user = await getUserById(decoded.userId)
     if (!user || user.role !== 'admin') {
-      return Response.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      )
+      return apiError(ERROR_CODES.FORBIDDEN)
     }
 
     const { id } = await params
@@ -108,10 +79,7 @@ export async function PUT(request, { params }) {
       .single()
 
     if (error || !order) {
-      return Response.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      )
+      return apiError(ERROR_CODES.ORDER_NOT_FOUND)
     }
 
     const { data: items } = await supabaseAdmin
@@ -121,12 +89,6 @@ export async function PUT(request, { params }) {
 
     return Response.json({ success: true, data: orderRowToObj(order, items || []) })
   } catch (error) {
-    
-    console.error('orders/[id] error:', error)
-
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 400 }
-    )
+    return handleApiError(error, 'orders/[id] PUT')
   }
 }
