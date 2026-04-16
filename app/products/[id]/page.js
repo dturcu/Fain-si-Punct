@@ -720,7 +720,7 @@ export default function ProductDetail({ params: paramsPromise }) {
             </div>
             <div className={styles.deliveryItem}>
               <span className={styles.deliveryIcon}><CheckIcon /></span>
-              <span>Retur in 30 zile</span>
+              <span>Retur in 14 zile</span>
             </div>
             <div className={styles.deliveryItem}>
               <span className={styles.deliveryIcon}><CheckIcon /></span>

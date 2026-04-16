@@ -69,8 +69,9 @@ export default function TermsPage() {
           <p>
             Conform legislatiei in vigoare (OUG 34/2014), aveti dreptul de a va
             retrage din contract in termen de 14 zile calendaristice de la primirea
-            produsului, fara a fi necesara invocarea unui motiv. Fain si Punct extinde
-            acest termen la 30 de zile calendaristice.
+            produsului, fara a fi necesara invocarea unui motiv. Detaliile complete
+            si procedura sunt disponibile in{' '}
+            <Link href="/returns">Politica de retur</Link>.
           </p>
 
           <h2>7. Garantii</h2>

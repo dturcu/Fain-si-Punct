@@ -3,7 +3,8 @@ import styles from '@/styles/static-page.module.css'
 
 export const metadata = {
   title: 'Politica de retur - Fain si Punct',
-  description: 'Informatii despre politica de retur Fain si Punct - 30 de zile pentru returnarea produselor.',
+  description:
+    'Politica de retur Fain si Punct: 14 zile conform OUG 34/2014. Conditii, procedura si rambursare.',
 }
 
 export default function ReturnsPage() {
@@ -19,100 +20,110 @@ export default function ReturnsPage() {
         <h1 className={styles.title}>Politica de retur</h1>
 
         <div className={styles.content}>
-          <h2>1. Dreptul de retur</h2>
           <p>
-            La Fain si Punct, satisfactia dumneavoastra este prioritatea noastra. Aveti
-            dreptul de a returna produsele achizitionate in termen de
-            <strong> 30 de zile calendaristice</strong> de la data primirii coletului,
-            fara a fi necesara invocarea unui motiv. Acest termen depaseste cerinta
-            legala minima de 14 zile, oferindu-va mai mult timp pentru a decide.
+            <em>
+              Ultima actualizare: aprilie 2026. Acest document reflecta obligatiile
+              minime impuse de lege. Pentru cazuri particulare ne rezervam dreptul
+              de a aplica politica legala fara a extinde termenii.
+            </em>
           </p>
 
-          <h2>2. Conditii de retur</h2>
-          <p>Pentru a fi acceptat, returul trebuie sa indeplineasca urmatoarele conditii:</p>
-          <ul>
-            <li>Produsul sa fie in starea originala, nefolosit si nedeteriorat</li>
-            <li>Ambalajul original sa fie intact si complet</li>
-            <li>Toate accesoriile, etichetele si documentele sa fie incluse</li>
-            <li>Produsul sa fie insotit de factura sau dovada achizitiei</li>
-          </ul>
+          <h2>1. Dreptul de retragere (14 zile)</h2>
+          <p>
+            Conform <strong>OUG 34/2014</strong>, aveti dreptul sa va retrageti din
+            contract in termen de <strong>14 zile calendaristice</strong> de la data
+            primirii produsului, fara invocarea unui motiv si fara a suporta alte
+            costuri decat cele prevazute de lege.
+          </p>
 
-          <h2>3. Cum initiezi un retur?</h2>
-          <p>Procesul de retur este simplu si poate fi initiat in cativa pasi:</p>
+          <h2>2. Cum initiati returul</h2>
           <ol>
             <li>
-              Accesati contul dumneavoastra Fain si Punct si selectati comanda care contine
-              produsul pe care doriti sa il returnati
+              Accesati <Link href="/account/orders">Comenzile mele</Link> si selectati
+              comanda din care doriti sa returnati unul sau mai multe produse.
             </li>
             <li>
-              Apasati butonul &quot;Solicita retur&quot; si completati formularul cu
-              motivul returului
+              Apasati <strong>Solicita retur</strong>, alegeti motivul si cantitatea.
+              Cererea este inregistrata automat si va primi un raspuns in maxim
+              2 zile lucratoare.
             </li>
             <li>
-              Veti primi prin email o eticheta de retur si instructiunile de expediere
-            </li>
-            <li>
-              Ambalati produsul in siguranta si predati coletul curierului sau la
-              punctul de colectare indicat
+              Puteti de asemenea sa ne notificati in scris la{' '}
+              <strong>contact@fain-si-punct.ro</strong> folosind orice declaratie
+              neechivoca. Modelul formularului tipizat prevazut de OUG 34/2014 este
+              acceptat, dar nu este obligatoriu.
             </li>
           </ol>
-          <p>
-            Alternativ, puteti solicita un retur contactandu-ne prin email la
-            <strong> contact@fain-si-punct.ro</strong> sau prin formularul de contact.
-          </p>
 
-          <h2>4. Costurile returului</h2>
-          <p>
-            In cazul in care produsul prezinta defecte sau a fost livrat gresit,
-            costurile de transport pentru retur sunt suportate integral de Fain si Punct.
-            In cazul retururilor din motive personale, costul transportului de retur
-            este in sarcina cumparatorului.
-          </p>
-
-          <h2>5. Procesarea rambursarii</h2>
-          <p>
-            Dupa primirea si verificarea produsului returnat, rambursarea se
-            proceseaza astfel:
-          </p>
+          <h2>3. Conditiile produsului returnat</h2>
           <ul>
+            <li>Produsul trebuie sa fie in aceeasi stare ca la primire.</li>
+            <li>Ambalajul original, etichetele si accesoriile sa fie complete.</li>
             <li>
-              <strong>Verificare:</strong> Produsul este inspectat in termen de 2
-              zile lucratoare de la primire
-            </li>
-            <li>
-              <strong>Aprobare:</strong> Veti fi notificat prin email despre
-              aprobarea returului
-            </li>
-            <li>
-              <strong>Rambursare:</strong> Suma va fi returnata in termen de 14 zile
-              calendaristice de la aprobarea returului, folosind aceeasi metoda de
-              plata utilizata la achizitie
+              Raspunderea pentru diminuarea valorii produsului cauzata de manipulari
+              care depasesc verificarea functionarii ii revine consumatorului.
             </li>
           </ul>
 
-          <h2>6. Exceptii</h2>
-          <p>Urmatoarele categorii de produse nu pot fi returnate:</p>
+          <h2>4. Costul returului</h2>
+          <p>
+            Costul direct al returnarii produsului este suportat de consumator,
+            conform art. 13 alin. (3) din OUG 34/2014. In cazul in care produsul
+            primit este defect sau diferit de cel comandat, costurile de retur
+            sunt suportate de Fain si Punct.
+          </p>
+
+          <h2>5. Rambursarea</h2>
+          <p>
+            Rambursam suma platita (inclusiv costurile standard de livrare) fara
+            intarzieri nejustificate si nu mai tarziu de{' '}
+            <strong>14 zile de la data primirii deciziei de retragere</strong>. Ne
+            rezervam dreptul de a amana rambursarea pana la primirea produsului
+            returnat sau pana la prezentarea dovezii de expediere, oricare dintre
+            acestea survine prima (art. 14 alin. (3) OUG 34/2014).
+          </p>
+          <p>
+            Rambursarea se face folosind aceeasi metoda de plata utilizata la
+            achizitie, cu exceptia cazului in care consumatorul accepta o alta
+            modalitate.
+          </p>
+
+          <h2>6. Exceptii de la dreptul de retragere</h2>
+          <p>Conform art. 16 din OUG 34/2014, sunt exceptate inclusiv:</p>
           <ul>
-            <li>Produse personalizate sau realizate la comanda</li>
-            <li>Produse de igiena personala desigilate</li>
-            <li>Software si continut digital descarcat sau activat</li>
-            <li>Produse perisabile sau cu termen de valabilitate scurt</li>
-            <li>Produse care au fost modificate sau deteriorate de cumparator</li>
+            <li>Produsele confectionate dupa specificatiile consumatorului sau personalizate.</li>
+            <li>Produsele care se pot deteriora sau expira rapid.</li>
+            <li>
+              Produsele sigilate care nu pot fi returnate din motive de protectie a
+              sanatatii sau din motive de igiena, desigilate dupa livrare.
+            </li>
+            <li>
+              Inregistrarile audio sau video sigilate ori programele informatice
+              sigilate, care au fost desigilate dupa livrare.
+            </li>
+            <li>Continut digital furnizat si activat cu acordul prealabil al consumatorului.</li>
           </ul>
 
-          <h2>7. Produse defecte sau gresite</h2>
+          <h2>7. Solutionare amiabila si ANPC</h2>
           <p>
-            Daca ati primit un produs defect, deteriorat sau diferit de cel comandat,
-            va rugam sa ne contactati in termen de 48 de ore de la primirea coletului.
-            In aceste cazuri, vom asigura inlocuirea produsului sau rambursarea
-            integrala, inclusiv costurile de transport.
+            In caz de nemultumire privind aplicarea acestei politici, puteti apela
+            la procedura de solutionare alternativa a litigiilor prin{' '}
+            <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener noreferrer">
+              ANPC-SAL
+            </a>{' '}
+            sau la platforma europeana{' '}
+            <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">
+              SOL
+            </a>
+            .
           </p>
 
           <h2>8. Contact</h2>
           <p>
-            Pentru orice intrebari legate de retururi, echipa noastra de suport
-            va sta la dispozitie la <strong>contact@fain-si-punct.ro</strong> sau prin
-            pagina de <Link href="/contact">Contact</Link>.
+            Email: <strong>contact@fain-si-punct.ro</strong>
+            <br />
+            Formular:{' '}
+            <Link href="/contact">pagina de Contact</Link>.
           </p>
         </div>
       </div>
