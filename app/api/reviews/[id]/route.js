@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { updateProductRatingStats } from '@/lib/reviews-supabase'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { getUserById } from '@/lib/supabase-queries'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 
 /**
  * GET /api/reviews/[id]
@@ -179,6 +180,14 @@ export async function DELETE(request, { params }) {
 
     // Update product rating stats
     await updateProductRatingStats(productId)
+
+    const { ip, userAgent } = getRequestMeta(request)
+    logAuditEvent('review_deleted', {
+      userId,
+      ip,
+      userAgent,
+      metadata: { reviewId: id, productId, actedAs: isAdmin ? 'admin' : 'owner' },
+    })
 
     return Response.json({
       success: true,

@@ -5,6 +5,7 @@ import { getOrderById } from '@/lib/supabase-queries'
 import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
 import { verifyAuth, getGuestSessionId } from '@/lib/auth'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 /**
  * POST /api/payments/create-intent
  * Create a payment intent for either Stripe or PayPal
@@ -57,6 +58,14 @@ export async function POST(request) {
         { status: 409 }
       )
     }
+
+    const { ip, userAgent } = getRequestMeta(request)
+    logAuditEvent('payment_attempt', {
+      userId: auth?.userId || null,
+      ip,
+      userAgent,
+      metadata: { orderId, method, total: order.total },
+    })
 
     if (method === 'stripe') {
       return handleStripePayment(order, auth)

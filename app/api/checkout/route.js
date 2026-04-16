@@ -4,6 +4,7 @@ import { getSessionContext } from '@/lib/auth'
 import { addEmailJob } from '@/lib/job-queue'
 import { orderConfirmation } from '@/lib/templates/orderConfirmation'
 import { SHIPPING_THRESHOLD, SHIPPING_COST, MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
+import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
@@ -157,6 +158,21 @@ export async function POST(request) {
 
     const orderId = rpcResult.order_id
     const order = await getOrderById(orderId)
+
+    const { ip, userAgent } = getRequestMeta(request)
+    logAuditEvent('order_created', {
+      userId: session.userId || null,
+      email: customer.email,
+      ip,
+      userAgent,
+      metadata: {
+        orderId,
+        orderNumber,
+        total: orderTotal,
+        paymentMethod,
+        guest: !session.userId,
+      },
+    })
 
     // Queue order confirmation email
     const shouldSendEmail = session.userId
