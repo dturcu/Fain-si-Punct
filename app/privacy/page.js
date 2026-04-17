@@ -110,16 +110,37 @@ export default function PrivacyPage() {
           <h2>9. Drepturile dumneavoastra</h2>
           <p>
             In conformitate cu GDPR, aveti urmatoarele drepturi cu privire la datele
-            dumneavoastra personale:
+            dumneavoastra personale. Pentru majoritatea drepturilor va punem la
+            dispozitie mecanisme directe:
           </p>
           <ul>
-            <li><strong>Dreptul de acces</strong> - puteti solicita o copie a datelor pe care le detinem</li>
-            <li><strong>Dreptul la rectificare</strong> - puteti solicita corectarea datelor inexacte</li>
-            <li><strong>Dreptul la stergere</strong> - puteti solicita stergerea datelor, sub rezerva obligatiilor legale</li>
-            <li><strong>Dreptul la restrictionarea prelucrarii</strong> - puteti solicita limitarea prelucrarii in anumite situatii</li>
-            <li><strong>Dreptul la portabilitatea datelor</strong> - puteti solicita transferul datelor catre alt operator</li>
-            <li><strong>Dreptul de opozitie</strong> - va puteti opune prelucrarii in scopuri de marketing direct</li>
-            <li><strong>Dreptul de a depune plangere</strong> - la Autoritatea Nationala de Supraveghere a Prelucrarii Datelor cu Caracter Personal (ANSPDCP)</li>
+            <li>
+              <strong>Dreptul de acces / portabilitate</strong> (art. 15 / 20) —
+              autentificati-va si apelati <code>GET /api/account/export</code>.
+              Raspunsul este un fisier JSON cu profilul, comenzile, recenziile,
+              cosul si evenimentele de audit.
+            </li>
+            <li>
+              <strong>Dreptul la stergere</strong> (art. 17) —{' '}
+              <code>DELETE /api/account</code>. Anonimizam imediat datele de
+              identificare. Pastram comenzile in forma anonimizata pentru
+              conformitate fiscala (art. 25 lit. b Cod fiscal, 10 ani).
+            </li>
+            <li>
+              <strong>Dreptul la rectificare</strong> (art. 16) — modificati datele
+              in pagina <Link href="/account">Contul meu</Link>.
+            </li>
+            <li>
+              <strong>Dreptul de opozitie la marketing</strong> (art. 21) —
+              dezabonare cu un clic din orice email sau din preferintele contului.
+            </li>
+            <li>
+              <strong>Dreptul de a depune plangere</strong> — la{' '}
+              <a href="https://www.dataprotection.ro/" target="_blank" rel="noopener noreferrer">
+                ANSPDCP
+              </a>
+              .
+            </li>
           </ul>
 
           <h2>10. Securitatea datelor</h2>
