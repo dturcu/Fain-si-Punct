@@ -33,3 +33,28 @@ jobs:
           JWT_SECRET: ci-test-secret-key-minimum-32-chars
           UPSTASH_REDIS_REST_URL: https://placeholder.upstash.io
           UPSTASH_REDIS_REST_TOKEN: placeholder
+
+  vercel-env-parity:
+    # Runs only if VERCEL_TOKEN + VERCEL_PROJECT_ID secrets exist. Otherwise
+    # skipped — this is an informational gate that fails the PR when the
+    # Preview scope drifts from Production, but shouldn't block PRs in a
+    # repo that hasn't set up Vercel tokens yet.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check Preview/Production env-var parity
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM: ${{ secrets.VERCEL_TEAM_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT" ]; then
+            echo "::notice::VERCEL_TOKEN or VERCEL_PROJECT_ID secret not set — skipping parity check"
+            exit 0
+          fi
+          node scripts/check-vercel-env-parity.mjs

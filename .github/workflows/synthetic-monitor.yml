@@ -1,0 +1,138 @@
+name: Synthetic monitor
+
+# Hourly check against production /api/health. Opens a GitHub issue if
+# the endpoint is unhealthy or unreachable; closes the issue automatically
+# on the next green run.
+#
+# To extend to Preview URLs, either:
+#   (a) set Vercel Deployment Protection to "Protection Bypass for
+#       Automation" and add the bypass secret to this workflow, or
+#   (b) disable Vercel Authentication on Preview (not recommended).
+#
+# Setup:
+#   gh secret set PROD_HEALTH_URL     # e.g. https://fain-si-punct.ro/api/health
+#   gh variable set SYNTHETIC_ISSUE_LABEL --body outage  # optional
+#
+# The workflow skips itself if PROD_HEALTH_URL isn't configured.
+
+on:
+  schedule:
+    # Every hour at :07 (avoid the :00 herd)
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe production health
+        id: probe
+        env:
+          HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::notice::PROD_HEALTH_URL not set — skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 10-second timeout, capture status + body.
+          http_status=$(curl --silent --show-error --max-time 10 \
+            --output /tmp/health.json --write-out '%{http_code}' "$HEALTH_URL" || echo "000")
+
+          echo "status=$http_status" >> "$GITHUB_OUTPUT"
+          echo "---"
+          echo "HTTP $http_status"
+          cat /tmp/health.json 2>/dev/null || echo "(no body)"
+          echo "---"
+
+          # Persist a redacted body for issue-comment use.
+          body=$(cat /tmp/health.json 2>/dev/null || echo '{}')
+          {
+            echo "body<<EOF"
+            echo "$body"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$http_status" = "200" ]; then
+            echo "healthy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open / update outage issue
+        if: steps.probe.outputs.skipped != 'true' && steps.probe.outputs.healthy == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'synthetic-outage'
+            const title = `[synthetic] production health degraded (${new Date().toISOString().slice(0, 16)})`
+            const bodyText = `\`\`\`
+            HTTP ${{ steps.probe.outputs.status }}
+            ${{ steps.probe.outputs.body }}
+            \`\`\`
+
+            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+
+            // Ensure label exists
+            try {
+              await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label })
+            } catch {
+              await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'd73a4a' })
+            }
+
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+              per_page: 1,
+            })
+
+            if (open.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: bodyText,
+                labels: [label],
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.data[0].number,
+                body: bodyText,
+              })
+            }
+
+      - name: Close outage issue on recovery
+        if: steps.probe.outputs.skipped != 'true' && steps.probe.outputs.healthy == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'synthetic-outage'
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+            })
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Recovered at ${new Date().toISOString()}. Closing.`,
+              })
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              })
+            }
