@@ -49,6 +49,15 @@ export default function AdminLayout({ children }) {
           <Link href="/admin/orders" className={styles.navItem}>
             Orders
           </Link>
+          <Link href="/admin/customers" className={styles.navItem}>
+            Customers
+          </Link>
+          <Link href="/admin/returns" className={styles.navItem}>
+            Returns
+          </Link>
+          <Link href="/admin/reviews" className={styles.navItem}>
+            Reviews
+          </Link>
           <Link href="/admin/import" className={styles.navItem}>
             Import Products
           </Link>
