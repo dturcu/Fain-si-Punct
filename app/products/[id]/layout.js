@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { getSiteUrl } from '@/lib/site-url'
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('NEXT_PUBLIC_SITE_URL must be set in production') })() : 'http://localhost:3099')
+const siteUrl = getSiteUrl()
 
 export async function generateMetadata({ params }) {
   const { id } = await params
