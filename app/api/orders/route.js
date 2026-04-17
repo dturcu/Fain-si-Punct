@@ -1,27 +1,28 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { getUserById } from '@/lib/supabase-queries'
+import { getUserById, orderRowToObj } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
-
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
   return 'ORD-' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()
 }
 
+async function requireAdmin(request) {
+  const token = getCookieToken(request)
+  if (!token) return { error: apiError(ERROR_CODES.UNAUTHORIZED) }
+  const decoded = verifyToken(token)
+  if (!decoded) return { error: apiError(ERROR_CODES.INVALID_TOKEN) }
+  const user = await getUserById(decoded.userId)
+  if (!user || user.role !== 'admin') return { error: apiError(ERROR_CODES.FORBIDDEN) }
+  return { decoded, user }
+}
+
 export async function GET(request) {
   try {
-    const token = getCookieToken(request)
-    if (!token) {
-      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
-    }
-    const user = await getUserById(decoded.userId)
-    if (!user || user.role !== 'admin') {
-      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
-    }
+    const auth = await requireAdmin(request)
+    if (auth.error) return auth.error
 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
@@ -30,15 +31,9 @@ export async function GET(request) {
 
     let query = supabaseAdmin.from('orders').select('*, order_items(*)')
 
-    if (email) {
-      query = query.eq('customer_email', email)
-    }
+    if (email) query = query.eq('customer_email', email)
+    if (status) query = query.eq('status', status)
 
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    // Search by order number, customer name, or email
     if (search) {
       const term = search.replace(/[%_"'\\]/g, '')
       query = query.or(
@@ -59,33 +54,18 @@ export async function GET(request) {
 
     return Response.json({ success: true, data: ordersWithItems })
   } catch (error) {
-    console.error('Get orders error:', error)
-    return Response.json(
-      { success: false, error: 'Failed to retrieve orders' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'orders GET')
   }
 }
 
 export async function POST(request) {
   try {
-    const token = getCookieToken(request)
-    if (!token) {
-      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return Response.json({ success: false, error: 'Invalid token' }, { status: 401 })
-    }
-
-    const user = await getUserById(decoded.userId)
-    if (!user || user.role !== 'admin') {
-      return Response.json({ success: false, error: 'Admin access required' }, { status: 403 })
-    }
+    const auth = await requireAdmin(request)
+    if (auth.error) return auth.error
 
     const body = await request.json()
-    // Always use the authenticated user's ID, never trust the client-supplied userId
-    body.userId = decoded.userId
+    // Always use the authenticated user's ID, never trust client-supplied userId
+    body.userId = auth.decoded.userId
 
     const { data: order, error } = await supabaseAdmin
       .from('orders')
@@ -103,50 +83,7 @@ export async function POST(request) {
       { status: 201 }
     )
   } catch (error) {
-    return Response.json(
-      { success: false, error: 'Failed to create order' },
-      { status: 400 }
-    )
-  }
-}
-
-function orderRowToObj(row, items = []) {
-  if (!row) return null
-  return {
-    _id: row.id,
-    id: row.id,
-    orderNumber: row.order_number,
-    userId: row.user_id,
-    guestSessionId: row.guest_session_id,
-    items: items.map(item => ({
-      productId: item.product_id,
-      name: item.name,
-      price: parseFloat(item.price),
-      quantity: item.quantity,
-      image: item.image,
-    })),
-    total: parseFloat(row.total),
-    status: row.status,
-    customer: {
-      name: row.customer_name,
-      email: row.customer_email,
-      phone: row.customer_phone,
-    },
-    shippingAddress: {
-      street: row.shipping_street,
-      city: row.shipping_city,
-      state: row.shipping_state,
-      zip: row.shipping_zip,
-      country: row.shipping_country,
-    },
-    paymentId: row.payment_id,
-    paymentStatus: row.payment_status,
-    paymentMethod: row.payment_method,
-    paidAt: row.paid_at,
-    trackingNumber: row.tracking_number,
-    trackingUrl: row.tracking_url,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    return handleApiError(error, 'orders POST', ERROR_CODES.VALIDATION_FAILED)
   }
 }
 
@@ -167,4 +104,6 @@ function orderObjToRow(body) {
   }
 }
 
-export { orderRowToObj, orderObjToRow }
+// Kept as named export for any legacy imports — prefer importing from
+// lib/supabase-queries directly in new code.
+export { orderObjToRow }

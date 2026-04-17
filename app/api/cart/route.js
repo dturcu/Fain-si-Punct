@@ -2,6 +2,8 @@ import { getCartByUserId, addToCart, getCartByGuestSession, addToGuestCart } fro
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSessionContext, guestSessionCookie } from '@/lib/auth'
 import { MAX_QUANTITY_PER_ITEM } from '@/lib/constants'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 
 export async function GET(request) {
   try {
@@ -26,11 +28,7 @@ export async function GET(request) {
 
     return response
   } catch (error) {
-    console.error('Cart GET error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'cart GET')
   }
 }
 
@@ -41,17 +39,11 @@ export async function POST(request) {
     const { productId, quantity, variantId } = await request.json()
 
     if (!Number.isInteger(quantity) || quantity < 1) {
-      return Response.json(
-        { success: false, error: 'Cantitatea trebuie să fie un număr întreg pozitiv' },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.VALIDATION_FAILED, { details: 'quantity must be a positive integer' })
     }
 
     if (quantity > MAX_QUANTITY_PER_ITEM) {
-      return Response.json(
-        { success: false, error: `Cantitatea maximă per produs este ${MAX_QUANTITY_PER_ITEM}` },
-        { status: 400 }
-      )
+      return apiError(ERROR_CODES.QUANTITY_EXCEEDS_MAX)
     }
 
     // Get product
@@ -62,10 +54,7 @@ export async function POST(request) {
       .single()
 
     if (productError || !product) {
-      return Response.json(
-        { success: false, error: 'Product not found' },
-        { status: 404 }
-      )
+      return apiError(ERROR_CODES.PRODUCT_NOT_FOUND)
     }
 
     // If a variant is specified, look it up and use its price/image/stock
@@ -83,17 +72,11 @@ export async function POST(request) {
         .single()
 
       if (variantError || !variant) {
-        return Response.json(
-          { success: false, error: 'Varianta selectata nu exista' },
-          { status: 404 }
-        )
+        return apiError(ERROR_CODES.PRODUCT_NOT_FOUND, { details: 'variant not found' })
       }
 
       if (variant.stock < quantity) {
-        return Response.json(
-          { success: false, error: 'Stoc insuficient pentru varianta selectata' },
-          { status: 400 }
-        )
+        return apiError(ERROR_CODES.INSUFFICIENT_STOCK)
       }
 
       if (variant.price_override != null) itemPrice = parseFloat(variant.price_override)
@@ -140,10 +123,6 @@ export async function POST(request) {
 
     return response
   } catch (error) {
-    console.error('Cart POST error:', error)
-    return Response.json(
-      { success: false, error: 'A apărut o eroare internă' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'cart POST')
   }
 }

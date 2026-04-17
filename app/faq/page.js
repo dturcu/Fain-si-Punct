@@ -6,46 +6,48 @@ import styles from '@/styles/pages.module.css'
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState(null)
 
+  // Romanian-first FAQ. Return window aligned with OUG 34/2014 (14 zile).
+  // Free shipping above the threshold is enforced in app/api/checkout/route.js.
   const faqs = [
     {
-      question: 'What is your return policy?',
+      question: 'Care este politica de retur?',
       answer:
-        'We offer a 30-day return policy on all items. Products must be in original condition with packaging.',
+        'Ai la dispozitie 14 zile calendaristice din momentul primirii coletului pentru a returna produsele, conform OUG 34/2014. Produsele trebuie sa fie in starea originala, nefolosite si cu ambalajul intact.',
     },
     {
-      question: 'Do you offer free shipping?',
+      question: 'Oferiti livrare gratuita?',
       answer:
-        'Yes! We offer free shipping on all orders, regardless of order size.',
+        'Da, comenzile peste 200 lei beneficiaza de livrare gratuita. Pentru comenzile sub acest prag, transportul costa 15.99 lei.',
     },
     {
-      question: 'How long does delivery take?',
+      question: 'Cat dureaza livrarea?',
       answer:
-        'Standard delivery takes 5-7 business days. Express shipping options are available.',
+        'Livrarea standard prin Sameday dureaza 1-3 zile lucratoare in functie de localitate. In zilele lucratoare expedierea se face in aceeasi zi pentru comenzile plasate pana la ora 14:00.',
     },
     {
-      question: 'Is my payment information secure?',
+      question: 'Plata este sigura?',
       answer:
-        'Yes, we use industry-standard SSL encryption to protect all payment information.',
+        'Da, toate platile sunt procesate prin Stripe, PayPal sau Revolut peste conexiune HTTPS cu criptare SSL. Nu stocam datele cardului pe serverele noastre.',
     },
     {
-      question: 'Can I change my order after placing it?',
+      question: 'Pot modifica o comanda dupa plasare?',
       answer:
-        'Orders can be modified within 1 hour of placement. Please contact support immediately.',
+        'Comanda poate fi modificata in primele 60 de minute de la plasare, atat timp cat nu a intrat in procesare. Contacteaza-ne cat mai rapid la adresa din pagina Contact.',
     },
     {
-      question: 'Do you ship internationally?',
+      question: 'Livrati in afara Romaniei?',
       answer:
-        'Yes, we ship to most countries worldwide. Shipping costs vary by location.',
+        'In prezent livram doar pe teritoriul Romaniei. Planuim extinderea catre alte tari din UE in viitor.',
     },
     {
-      question: 'How can I track my order?',
+      question: 'Cum imi urmaresc comanda?',
       answer:
-        "You'll receive a tracking number via email once your order ships.",
+        'Dupa expediere primesti un email cu numarul AWB Sameday. Poti urmari coletul in pagina Comenzile mele sau direct pe sameday.ro.',
     },
     {
-      question: 'What payment methods do you accept?',
+      question: 'Ce metode de plata acceptati?',
       answer:
-        'We accept credit cards, debit cards, PayPal, and digital wallets.',
+        'Acceptam card bancar (Visa, Mastercard) prin Stripe, Revolut Pay, PayPal si plata ramburs (cash la livrare).',
     },
   ]
 
@@ -55,30 +57,43 @@ export default function FAQPage() {
 
   return (
     <div className={styles.container}>
-      <h1>Frequently Asked Questions</h1>
+      <h1>Intrebari frecvente</h1>
 
       <div className={styles.faqList}>
-        {faqs.map((faq, index) => (
-          <div
-            key={index}
-            className={`${styles.faqItem} ${
-              openIndex === index ? styles.open : ''
-            }`}
-          >
-            <button
-              className={styles.question}
-              onClick={() => toggleFAQ(index)}
+        {faqs.map((faq, index) => {
+          const isOpen = openIndex === index
+          const panelId = `faq-panel-${index}`
+          const buttonId = `faq-button-${index}`
+          return (
+            <div
+              key={index}
+              className={`${styles.faqItem} ${isOpen ? styles.open : ''}`}
             >
-              <span>{faq.question}</span>
-              <span className={styles.icon}>
-                {openIndex === index ? '−' : '+'}
-              </span>
-            </button>
-            {openIndex === index && (
-              <div className={styles.answer}>{faq.answer}</div>
-            )}
-          </div>
-        ))}
+              <button
+                id={buttonId}
+                className={styles.question}
+                onClick={() => toggleFAQ(index)}
+                aria-expanded={isOpen}
+                aria-controls={panelId}
+              >
+                <span>{faq.question}</span>
+                <span className={styles.icon} aria-hidden="true">
+                  {isOpen ? '−' : '+'}
+                </span>
+              </button>
+              {isOpen && (
+                <div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={buttonId}
+                  className={styles.answer}
+                >
+                  {faq.answer}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       <section className={styles.section}>

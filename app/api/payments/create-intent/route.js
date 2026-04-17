@@ -6,6 +6,8 @@ import { createPaymentIntent, getStripePublicKey } from '@/lib/stripe'
 import { createPayPalOrder, getPayPalClientId } from '@/lib/paypal'
 import { verifyAuth, getGuestSessionId } from '@/lib/auth'
 import { logAuditEvent, getRequestMeta } from '@/lib/audit-log'
+import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
+import { handleApiError } from '@/lib/error-handler'
 /**
  * POST /api/payments/create-intent
  * Create a payment intent for either Stripe or PayPal
@@ -18,30 +20,30 @@ export async function POST(request) {
     const guestSessionId = getGuestSessionId(request)
 
     if (!auth && !guestSessionId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return apiError(ERROR_CODES.UNAUTHORIZED)
     }
 
     const { orderId, method } = await request.json()
 
     if (!orderId || !method) {
-      return NextResponse.json({ error: 'Missing orderId or method' }, { status: 400 })
+      return apiError(ERROR_CODES.MISSING_FIELD, { details: 'orderId and method are required' })
     }
 
     if (!['stripe', 'paypal'].includes(method)) {
-      return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 })
+      return apiError(ERROR_CODES.INVALID_PAYMENT_METHOD)
     }
 
     // Verify order exists
     const order = await getOrderById(orderId)
     if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      return apiError(ERROR_CODES.ORDER_NOT_FOUND)
     }
 
     // Ownership check: user owns order OR guest session matches
     const isOwner = (auth && order.userId === auth.userId) ||
       (guestSessionId && order.guestSessionId === guestSessionId)
     if (!isOwner) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return apiError(ERROR_CODES.FORBIDDEN)
     }
 
     // Check if order already has a processing payment
@@ -53,10 +55,7 @@ export async function POST(request) {
       .single()
 
     if (existingPayment) {
-      return NextResponse.json(
-        { error: 'Order already has a processing payment' },
-        { status: 409 }
-      )
+      return apiError(ERROR_CODES.PAYMENT_IN_PROGRESS)
     }
 
     const { ip, userAgent } = getRequestMeta(request)
@@ -73,11 +72,7 @@ export async function POST(request) {
       return handlePayPalPayment(order, auth)
     }
   } catch (error) {
-    console.error('Error creating payment intent:', error)
-    return NextResponse.json(
-      { error: 'Failed to create payment intent' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'payments/create-intent', ERROR_CODES.PAYMENT_FAILED)
   }
 }
 
