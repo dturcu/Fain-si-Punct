@@ -25,7 +25,7 @@ export async function GET(request, { params }) {
       .single()
 
     if (error || !review) {
-      return apiError(ERROR_CODES.PRODUCT_NOT_FOUND, { details: 'review not found' })
+      return apiError(ERROR_CODES.REVIEW_NOT_FOUND)
     }
 
     return Response.json({ success: true, data: review })
@@ -51,7 +51,7 @@ export async function PUT(request, { params }) {
       .single()
 
     if (fetchError || !review) {
-      return apiError(ERROR_CODES.PRODUCT_NOT_FOUND, { details: 'review not found' })
+      return apiError(ERROR_CODES.REVIEW_NOT_FOUND)
     }
 
     if (review.user_id !== userId) {
@@ -106,7 +106,7 @@ export async function DELETE(request, { params }) {
       .single()
 
     if (fetchError || !review) {
-      return apiError(ERROR_CODES.PRODUCT_NOT_FOUND, { details: 'review not found' })
+      return apiError(ERROR_CODES.REVIEW_NOT_FOUND)
     }
 
     // Authorization: owner or admin (role resolved from DB via verified JWT)
@@ -126,7 +126,7 @@ export async function DELETE(request, { params }) {
     await updateProductRatingStats(productId)
 
     const { ip, userAgent } = getRequestMeta(request)
-    logAuditEvent('review_deleted', {
+    await logAuditEvent('review_deleted', {
       userId,
       ip,
       userAgent,

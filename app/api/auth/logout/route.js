@@ -8,7 +8,7 @@ export async function POST(request) {
     const decoded = verifyToken(token)
     if (decoded) {
       const { ip, userAgent } = getRequestMeta(request)
-      logAuditEvent('logout', { userId: decoded.userId, email: decoded.email, ip, userAgent })
+      await logAuditEvent('logout', { userId: decoded.userId, email: decoded.email, ip, userAgent })
     }
   }
 

@@ -26,14 +26,24 @@ export async function DELETE(request) {
     if (!decoded) return apiError(ERROR_CODES.INVALID_TOKEN)
 
     const user = await getUserById(decoded.userId)
-    if (!user) return apiError(ERROR_CODES.UNAUTHORIZED)
+    if (!user) return apiError(ERROR_CODES.USER_NOT_FOUND)
 
     const userId = user.id
     const nowIso = new Date().toISOString()
     const anonEmail = `anon.${userId}@deleted.local`
 
+    // Every write below is checked for errors. If any step fails we bail
+    // with 500 — claiming "success: true" while PII remains would be a
+    // GDPR Art. 17 violation worse than the original complaint.
+    function check(label, { error }) {
+      if (error) {
+        error.erasureStep = label
+        throw error
+      }
+    }
+
     // 1. Scrub the users row.
-    await supabaseAdmin
+    check('users.update', await supabaseAdmin
       .from('users')
       .update({
         email: anonEmail,
@@ -51,43 +61,44 @@ export async function DELETE(request) {
         is_active: false,
         updated_at: nowIso,
       })
-      .eq('id', userId)
+      .eq('id', userId))
 
     // 2. Scrub customer snapshot on orders — keep totals/items for
     //    accounting; strip PII.
-    await supabaseAdmin
+    check('orders.update', await supabaseAdmin
       .from('orders')
       .update({
         customer_name: '[redacted]',
         customer_email: anonEmail,
         customer_phone: null,
       })
-      .eq('user_id', userId)
+      .eq('user_id', userId))
 
     // 3. Drop reviews (no legal retention need) and associated helpful_votes.
-    const { data: userReviews } = await supabaseAdmin
+    const reviewsRes = await supabaseAdmin
       .from('reviews')
       .select('id')
       .eq('user_id', userId)
-    const reviewIds = (userReviews || []).map((r) => r.id)
+    check('reviews.select', reviewsRes)
+    const reviewIds = (reviewsRes.data || []).map((r) => r.id)
     if (reviewIds.length > 0) {
-      await supabaseAdmin.from('helpful_votes').delete().in('review_id', reviewIds)
-      await supabaseAdmin.from('reviews').delete().eq('user_id', userId)
+      check('helpful_votes.delete', await supabaseAdmin.from('helpful_votes').delete().in('review_id', reviewIds))
+      check('reviews.delete', await supabaseAdmin.from('reviews').delete().eq('user_id', userId))
     }
 
     // 4. Clear cart.
-    await supabaseAdmin.from('carts').delete().eq('user_id', userId)
+    check('carts.delete', await supabaseAdmin.from('carts').delete().eq('user_id', userId))
 
-    // 5. Anonymize audit-log rows owned by this user — retain event_type +
-    //    timestamp (aggregate metrics) but strip email and metadata.
-    await supabaseAdmin
+    // 5. Anonymize audit-log rows — retain event_type + timestamp but
+    //    strip email, IP, user-agent, metadata.
+    check('audit_logs.update', await supabaseAdmin
       .from('audit_logs')
       .update({ email: null, ip_address: null, user_agent: null, metadata: null })
-      .eq('user_id', userId)
+      .eq('user_id', userId))
 
     const { ip, userAgent } = getRequestMeta(request)
     // Final audit entry — uses anonymized email so it matches the new state.
-    logAuditEvent('admin_action', {
+    await logAuditEvent('admin_action', {
       userId,
       ip,
       userAgent,

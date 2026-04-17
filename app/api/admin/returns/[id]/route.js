@@ -101,7 +101,7 @@ export async function PUT(request, { params }) {
       refundExternalId,
     })
 
-    logAuditEvent('admin_action', {
+    await logAuditEvent('admin_action', {
       userId: auth.decoded.userId,
       email: auth.user.email,
       ip,

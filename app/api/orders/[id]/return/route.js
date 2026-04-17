@@ -83,24 +83,42 @@ export async function POST(request, { params }) {
       if (!Number.isInteger(line.quantity) || line.quantity < 1) {
         return apiError(ERROR_CODES.VALIDATION_FAILED, { details: 'invalid item quantity' })
       }
-      if (line.productId && !orderProductIds.has(line.productId)) {
+      // productId is REQUIRED — otherwise downstream approval/refund has no
+      // line to reconcile against.
+      if (!line.productId) {
+        return apiError(ERROR_CODES.VALIDATION_FAILED, { details: 'productId required on each line' })
+      }
+      if (!orderProductIds.has(line.productId)) {
         return apiError(ERROR_CODES.VALIDATION_FAILED, {
           details: `productId not in order: ${line.productId}`,
         })
       }
     }
 
-    const ret = await createReturnRequest({
-      orderId,
-      userId: session.userId || null,
-      guestSessionId: session.userId ? null : session.guestSessionId,
-      reasonCode,
-      reasonNote,
-      items,
-    })
+    let ret
+    try {
+      ret = await createReturnRequest({
+        orderId,
+        userId: session.userId || null,
+        guestSessionId: session.userId ? null : session.guestSessionId,
+        reasonCode,
+        reasonNote,
+        items,
+      })
+    } catch (err) {
+      // 23505 = unique_violation. Our partial unique index
+      // idx_returns_one_open_per_order fires when a second open return is
+      // requested concurrently — map to the "in progress" error.
+      if (err?.code === '23505') {
+        return apiError(ERROR_CODES.PAYMENT_IN_PROGRESS, {
+          details: 'an open return already exists for this order',
+        })
+      }
+      throw err
+    }
 
     const { ip, userAgent } = getRequestMeta(request)
-    logAuditEvent('order_created', {
+    await logAuditEvent('order_created', {
       userId: session.userId || null,
       ip,
       userAgent,

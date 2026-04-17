@@ -14,20 +14,25 @@ export async function POST(request) {
     const { token, password } = await request.json()
 
     if (!token) {
-      return apiError(ERROR_CODES.INVALID_TOKEN)
+      // Distinguish "token missing from request" (client bug, 400) from
+      // "token malformed / expired" (401).
+      return apiError(ERROR_CODES.MISSING_FIELD, { details: 'token is required' })
     }
 
-    // Min 8 chars + letter + digit (matches register endpoint)
-    if (typeof password !== 'string' || password.length < 8 || !/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password)) {
+    // Min 8 chars + letter + digit (matches register endpoint). \p{L}
+    // accepts the full Romanian alphabet (ă, ș, ț, etc.).
+    if (typeof password !== 'string' || password.length < 8 || !/\p{L}/u.test(password) || !/\d/.test(password)) {
       return apiError(ERROR_CODES.WEAK_PASSWORD)
     }
 
-    // Find user with this token
-    const { data: user } = await supabaseAdmin
+    // Find user with this token. maybeSingle() returns null on not-found
+    // instead of an error.
+    const { data: user, error: userErr } = await supabaseAdmin
       .from('users')
       .select('id, email, reset_token_expires')
       .eq('reset_token', token)
-      .single()
+      .maybeSingle()
+    if (userErr) throw userErr
 
     if (!user) {
       return apiError(ERROR_CODES.INVALID_TOKEN)
@@ -53,7 +58,7 @@ export async function POST(request) {
       })
       .eq('id', user.id)
 
-    logAuditEvent('password_reset', { userId: user.id, email: user.email, ip, userAgent })
+    await logAuditEvent('password_reset', { userId: user.id, email: user.email, ip, userAgent })
 
     return Response.json({
       success: true,

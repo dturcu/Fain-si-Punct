@@ -135,7 +135,7 @@ export async function POST(request) {
     const order = await getOrderById(orderId)
 
     const { ip, userAgent } = getRequestMeta(request)
-    logAuditEvent('order_created', {
+    await logAuditEvent('order_created', {
       userId: session.userId || null,
       email: customer.email,
       ip,

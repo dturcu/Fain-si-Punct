@@ -17,7 +17,7 @@ export async function GET(request) {
     if (error) return error
 
     const user = await getUserById(decoded.userId)
-    if (!user) return apiError(ERROR_CODES.UNAUTHORIZED, { status: 404 })
+    if (!user) return apiError(ERROR_CODES.USER_NOT_FOUND)
 
     return Response.json({ success: true, user, data: user })
   } catch (error) {

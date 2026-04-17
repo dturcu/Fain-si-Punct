@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
 
     const { id } = await params
     const user = await getUserById(id)
-    if (!user) return apiError(ERROR_CODES.UNAUTHORIZED, { status: 404 })
+    if (!user) return apiError(ERROR_CODES.USER_NOT_FOUND)
 
     // Exclude password hash before sending.
     const profile = { ...user }

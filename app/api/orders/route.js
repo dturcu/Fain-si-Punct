@@ -83,7 +83,10 @@ export async function POST(request) {
       { status: 201 }
     )
   } catch (error) {
-    return handleApiError(error, 'orders POST', ERROR_CODES.VALIDATION_FAILED)
+    // Let handleApiError's Supabase code map classify validation-class errors
+    // explicitly. Default to INTERNAL_ERROR so real 5xx issues aren't masked
+    // as 422s.
+    return handleApiError(error, 'orders POST')
   }
 }
 

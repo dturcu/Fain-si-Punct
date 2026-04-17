@@ -28,7 +28,7 @@ export async function GET(request) {
     if (!decoded) return apiError(ERROR_CODES.INVALID_TOKEN)
 
     const user = await getUserById(decoded.userId)
-    if (!user) return apiError(ERROR_CODES.UNAUTHORIZED)
+    if (!user) return apiError(ERROR_CODES.USER_NOT_FOUND)
 
     const [ordersFull, reviewsRes, cartRes, auditRes] = await Promise.all([
       getOrdersByUserId(user.id, 1000, 0),
