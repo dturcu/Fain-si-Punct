@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
 import JsonLd from '@/components/JsonLd'
 import CookieConsent from '@/components/CookieConsent'
+import FreeShippingBanner from '@/components/FreeShippingBanner'
 
 // Self-hosted via next/font — eliminates render-blocking Google Fonts
 // CSS request, FOUT, and CLS.
@@ -63,6 +64,7 @@ export default function RootLayout({ children }) {
           description: 'Magazin online cu peste 14.000 produse la cele mai bune preturi.',
           contactPoint: { '@type': 'ContactPoint', contactType: 'customer service', availableLanguage: 'Romanian' },
         }} />
+        <FreeShippingBanner />
         <Navbar />
 
         <main>{children}</main>

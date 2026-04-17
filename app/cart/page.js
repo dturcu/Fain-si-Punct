@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styles from '@/styles/cart.module.css'
 import { SHIPPING_THRESHOLD, SHIPPING_COST } from '@/lib/constants'
+import RelatedProducts from '@/components/RelatedProducts'
 
 export default function CartPage() {
   const router = useRouter()
@@ -398,6 +399,8 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      <RelatedProducts productIds={cart.items.map((i) => i.productId)} />
     </div>
   )
 }
