@@ -23,11 +23,14 @@ CREATE INDEX IF NOT EXISTS idx_products_category_stock
 CREATE INDEX IF NOT EXISTS idx_products_category_price_stock
   ON products (category, price, stock);
 
--- Email retry queue — only the narrow "ready" slice is ever scanned by the
--- cron job; a partial index avoids touching sent/bounced rows entirely.
+-- Email retry queue. Partial index predicates must be immutable, so NOW()
+-- can't appear there. Instead, index (next_retry_at, id) with the static
+-- status filter; the cron query `WHERE status = 'pending_retry' AND
+-- next_retry_at <= NOW()` still hits this index because next_retry_at is
+-- the leading column.
 CREATE INDEX IF NOT EXISTS idx_email_logs_retry_ready
-  ON email_logs (id)
-  WHERE status = 'pending_retry' AND next_retry_at <= NOW();
+  ON email_logs (next_retry_at, id)
+  WHERE status = 'pending_retry';
 
 -- Orders by user, most recent first — account/orders page hot path.
 CREATE INDEX IF NOT EXISTS idx_orders_user_created

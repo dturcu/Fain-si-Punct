@@ -16,17 +16,17 @@ export async function POST(request) {
 
     const user = await getUserByEmail(email)
     if (!user) {
-      logAuditEvent('login_failed', { email, ip, userAgent, metadata: { reason: 'no_such_user' } })
+      await logAuditEvent('login_failed', { email, ip, userAgent, metadata: { reason: 'no_such_user' } })
       return apiError(ERROR_CODES.INVALID_CREDENTIALS)
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password || '')
     if (!isPasswordValid) {
-      logAuditEvent('login_failed', { userId: user.id, email, ip, userAgent, metadata: { reason: 'bad_password' } })
+      await logAuditEvent('login_failed', { userId: user.id, email, ip, userAgent, metadata: { reason: 'bad_password' } })
       return apiError(ERROR_CODES.INVALID_CREDENTIALS)
     }
 
-    logAuditEvent('login_success', { userId: user.id, email: user.email, ip, userAgent })
+    await logAuditEvent('login_success', { userId: user.id, email: user.email, ip, userAgent })
     const token = createToken(user.id, user.email, user.role)
 
     // Migrate guest cart/orders to the logged-in user

@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import JsonLd from '@/components/JsonLd'
 import CookieConsent from '@/components/CookieConsent'
 import FreeShippingBanner from '@/components/FreeShippingBanner'
+import { getSiteUrl } from '@/lib/site-url'
 
 // Self-hosted via next/font — eliminates render-blocking Google Fonts
 // CSS request, FOUT, and CLS.
@@ -15,7 +16,11 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('NEXT_PUBLIC_SITE_URL must be set in production') })() : 'http://localhost:3099')
+// See lib/site-url.js for the resolution contract (NEXT_PUBLIC_SITE_URL
+// → VERCEL_URL → localhost). Keeping the logic in one helper so
+// app/layout.js, app/sitemap.js, app/robots.js, and per-route layouts
+// stay in sync.
+const siteUrl = getSiteUrl()
 
 export const metadata = {
   metadataBase: new URL(siteUrl),

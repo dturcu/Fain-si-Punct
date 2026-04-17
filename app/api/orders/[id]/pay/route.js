@@ -42,7 +42,7 @@ export async function POST(request, { params }) {
 
     // Prevent double-marking
     if (order.payment_status === 'paid') {
-      return apiError(ERROR_CODES.PAYMENT_IN_PROGRESS, { details: 'order is already paid' })
+      return apiError(ERROR_CODES.ORDER_ALREADY_PAID)
     }
 
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
@@ -55,7 +55,7 @@ export async function POST(request, { params }) {
     if (updateError) throw updateError
 
     const { ip, userAgent } = getRequestMeta(request)
-    logAuditEvent('payment_success', {
+    await logAuditEvent('payment_success', {
       userId: decoded?.userId || null,
       ip,
       userAgent,

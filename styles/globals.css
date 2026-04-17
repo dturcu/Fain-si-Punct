@@ -92,6 +92,21 @@
   box-sizing: border-box;
 }
 
+/* Visually-hidden utility — used on labels for icon-only buttons / search
+   inputs so screen readers still announce them. Keeps the element in the
+   accessibility tree without occupying layout space. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 *:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -619,10 +634,12 @@ a:hover {
 /* ===== BUTTONS ===== */
 
 /*
- * Three-variant button system. Use these in component CSS via @extend
- * or by referencing .btn / .btn-primary / .btn-secondary / .btn-tertiary
- * classNames directly. Eliminates one-off button styling in every page
- * module. See audit/04-ux-ui-mobile-cro.md for rationale.
+ * Three-variant button system. Apply .btn together with .btn-primary /
+ * .btn-secondary / .btn-tertiary classNames directly (plain CSS — no
+ * Sass @extend). For CSS Modules components, add these via global
+ * classNames or compose them through a shared <Button> component.
+ * Eliminates one-off button styling in every page module.
+ * See docs/audit/04-ux-ui-mobile-cro.md for rationale.
  */
 .btn {
   display: inline-flex;

@@ -7,12 +7,13 @@ import { handleApiError } from '@/lib/error-handler'
 
 /**
  * Password complexity: min 8 chars, at least one letter AND one digit.
- * Rationale: discourages trivial passwords without blocking legitimate
- * international characters (we accept the full Romanian alphabet).
+ * Uses Unicode \p{L} so the full Romanian alphabet (ă, â, î, ș, ț and
+ * their capitals) counts as letters — the earlier [A-Za-zÀ-ÿ] range
+ * missed ă (U+0103), ș (U+0219), ț (U+021B).
  */
 function isStrongPassword(pw) {
   if (typeof pw !== 'string' || pw.length < 8) return false
-  return /[A-Za-zÀ-ÿ]/.test(pw) && /\d/.test(pw)
+  return /\p{L}/u.test(pw) && /\d/.test(pw)
 }
 
 export async function POST(request) {
@@ -37,7 +38,7 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(password, salt)
 
     const user = await createUser(email, hashedPassword, firstName, lastName)
-    logAuditEvent('register', { userId: user.id, email: user.email, ip, userAgent })
+    await logAuditEvent('register', { userId: user.id, email: user.email, ip, userAgent })
     const token = createToken(user.id, user.email, user.role)
 
     // Migrate guest cart/orders to the new user account

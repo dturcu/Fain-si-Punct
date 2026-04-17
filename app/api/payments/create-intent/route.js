@@ -46,20 +46,24 @@ export async function POST(request) {
       return apiError(ERROR_CODES.FORBIDDEN)
     }
 
-    // Check if order already has a processing payment
-    const { data: existingPayment } = await supabaseAdmin
+    // Check if order already has a processing payment. maybeSingle()
+    // tolerates 0-row (no existing) and returns the error for anything
+    // unexpected so we don't silently bypass the guard on transient DB
+    // errors.
+    const { data: existingPayment, error: existingErr } = await supabaseAdmin
       .from('payments')
       .select('id')
       .eq('order_id', orderId)
       .eq('status', 'processing')
-      .single()
+      .maybeSingle()
 
+    if (existingErr) throw existingErr
     if (existingPayment) {
       return apiError(ERROR_CODES.PAYMENT_IN_PROGRESS)
     }
 
     const { ip, userAgent } = getRequestMeta(request)
-    logAuditEvent('payment_attempt', {
+    await logAuditEvent('payment_attempt', {
       userId: auth?.userId || null,
       ip,
       userAgent,
@@ -91,29 +95,33 @@ async function handleStripePayment(order, auth) {
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 })
+      return apiError(ERROR_CODES.PAYMENT_FAILED, { details: result.error })
     }
 
-    // Create payment record in database
+    // Upsert by external_id — Stripe's stable idempotency key returns the
+    // SAME PaymentIntent on retry, but payments.external_id is UNIQUE, so a
+    // second plain INSERT would 23505. Upsert keeps us at one row per intent.
     const { data: payment, error } = await supabaseAdmin
       .from('payments')
-      .insert({
-        order_id: order.id,
-        type: 'stripe',
-        external_id: result.id,
-        amount: amountInCents,
-        currency: 'RON',
-        status: 'pending',
-        payment_method: 'card',
-        metadata: { clientSecret: result.clientSecret },
-      })
+      .upsert(
+        {
+          order_id: order.id,
+          type: 'stripe',
+          external_id: result.id,
+          amount: amountInCents,
+          currency: 'RON',
+          status: 'pending',
+          payment_method: 'card',
+          metadata: { clientSecret: result.clientSecret },
+        },
+        { onConflict: 'external_id' }
+      )
       .select()
       .single()
 
     if (error) throw error
 
-    // Update order with payment reference
-    await supabaseAdmin
+    const { error: orderUpdateError } = await supabaseAdmin
       .from('orders')
       .update({
         payment_id: payment.id,
@@ -121,6 +129,8 @@ async function handleStripePayment(order, auth) {
         payment_status: 'processing',
       })
       .eq('id', order.id)
+
+    if (orderUpdateError) throw orderUpdateError
 
     return NextResponse.json(
       {
@@ -131,11 +141,7 @@ async function handleStripePayment(order, auth) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Error handling Stripe payment:', error)
-    return NextResponse.json(
-      { error: 'Failed to create Stripe payment intent' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'payments/create-intent/stripe', ERROR_CODES.PAYMENT_FAILED)
   }
 }
 
@@ -151,28 +157,30 @@ async function handlePayPalPayment(order, _auth) {
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 })
+      return apiError(ERROR_CODES.PAYMENT_FAILED, { details: result.error })
     }
 
-    // Create payment record in database
+    // Upsert by external_id — same rationale as Stripe handler.
     const { data: payment, error } = await supabaseAdmin
       .from('payments')
-      .insert({
-        order_id: order.id,
-        type: 'paypal',
-        external_id: result.id,
-        amount: Math.round(order.total * 100),
-        currency: 'RON',
-        status: 'pending',
-        payment_method: 'paypal',
-      })
+      .upsert(
+        {
+          order_id: order.id,
+          type: 'paypal',
+          external_id: result.id,
+          amount: Math.round(order.total * 100),
+          currency: 'RON',
+          status: 'pending',
+          payment_method: 'paypal',
+        },
+        { onConflict: 'external_id' }
+      )
       .select()
       .single()
 
     if (error) throw error
 
-    // Update order with payment reference
-    await supabaseAdmin
+    const { error: orderUpdateError } = await supabaseAdmin
       .from('orders')
       .update({
         payment_id: payment.id,
@@ -180,6 +188,8 @@ async function handlePayPalPayment(order, _auth) {
         payment_status: 'processing',
       })
       .eq('id', order.id)
+
+    if (orderUpdateError) throw orderUpdateError
 
     return NextResponse.json(
       {
@@ -190,10 +200,6 @@ async function handlePayPalPayment(order, _auth) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Error handling PayPal payment:', error)
-    return NextResponse.json(
-      { error: 'Failed to create PayPal order' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'payments/create-intent/paypal', ERROR_CODES.PAYMENT_FAILED)
   }
 }

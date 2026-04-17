@@ -99,7 +99,7 @@ export async function PUT(request, { params }) {
     if (updateError) throw updateError
 
     const { ip, userAgent } = getRequestMeta(request)
-    logAuditEvent('admin_action', {
+    await logAuditEvent('admin_action', {
       userId: decoded.userId,
       email: user.email,
       ip,
