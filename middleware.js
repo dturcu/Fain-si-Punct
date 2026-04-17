@@ -38,9 +38,15 @@ try {
 }
 
 async function checkRateLimit(ip, route, limit, windowSec, failMode) {
-  if (!redis) {
-    return failMode === 'closed' ? { allowed: false, unavailable: true } : { allowed: true }
-  }
+  // Rate limiting is an opt-in: if the project hasn't set
+  // UPSTASH_REDIS_REST_URL/TOKEN, rate-limiting is intentionally off.
+  // Fail-closed here would block every auth request on any deploy
+  // without Redis configured — exactly what happened in production
+  // after the Phase 1 fail-closed change. Instead, distinguish:
+  //   - !redis           → Redis not configured → allow (feature off)
+  //   - redis throws     → Redis configured but unreachable → fail per mode
+  if (!redis) return { allowed: true }
+
   try {
     const key = `rate:${route}:${ip}`
     const current = await redis.incr(key)
