@@ -2,6 +2,18 @@
 
 Goal: preview builds (on PRs and branches) behave exactly like production. If something breaks in preview, it would have broken in production — catching it a PR early is the whole point of the preview environment.
 
+## The branch-scope trap (how previews were dying before)
+
+Vercel's Preview scope for an env var has an **optional branch filter**. If that filter is set to e.g. `main`, the var only applies to Preview builds of the `main` branch — every feature-branch preview starts with that var **unset**. Combined with strict env validation (`lib/env.js`) or the `NEXT_PUBLIC_SITE_URL` guard, this killed every preview deploy on a non-`main` branch.
+
+**Always leave the branch filter empty** ("All Preview Branches") unless you truly want a var scoped to one branch. After editing:
+
+```
+Project → Settings → Environment Variables → (edit) → Environments: Preview → Branch: (empty)
+```
+
+The parity audit script (`scripts/check-vercel-env-parity.mjs`) flags the drift, and the CI job in `.github/workflows/ci.yml` fails PRs when the drift exists (once `VERCEL_TOKEN` is set in secrets).
+
 ## Required env vars per scope
 
 Every var below must exist in **both** the Production and Preview scopes in the Vercel dashboard (`Project → Settings → Environment Variables`). Phase 1's `lib/env.js` fails boot in both scopes if any of these are missing.
@@ -63,9 +75,47 @@ Exit code `0` = parity OK. `1` = drift (prints missing keys per scope). `2` = au
 
 Get a Vercel token at <https://vercel.com/account/tokens>.
 
-## CI wiring (future)
+## CI wiring
 
-The check script doesn't run in CI today — the GitHub Action would need `VERCEL_TOKEN` in secrets and the right project/team IDs. Add it to `.github/workflows/ci.yml` once you're comfortable putting the token in `gh secret set`.
+Parity check is wired into `.github/workflows/ci.yml` as the `vercel-env-parity` job. It runs on every PR but **only if the required secrets are set**, skipping cleanly otherwise:
+
+```bash
+gh secret set VERCEL_TOKEN          # https://vercel.com/account/tokens
+gh secret set VERCEL_PROJECT_ID     # from dashboard URL or `vercel project ls`
+gh secret set VERCEL_TEAM_ID        # optional (personal accounts skip)
+```
+
+Once set, the PR check fails loudly when anyone adds/edits a var in only one scope.
+
+## Synthetic uptime monitoring
+
+`.github/workflows/synthetic-monitor.yml` runs hourly, probes `/api/health` on production, and opens (or re-comments on) a GitHub issue labeled `synthetic-outage` when the endpoint returns non-200 or times out. On recovery it auto-closes the issue.
+
+```bash
+gh secret set PROD_HEALTH_URL        # https://fain-si-punct.ro/api/health
+```
+
+The workflow skips itself if the secret isn't set. Preview URLs are not monitored by default because Vercel Standard Protection requires authentication — to include Preview, enable "Protection Bypass for Automation" in `Settings → Deployment Protection` and forward the bypass secret as a header.
+
+## Health endpoint contract
+
+`GET /api/health` returns:
+
+```json
+{
+  "healthy": true,
+  "elapsedMs": 123,
+  "timestamp": "2026-04-17T...",
+  "commit": "abc1234",
+  "env": "production",
+  "required":  { "supabase": { "ok": true } },
+  "optional":  { "upstash": { "ok": true }, "stripe": { "ok": true }, "smtp": { "ok": true } }
+}
+```
+
+- `required.*` all `ok:true` ⇒ HTTP 200. Anything false ⇒ HTTP 503.
+- `optional.*` with `ok: null` mean the dependency isn't configured (e.g. SMTP env vars absent). Doesn't affect HTTP status.
+- `commit` reflects `VERCEL_GIT_COMMIT_SHA` on deployed builds — useful to confirm the deploy you're hitting.
 
 ## Troubleshooting
 
