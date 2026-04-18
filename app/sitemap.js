@@ -8,11 +8,19 @@ export default async function sitemap() {
   const staticPages = [
     '', '/products', '/about', '/contact', '/blog',
     '/terms', '/privacy', '/cookies', '/returns', '/faq', '/careers',
+    '/plata-la-livrare', '/livrare-gratuita',
   ].map((path) => ({
     url: `${siteUrl}${path}`,
     lastModified: new Date().toISOString(),
     changeFrequency: path === '' ? 'daily' : 'monthly',
-    priority: path === '' ? 1.0 : path === '/products' ? 0.9 : 0.5,
+    priority:
+      path === ''
+        ? 1.0
+        : path === '/products'
+        ? 0.9
+        : path === '/plata-la-livrare' || path === '/livrare-gratuita'
+        ? 0.8
+        : 0.5,
   }))
 
   // Product pages

@@ -107,6 +107,14 @@ export default function RootLayout({ children }) {
                 <li><a href="/returns">Politica de retur</a></li>
               </ul>
             </div>
+            <div className="footer-col">
+              <h4>Informatii</h4>
+              <ul>
+                <li><a href="/plata-la-livrare">Plata la livrare</a></li>
+                <li><a href="/livrare-gratuita">Livrare gratuita</a></li>
+                <li><a href="/faq">Intrebari frecvente</a></li>
+              </ul>
+            </div>
           </div>
           <div className="footer-bottom">
             <span>&copy; 2026 Fain si Punct. Toate drepturile rezervate.</span>
