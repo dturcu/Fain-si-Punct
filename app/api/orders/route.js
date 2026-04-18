@@ -3,6 +3,7 @@ import { getUserById, orderRowToObj } from '@/lib/supabase-queries'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { apiError, ERROR_CODES } from '@/lib/i18n-errors'
 import { handleApiError } from '@/lib/error-handler'
+import { orderObjToRow } from '@/lib/mappers/orders'
 import { randomUUID } from 'crypto'
 
 function generateOrderNumber() {
@@ -90,23 +91,3 @@ export async function POST(request) {
   }
 }
 
-function orderObjToRow(body) {
-  return {
-    user_id: body.userId,
-    total: body.total,
-    status: body.status || 'pending',
-    customer_name: body.customer?.name,
-    customer_email: body.customer?.email,
-    customer_phone: body.customer?.phone,
-    shipping_street: body.shippingAddress?.street,
-    shipping_city: body.shippingAddress?.city,
-    shipping_state: body.shippingAddress?.state,
-    shipping_zip: body.shippingAddress?.zip,
-    shipping_country: body.shippingAddress?.country,
-    payment_method: body.paymentMethod,
-  }
-}
-
-// Kept as named export for any legacy imports — prefer importing from
-// lib/supabase-queries directly in new code.
-export { orderObjToRow }

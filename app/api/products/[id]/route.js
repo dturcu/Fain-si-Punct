@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { rowToProduct, productToRow } from '../route'
+import { rowToProduct, productToRow } from '@/lib/mappers/products'
 import { verifyToken, getCookieToken } from '@/lib/auth'
 import { getUserById } from '@/lib/supabase-queries'
 
