@@ -23,7 +23,13 @@
  *   NODE_ENV   = 'production' in both production and preview builds
  */
 
-const REQUIRED = [
+/**
+ * Classification of env vars: required everywhere vs only on Vercel deploys.
+ * Listed as `readonly string[]` so consumers can iterate but not mutate.
+ */
+type EnvVarList = readonly string[]
+
+const REQUIRED: EnvVarList = [
   'JWT_SECRET',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -34,7 +40,7 @@ const REQUIRED = [
   'NEXT_PUBLIC_SITE_URL',
 ]
 
-const PROD_REQUIRED = [
+const PROD_REQUIRED: EnvVarList = [
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
   'STRIPE_SECRET_KEY',
@@ -43,11 +49,11 @@ const PROD_REQUIRED = [
   'CRON_SECRET',
 ]
 
-export function isProd() {
+export function isProd(): boolean {
   return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production'
 }
 
-export function isPreview() {
+export function isPreview(): boolean {
   return process.env.VERCEL_ENV === 'preview'
 }
 
@@ -56,7 +62,7 @@ export function isPreview() {
  * treated identically by the validator so preview bugs mirror production
  * bugs rather than surface only after release.
  */
-export function isVercelDeploy() {
+export function isVercelDeploy(): boolean {
   return process.env.VERCEL_ENV === 'production' || process.env.VERCEL_ENV === 'preview'
 }
 
@@ -64,7 +70,7 @@ export function isVercelDeploy() {
  * NEXT_PUBLIC_SITE_URL has a legitimate Vercel fallback (VERCEL_URL),
  * so skip it when the fallback is available.
  */
-function missingRequired() {
+function missingRequired(): string[] {
   return REQUIRED.filter((k) => {
     if (process.env[k]) return false
     if (k === 'NEXT_PUBLIC_SITE_URL' && process.env.VERCEL_URL) return false
@@ -77,7 +83,7 @@ function missingRequired() {
  * also throws on missing PROD_REQUIRED — parity is enforced.
  * Safe to call repeatedly (idempotent).
  */
-export function assertEnv() {
+export function assertEnv(): void {
   const missing = missingRequired()
   if (missing.length > 0) {
     throw new Error(
@@ -110,7 +116,7 @@ export function assertEnv() {
  * Get a required env var or throw with a clear error.
  * Prefer this over process.env.X for anything that must be set.
  */
-export function requireEnv(name) {
+export function requireEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`)
