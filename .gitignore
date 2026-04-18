@@ -21,7 +21,9 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
-next-env.d.ts
+# Note: next-env.d.ts is intentionally tracked so fresh clones and CI have
+# Next.js ambient types available before `next build` runs. Do not edit —
+# Next regenerates it on build.
 
 # Runtime data
 pids
