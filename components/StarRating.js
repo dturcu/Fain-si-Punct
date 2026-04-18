@@ -26,22 +26,50 @@ export default function StarRating({ rating = 0, onRatingChange, interactive = t
     }
   }
 
+  if (!interactive) {
+    return (
+      <div
+        className={`${styles.starRating} ${styles[size]}`}
+        role="img"
+        aria-label={`${rating.toFixed(1)} din 5 stele`}
+      >
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span
+            key={star}
+            className={`${styles.star} ${star <= displayRating ? styles.filled : styles.empty}`}
+            aria-hidden="true"
+          >
+            ★
+          </span>
+        ))}
+        {rating > 0 && <span className={styles.ratingText}>{rating.toFixed(1)}</span>}
+      </div>
+    )
+  }
+
   return (
-    <div className={`${styles.starRating} ${styles[size]}`}>
+    <div
+      className={`${styles.starRating} ${styles[size]}`}
+      role="radiogroup"
+      aria-label="Alege numarul de stele"
+      onMouseLeave={handleMouseLeave}
+    >
       {[1, 2, 3, 4, 5].map((star) => (
-        <span
+        <button
           key={star}
-          className={`${styles.star} ${star <= displayRating ? styles.filled : styles.empty} ${
-            interactive ? styles.interactive : ''
-          }`}
+          type="button"
+          role="radio"
+          aria-checked={rating === star}
+          aria-label={`${star} ${star === 1 ? 'stea' : 'stele'}`}
+          className={`${styles.star} ${star <= displayRating ? styles.filled : styles.empty} ${styles.interactive}`}
           onClick={() => handleClick(star)}
           onMouseEnter={() => handleMouseEnter(star)}
-          onMouseLeave={handleMouseLeave}
+          onFocus={() => handleMouseEnter(star)}
+          onBlur={handleMouseLeave}
         >
-          ★
-        </span>
+          <span aria-hidden="true">★</span>
+        </button>
       ))}
-      {!interactive && rating > 0 && <span className={styles.ratingText}>{rating.toFixed(1)}</span>}
     </div>
   )
 }

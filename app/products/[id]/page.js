@@ -307,7 +307,7 @@ export default function ProductDetail({ params: paramsPromise }) {
       />
 
       {/* Breadcrumbs */}
-      <nav className={styles.breadcrumbs}>
+      <nav className={styles.breadcrumbs} aria-label="Navigare pagina">
         <Link href="/">Acasa</Link>
         <span className={styles.breadcrumbSep}>&gt;</span>
         <Link href="/products">Produse</Link>
@@ -342,17 +342,24 @@ export default function ProductDetail({ params: paramsPromise }) {
             )}
           </div>
           {allImages.length > 1 && (
-            <div className={styles.thumbnails}>
+            <div className={styles.thumbnails} role="list" aria-label="Galerie imagini produs">
               {allImages.map((img, i) => (
-                <Image
+                <button
                   key={i}
-                  src={img}
-                  alt={`${product.name} ${i + 1}`}
-                  width={68}
-                  height={68}
+                  type="button"
+                  role="listitem"
                   className={`${styles.thumbnail} ${selectedImage === i ? styles.activeThumbnail : ''}`}
                   onClick={() => setSelectedImage(i)}
-                />
+                  aria-label={`Afiseaza imaginea ${i + 1} din ${allImages.length}`}
+                  aria-pressed={selectedImage === i}
+                >
+                  <Image
+                    src={img}
+                    alt=""
+                    width={68}
+                    height={68}
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -539,7 +546,7 @@ export default function ProductDetail({ params: paramsPromise }) {
                       <span className={styles.verifiedBadge}>Achizitie verificata</span>
                     )}
                   </div>
-                  <h4 className={styles.reviewTitle}>{review.title}</h4>
+                  <h3 className={styles.reviewTitle}>{review.title}</h3>
                   {review.comment && (
                     <p className={styles.reviewComment}>{review.comment}</p>
                   )}

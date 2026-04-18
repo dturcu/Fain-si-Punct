@@ -21,6 +21,12 @@
   cursor: default;
   transition: color 0.2s ease;
   color: #d1d5db;
+  /* Button reset — the interactive variant renders as <button> */
+  background: none;
+  border: 0;
+  padding: 0;
+  line-height: 1;
+  font-family: inherit;
 }
 
 .star.filled {

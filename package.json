@@ -12,7 +12,9 @@
     "import": "node scripts/import-from-excel.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test accessibility.spec.js"
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.1",
@@ -35,6 +37,8 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.49.0",
     "@testing-library/react": "^14.0.0",
     "eslint": "^8.0.0",
     "eslint-config-next": "^15.0.0",

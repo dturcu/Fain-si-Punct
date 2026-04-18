@@ -197,6 +197,12 @@
   font-size: 0.85rem;
   color: #0f1111;
   transition: background 0.15s;
+  /* Button reset when rendered as <button> */
+  width: 100%;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  text-align: left;
 }
 
 .categoryItem:hover {

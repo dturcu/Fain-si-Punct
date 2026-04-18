@@ -14,22 +14,26 @@ export default function NavbarMobileMenu({
 }) {
   return (
     <div className="mobile-menu">
-      <form className="mobile-search" onSubmit={onSearch}>
+      <form className="mobile-search" onSubmit={onSearch} role="search" aria-label="Cauta produse (meniu mobil)">
+        <label htmlFor="mobile-search-input" className="visually-hidden">
+          Cauta produse
+        </label>
         <input
-          type="text"
+          id="mobile-search-input"
+          type="search"
           placeholder="Cauta produse..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="nav-search-input"
         />
         <button type="submit" className="nav-search-btn" aria-label="Cauta">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </button>
       </form>
-      <nav className="mobile-nav-links">
+      <nav className="mobile-nav-links" aria-label="Meniu principal">
         <Link href="/" onClick={onClose}>Acasa</Link>
         <Link href="/products" onClick={onClose}>Produse</Link>
         <Link href="/cart" onClick={onClose}>
