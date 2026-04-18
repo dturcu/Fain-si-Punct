@@ -1,8 +1,18 @@
 # Email Notification System - Setup & Documentation
 
+> **Provider:** Brevo (ex-Sendinblue) is the configured provider.
+> For provider setup (account, DNS, SMTP credentials), see
+> **[EMAIL_BREVO_SETUP.md](./EMAIL_BREVO_SETUP.md)**.
+> This doc covers the application-layer system (templates, API, preferences,
+> logs) which is provider-agnostic.
+
 ## Overview
 
-The ShopHub ecommerce platform includes a comprehensive email notification system built with Nodemailer and Gmail SMTP. This system handles transactional emails, order notifications, shipping updates, and user preferences management.
+The Fain si Punct ecommerce platform includes a comprehensive email
+notification system built with Nodemailer over SMTP. This system handles
+transactional emails, order notifications, shipping updates, and user
+preferences management. SMTP backend is pluggable — Brevo is the current
+choice; any SMTP provider works with the same env vars.
 
 ## Features
 
