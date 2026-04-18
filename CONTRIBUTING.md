@@ -23,9 +23,20 @@
 
 ## Code Standards
 
-- JavaScript (ES modules). TypeScript migration planned.
+- JavaScript (ES modules) with incremental TypeScript adoption.
 - ESLint with Next.js config (`npm run lint`).
 - Jest for testing (`npm test`).
+
+## TypeScript
+
+The repo is bootstrapped with TypeScript in `allowJs` mode. Existing `.js` files
+keep working unchanged; new code should prefer `.ts`/`.tsx`.
+
+- **New files:** write in `.ts` / `.tsx`. Use `@/…` path aliases (defined in `tsconfig.json`).
+- **Existing `.js` files:** converted opportunistically as they're touched — don't do mass rewrites. Runtime behavior must stay byte-for-byte identical; types only.
+- **Per-file strictness:** add `// @ts-check` at the top of a `.js` file to opt into type-checking without renaming. `checkJs` and `strict` are off globally by design — they'll be tightened in future PRs.
+- **Before a PR:** run `npm run typecheck` (alias for `tsc --noEmit`). Zero type errors is the bar.
+- **Supabase types:** regenerate with `npm run types:supabase` (requires the Supabase CLI linked to the project). The generated file lives at `types/supabase.ts` and is currently a placeholder.
 
 ## Branch Naming
 
