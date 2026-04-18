@@ -220,13 +220,15 @@ export default function CheckoutPage() {
   return (
     <div className={styles.container}>
       {/* Breadcrumbs */}
-      <nav className={styles.breadcrumbs}>
+      <nav className={styles.breadcrumbs} aria-label="Navigare pagina">
         <a href="/">Acasa</a>
-        <span className={styles.breadcrumbSep}>&gt;</span>
+        <span className={styles.breadcrumbSep} aria-hidden="true">&gt;</span>
         <a href="/cart">Cos</a>
-        <span className={styles.breadcrumbSep}>&gt;</span>
+        <span className={styles.breadcrumbSep} aria-hidden="true">&gt;</span>
         <span className={styles.breadcrumbActive}>Finalizare comanda</span>
       </nav>
+
+      <h1 className="visually-hidden">Finalizare comanda</h1>
 
       {/* Step Indicator */}
       <div className={styles.steps}>

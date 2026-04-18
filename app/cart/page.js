@@ -177,7 +177,7 @@ export default function CartPage() {
           <span>Cosul meu</span>
         </div>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>
+          <div className={styles.emptyIcon} aria-hidden="true">
             <svg
               width="80"
               height="80"
@@ -217,7 +217,7 @@ export default function CartPage() {
               />
             </svg>
           </div>
-          <h2 className={styles.emptyTitle}>Cosul tau este gol</h2>
+          <h1 className={styles.emptyTitle}>Cosul tau este gol</h1>
           <p className={styles.emptyText}>
             Descopera produsele noastre si adauga articole in cos.
           </p>

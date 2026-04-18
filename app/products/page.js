@@ -265,7 +265,7 @@ function ProductsContent() {
         <div className={styles.cartToast}>{cartMessage}</div>
       )}
       {/* Breadcrumbs */}
-      <nav className={styles.breadcrumbs}>
+      <nav className={styles.breadcrumbs} aria-label="Navigare pagina">
         <Link href="/">Acasa</Link>
         <span className={styles.breadcrumbSep}>&rsaquo;</span>
         {category ? (
@@ -279,12 +279,18 @@ function ProductsContent() {
         )}
       </nav>
 
+      <h1 className="visually-hidden">
+        {activeCategoryName || (category ? category : 'Produse')}
+      </h1>
+
       {/* Mobile filter toggle */}
       <button
         className={styles.mobileFilterBtn}
         onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-expanded={sidebarOpen}
+        aria-controls="products-filter-sidebar"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
           <line x1="4" y1="6" x2="20" y2="6" />
           <line x1="4" y1="12" x2="16" y2="12" />
           <line x1="4" y1="18" x2="12" y2="18" />
@@ -294,21 +300,31 @@ function ProductsContent() {
 
       <div className={styles.layout}>
         {/* Sidebar */}
-        <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
+        <aside
+          id="products-filter-sidebar"
+          className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}
+          aria-label="Filtre produse"
+        >
           <div className={styles.sidebarHeader}>
             <h3>Filtre</h3>
             <button
               className={styles.sidebarClose}
               onClick={() => setSidebarOpen(false)}
+              aria-label="Inchide filtrele"
+              type="button"
             >
-              &times;
+              <span aria-hidden="true">&times;</span>
             </button>
           </div>
 
           {/* Search inside sidebar */}
-          <form onSubmit={handleSearch} className={styles.sidebarSearch}>
+          <form onSubmit={handleSearch} className={styles.sidebarSearch} role="search" aria-label="Cauta in catalog">
+            <label htmlFor="products-sidebar-search" className="visually-hidden">
+              Cauta produse
+            </label>
             <input
-              type="text"
+              id="products-sidebar-search"
+              type="search"
               placeholder="Cauta produse..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -318,16 +334,19 @@ function ProductsContent() {
 
           {/* Categories */}
           <div className={styles.filterGroup}>
-            <h4>Categorie</h4>
-            <ul className={styles.categoryList}>
+            <h4 id="filter-category-heading">Categorie</h4>
+            <ul className={styles.categoryList} aria-labelledby="filter-category-heading">
               {categories.map((cat) => (
-                <li
-                  key={cat.name}
-                  className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
-                  onClick={() => handleCategorySelect(cat.name)}
-                >
-                  <span className={styles.categoryName}>{cat.name}</span>
-                  <span className={styles.categoryCount}>({cat.count})</span>
+                <li key={cat.name}>
+                  <button
+                    type="button"
+                    className={`${styles.categoryItem} ${category === cat.name ? styles.categoryActive : ''}`}
+                    onClick={() => handleCategorySelect(cat.name)}
+                    aria-pressed={category === cat.name}
+                  >
+                    <span className={styles.categoryName}>{cat.name}</span>
+                    <span className={styles.categoryCount}>({cat.count})</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -336,13 +355,12 @@ function ProductsContent() {
           {/* Subcategories */}
           {category && subcategories.length > 0 && (
             <div className={styles.filterGroup}>
-              <h4>Subcategorii</h4>
-              <ul className={styles.categoryList}>
+              <h4 id="filter-subcategory-heading">Subcategorii</h4>
+              <ul className={styles.categoryList} aria-labelledby="filter-subcategory-heading">
                 {subcategories.map((sub) => (
                   <li
                     key={sub.name}
                     className={`${styles.subcategoryItem} ${selectedTags.includes(sub.name) ? styles.subcategoryActive : ''}`}
-                    onClick={() => handleTagToggle(sub.name)}
                   >
                     <label className={styles.subcategoryLabel}>
                       <input
@@ -350,7 +368,6 @@ function ProductsContent() {
                         checked={selectedTags.includes(sub.name)}
                         onChange={() => handleTagToggle(sub.name)}
                         className={styles.subcategoryCheckbox}
-                        onClick={(e) => e.stopPropagation()}
                       />
                       <span className={styles.categoryName}>{sub.name}</span>
                     </label>
